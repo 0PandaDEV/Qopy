@@ -1,0 +1,287 @@
+$primary: #2E2D2B;
+$accent: #FEB453;
+$divider: #ffffff0d;
+
+$text: #E5DFD5;
+$text2: #ADA9A1;
+$mutedtext: #78756F;
+
+@font-face {
+  font-family: SFRoundedRegular;
+  font-display: swap;
+  src: url("~/assets/fonts/SFRoundedRegular.otf") format("woff2");
+}
+
+@font-face {
+  font-family: SFRoundedMedium;
+  font-display: swap;
+  src: url("~/assets/fonts/SFRoundedMedium.otf") format("woff2");
+}
+
+@font-face {
+  font-family: SFRoundedSemiBold;
+  font-display: swap;
+  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("woff2");
+}
+
+@font-face {
+  font-family: SFMonoRegular;
+  font-display: swap;
+  src: url("~/assets/fonts/SFMonoRegular.otf") format("woff2");
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  color: $text;
+  text-decoration: none;
+  font-family: SFRoundedRegular;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  user-select: none;
+
+  --os-handle-bg: #ADA9A1;
+  --os-handle-bg-hover: #78756F;
+  --os-handle-bg-active: #78756F;
+}
+
+html,
+body,
+#__nuxt {
+  background-color: transparent;
+}
+
+.bg {
+  width: 100vw;
+  height: 100vh;
+  background-color: $primary;
+  border: 1px solid $divider;
+  border-radius: 12px;
+  z-index: -1;
+  position: fixed;
+  outline: none;
+}
+
+.search {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 54px;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  font-size: 18px;
+  color: $mutedtext;
+  padding-inline: 16px;
+  border-bottom: 1px solid $divider;
+  font-family: SFRoundedMedium;
+}
+
+.results {
+  position: absolute;
+  width: 284px;
+  top: 53px;
+  left: 0;
+  height: calc(100vh - 55px);
+  border-right: 1px solid $divider;
+  display: flex;
+  flex-direction: column;
+  padding-inline: 8px;
+  padding-top: 14px;
+  padding-bottom: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  .result {
+    height: 40px;
+    font-size: 14px;
+    align-items: center;
+    display: flex;
+    padding: 12px;
+    padding-left: 12px;
+    letter-spacing: 0.5px;
+    gap: 16px;
+  }
+
+  .result {
+    cursor: pointer;
+
+    &.selected {
+      background-color: $divider;
+    }
+  }
+}
+
+.content {
+  position: fixed;
+  top: 53px;
+  left: 284px;
+  padding: 10px;
+  padding-inline: 14px;
+  font-family: SFMonoRegular;
+  font-size: 12px;
+}
+
+.bottom-bar {
+  height: 40px;
+  width: calc(100vw - 2px);
+  backdrop-filter: blur(18px);
+  background-color: rgba(46, 45, 43, 0.8);
+  position: fixed;
+  bottom: 1px;
+  left: 1px;
+  z-index: 100;
+  border-radius: 0 0 10px 10px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-inline: 12px;
+  align-items: center;
+  font-size: 14px;
+
+  p {
+    color: $text2;
+  }
+
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .right {
+    display: flex;
+    align-items: center;
+
+    .paste p {
+      color: $text;
+    }
+
+    .actions div {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .divider {
+      width: 2px;
+      height: 12px;
+      background-color: $divider;
+      margin-left: 8px;
+      margin-right: 4px;
+      transition: all .2s;
+    }
+
+    .paste,
+    .actions {
+      padding: 4px;
+      padding-left: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 6px;
+      background-color: transparent;
+      transition: all .2s;
+    }
+
+    .paste:hover,
+    .actions:hover {
+      background-color: $divider;
+    }
+
+    &:hover .paste:hover~.divider,
+    &:hover .actions:hover~.divider {
+      opacity: 0;
+    }
+  }
+}
+
+.clothoid-corner {
+  clip-path: polygon(13.890123px 0px,
+      calc(100% - 13.890123px) 0px,
+      calc(100% - 12.723414px) 0.004211px,
+      calc(100% - 11.556933px) 0.025635px,
+      calc(100% - 10.391895px) 0.085062px,
+      calc(100% - 9.231074px) 0.199291px,
+      calc(100% - 8.079275px) 0.382298px,
+      calc(100% - 6.947448px) 0.662609px,
+      calc(100% - 5.844179px) 1.039291px,
+      calc(100% - 4.793324px) 1.542842px,
+      calc(100% - 3.811369px) 2.169728px,
+      calc(100% - 2.926417px) 2.926417px,
+      calc(100% - 2.169728px) 3.811369px,
+      calc(100% - 1.542842px) 4.793324px,
+      calc(100% - 1.039291px) 5.844179px,
+      calc(100% - 0.662609px) 6.947448px,
+      calc(100% - 0.382298px) 8.079275px,
+      calc(100% - 0.199291px) 9.231074px,
+      calc(100% - 0.085062px) 10.391895px,
+      calc(100% - 0.025635px) 11.556933px,
+      calc(100% - 0.004211px) 12.723414px,
+      100% 13.890123px,
+      100% calc(100% - 13.890123px),
+      calc(100% - 0.004211px) calc(100% - 12.723414px),
+      calc(100% - 0.025635px) calc(100% - 11.556933px),
+      calc(100% - 0.085062px) calc(100% - 10.391895px),
+      calc(100% - 0.199291px) calc(100% - 9.231074px),
+      calc(100% - 0.382298px) calc(100% - 8.079275px),
+      calc(100% - 0.662609px) calc(100% - 6.947448px),
+      calc(100% - 1.039291px) calc(100% - 5.844179px),
+      calc(100% - 1.542842px) calc(100% - 4.793324px),
+      calc(100% - 2.169728px) calc(100% - 3.811369px),
+      calc(100% - 2.926417px) calc(100% - 2.926417px),
+      calc(100% - 3.811369px) calc(100% - 2.169728px),
+      calc(100% - 4.793324px) calc(100% - 1.542842px),
+      calc(100% - 5.844179px) calc(100% - 1.039291px),
+      calc(100% - 6.947448px) calc(100% - 0.662609px),
+      calc(100% - 8.079275px) calc(100% - 0.382298px),
+      calc(100% - 9.231074px) calc(100% - 0.199291px),
+      calc(100% - 10.391895px) calc(100% - 0.085062px),
+      calc(100% - 11.556933px) calc(100% - 0.025635px),
+      calc(100% - 12.723414px) calc(100% - 0.004211px),
+      calc(100% - 13.890123px) 100%,
+      13.890123px 100%,
+      12.723414px calc(100% - 0.004211px),
+      11.556933px calc(100% - 0.025635px),
+      10.391895px calc(100% - 0.085062px),
+      9.231074px calc(100% - 0.199291px),
+      8.079275px calc(100% - 0.382298px),
+      6.947448px calc(100% - 0.662609px),
+      5.844179px calc(100% - 1.039291px),
+      4.793324px calc(100% - 1.542842px),
+      3.811369px calc(100% - 2.169728px),
+      2.926417px calc(100% - 2.926417px),
+      2.169728px calc(100% - 3.811369px),
+      1.542842px calc(100% - 4.793324px),
+      1.039291px calc(100% - 5.844179px),
+      0.662609px calc(100% - 6.947448px),
+      0.382298px calc(100% - 8.079275px),
+      0.199291px calc(100% - 9.231074px),
+      0.085062px calc(100% - 10.391895px),
+      0.025635px calc(100% - 11.556933px),
+      0.004211px calc(100% - 12.723414px),
+      0px calc(100% - 13.890123px),
+      0px 13.890123px,
+      0.004211px 12.723414px,
+      0.025635px 11.556933px,
+      0.085062px 10.391895px,
+      0.199291px 9.231074px,
+      0.382298px 8.079275px,
+      0.662609px 6.947448px,
+      1.039291px 5.844179px,
+      1.542842px 4.793324px,
+      2.169728px 3.811369px,
+      2.926417px 2.926417px,
+      3.811369px 2.169728px,
+      4.793324px 1.542842px,
+      5.844179px 1.039291px,
+      6.947448px 0.662609px,
+      8.079275px 0.382298px,
+      9.231074px 0.199291px,
+      10.391895px 0.085062px,
+      11.556933px 0.025635px,
+      12.723414px 0.004211px,
+      13.890123px 0px);
+}

@@ -1,0 +1,26 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "tauri dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0-beta.14",
+    "@tauri-apps/cli": "^2.0.0-beta.21",
+    "@tauri-apps/plugin-autostart": "^2.0.0-beta.6",
+    "@tauri-apps/plugin-clipboard-manager": "^2.1.0-beta.4",
+    "@tauri-apps/plugin-global-shortcut": "^2.0.0-beta.6",
+    "@tauri-apps/plugin-os": "^2.0.0-beta.6",
+    "@tauri-apps/plugin-sql": "^2.0.0-beta.6",
+    "nuxt": "^3.12.3",
+    "overlayscrollbars": "^2.9.2",
+    "overlayscrollbars-vue": "^0.5.9",
+    "sass": "^1.77.6",
+    "vue": "latest"
+  }
+}
