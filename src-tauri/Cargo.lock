@@ -82,26 +82,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "rand 0.8.5",
- "rdev",
- "serde",
- "serde_json",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-os",
- "tauri-plugin-sql",
- "tauri-plugin-window-state",
- "tokio",
-]
-
-[[package]]
 name = "arboard"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -417,6 +397,26 @@ dependencies = [
  "num-traits",
  "serde",
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "clipboard-manager"
+version = "0.1.0"
+dependencies = [
+ "rand 0.8.5",
+ "rdev",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-os",
+ "tauri-plugin-sql",
+ "tauri-plugin-window-state",
+ "tokio",
 ]
 
 [[package]]
