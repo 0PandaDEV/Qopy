@@ -1,6 +1,6 @@
 <template>
   <div class="bg" @keydown.down.prevent="selectNext" @keydown.up.prevent="selectPrevious"
-    @keydown.enter.prevent="pasteSelectedItem" tabindex="0">
+    @keydown.enter.prevent="pasteSelectedItem" @keydown.esc="hideApp" tabindex="0">
     <input v-model="searchQuery" @input="searchHistory" autocorrect="off" autocapitalize="off" spellcheck="false"
       class="search" type="text" placeholder="Type to filter entries...">
     <div class="bottom-bar">
@@ -44,7 +44,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import Database from '@tauri-apps/plugin-sql';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
-import { writeText, paste } from '@tauri-apps/plugin-clipboard-manager';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 import { app, window } from '@tauri-apps/api';
