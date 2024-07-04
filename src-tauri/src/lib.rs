@@ -4,10 +4,16 @@ use rdev::{listen, EventType, Key};
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::fs;
 use std::sync::mpsc;
-use tauri::Manager;
-use tauri_plugin_autostart::MacosLauncher;
-use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 use tokio::runtime::Runtime;
+use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    Manager
+};
+use tauri::image::Image;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,6 +28,49 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
+            
+            let window = app.get_window("main").unwrap();
+            let window_clone_for_tray = window.clone();
+            let window_clone_for_click = window.clone();
+
+            let _tray = TrayIconBuilder::new()
+                .menu(
+                    &MenuBuilder::new(app)
+                        .items(&[&MenuItemBuilder::with_id("show", "Show/Hide").build(app)?])
+                        .items(&[&MenuItemBuilder::with_id("quit", "Quit").build(app)?])
+                        .build()?,
+                )
+                .on_menu_event(move |_app, event| match event.id().as_ref() {
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    "show" => {
+                        let is_visible = window_clone_for_tray.is_visible().unwrap();
+                        if is_visible {
+                            window_clone_for_tray.hide().unwrap();
+                        } else {
+                            window_clone_for_tray.show().unwrap();
+                            window_clone_for_tray.set_focus().unwrap();
+                        }
+                    }
+                    _ => (),
+                })
+                .on_tray_icon_event(move |_tray, event| {
+                    if let TrayIconEvent::Click { button, .. } = event {
+                        if button == MouseButton::Left {
+                            let is_visible = window_clone_for_click.is_visible().unwrap();
+                            if is_visible {
+                                window_clone_for_click.hide().unwrap();
+                            } else {
+                                window_clone_for_click.show().unwrap();
+                            }
+                        }
+                    }
+                })
+                .icon(Image::from_path("icons/Square71x71Logo.png").unwrap())
+                .build(app)?;
+
+            //////////////////////////////////////
             
             let rt = Runtime::new().expect("Failed to create Tokio runtime");
 
