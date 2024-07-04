@@ -37,6 +37,8 @@
     "app:allow-app-show",
     "window:allow-hide",
     "window:allow-show",
-    "window:allow-set-focus"
+    "window:allow-set-focus",
+    "window:allow-is-focused",
+    "window:allow-is-visible"
   ]
 }

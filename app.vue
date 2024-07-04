@@ -33,9 +33,9 @@
         {{ truncateContent(item.content) }}
       </div>
     </OverlayScrollbarsComponent>
-    <div class="content">
+    <OverlayScrollbarsComponent class="content">
       {{ filteredHistory[selectedIndex]?.content || '' }}
-    </div>
+    </OverlayScrollbarsComponent>
     <Noise />
   </div>
 </template>
@@ -44,18 +44,19 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import Database from '@tauri-apps/plugin-sql';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { writeText, paste } from '@tauri-apps/plugin-clipboard-manager';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 import { app, window } from '@tauri-apps/api';
 import { platform } from '@tauri-apps/plugin-os';
 import { invoke } from '@tauri-apps/api/core';
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { listen } from '@tauri-apps/api/event';
 
+const db = ref(null);
 const history = ref([]);
 const searchQuery = ref('');
 const selectedIndex = ref(0);
-const isVisible = ref(false);
 const resultsContainer = ref(null);
 const selectedElement = ref(null);
 const os = platform();
@@ -127,11 +128,8 @@ const pasteSelectedItem = async () => {
   const selectedItem = filteredHistory.value[selectedIndex.value];
   if (selectedItem) {
     await writeText(selectedItem.content);
-    isVisible.value = false;
-    await app.hide();
-    await window.getCurrent().hide();
-    await window.getCurrent().setFocus();
-    await invoke('simulate_paste');
+    await hideApp();
+    await invoke("simulate_paste");
   }
 };
 
@@ -143,30 +141,31 @@ const truncateContent = (content) => {
 };
 
 onMounted(async () => {
-  const db = await Database.load('sqlite:data.db');
-  history.value = await db.select('SELECT * FROM history ORDER BY timestamp DESC');
-
-  if (await isRegistered("MetaLeft+V")) {
-    await unregister("MetaLeft+V")
-  }
-
-  await register('MetaLeft+V', (event) => {
-    if (event.state === "MetaLeft+V") {
-      if (isVisible.value == true) {
-        app.hide()
-        isVisible.value = false;
-      } else {
-        app.show()
-        isVisible.value = true;
-        selectedIndex.value = 0;
-      }
-    }
-  });
+  db.value = await Database.load('sqlite:data.db');
+  await refreshHistory();
 
   if (!await isEnabled()) {
     await enable()
   }
+
+  await listen('tauri://blur', hideApp);
 });
+
+const refreshHistory = async () => {
+  history.value = await db.value.select('SELECT * FROM history ORDER BY timestamp DESC');
+};
+
+const hideApp = async () => {
+  await app.hide();
+  await window.getCurrent().hide();
+};
+
+const showApp = async () => {
+  await refreshHistory();
+  await app.show();
+  await window.getCurrent().show();
+  selectedIndex.value = 0;
+};
 
 watch(selectedIndex, scrollToSelectedItem);
 </script>

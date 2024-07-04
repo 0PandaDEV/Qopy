@@ -90,7 +90,7 @@ body,
   flex-direction: column;
   padding-inline: 8px;
   padding-top: 14px;
-  padding-bottom: 8px;
+  padding-bottom: 49px;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -115,17 +115,27 @@ body,
 }
 
 .content {
-  position: fixed;
+  position: absolute;
   top: 53px;
   left: 284px;
   padding: 10px;
+  height: calc(100vh - 96px);
   padding-inline: 14px;
-  font-family: SFMonoRegular;
+  font-family: SFMonoRegular !important;
   font-size: 12px;
+  border-radius: 10px;
+  width: calc(100vw - 286px);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  
+  div {
+    border-radius: 10px;
+    font-family: SFMonoRegular !important;
+  }
 }
 
 .bottom-bar {
-  height: 40px;
+  height: 41px;
   width: calc(100vw - 2px);
   backdrop-filter: blur(18px);
   background-color: rgba(46, 45, 43, 0.8);
@@ -140,6 +150,7 @@ body,
   padding-inline: 12px;
   align-items: center;
   font-size: 14px;
+  border-top: 1px solid $divider;
 
   p {
     color: $text2;
