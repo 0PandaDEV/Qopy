@@ -50,13 +50,10 @@ pub fn setup(app_handle: tauri::AppHandle) {
                     if is_format_avail(formats::Bitmap.into()) {
                         match get_clipboard(formats::Bitmap) {
                             Ok(image) => {
-                                println!("Image found in clipboard");
                                 rt.block_on(async {
                                     let base64_image = STANDARD.encode(&image);
-                                    println!("Image encoded to base64");
                                     insert_content_if_not_exists(&pool, "image", base64_image)
                                         .await;
-                                    println!("Image inserted into database");
                                 });
                             }
                             Err(e) => {
@@ -65,15 +62,6 @@ pub fn setup(app_handle: tauri::AppHandle) {
                         }
                     } else {
                         println!("No image format available in clipboard");
-                    }
-
-                    match get_clipboard(formats::RawData(0)) {
-                        Ok(data) => {
-                            println!("{:?}", data);
-                        }
-                        Err(e) => {
-                            println!("Error reading raw data from clipboard: {:?}", e);
-                        }
                     }
                 }
             }
