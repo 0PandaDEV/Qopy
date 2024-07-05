@@ -52,6 +52,10 @@ body,
   background-color: transparent;
 }
 
+.os-scrollbar-horizontal{
+  display: none;
+}
+
 .bg {
   width: 750px;
   height: 474px;
@@ -120,25 +124,36 @@ body,
     padding-bottom: 8px;
     padding-top: 14px;
   }
+
+  .favicon{
+    width: 14px;
+  }
+
 }
 
 .content {
   position: absolute;
   top: 53px;
   left: 284px;
-  padding: 10px;
+  padding: 8px;
   height: calc(100vh - 96px);
-  padding-inline: 14px;
   font-family: SFMonoRegular !important;
   font-size: 12px;
   border-radius: 10px;
   width: calc(100vw - 286px);
   white-space: pre-wrap;
   word-wrap: break-word;
-
+  
   div {
     border-radius: 10px;
     font-family: SFMonoRegular !important;
+  }
+
+  .full-image{
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center;
   }
 }
 
