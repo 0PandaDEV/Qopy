@@ -26,15 +26,19 @@
     </div>
     <OverlayScrollbarsComponent class="results" ref="resultsContainer"
       :options="{ scrollbars: { autoHide: 'scroll' } }">
-      <div v-for="(item, index) in filteredHistory" :key="item.id"
-        :class="['result clothoid-corner', { 'selected': index === selectedIndex }]" @click="selectItem(index)"
-        :ref="el => { if (index === selectedIndex) selectedElement = el }">
-        <FileIcon />
-        {{ truncateContent(item.content) }}
-      </div>
+      <template v-for="(group, groupIndex) in groupedHistory" :key="groupIndex">
+        <div class="time-separator">{{ group.label }}</div>
+        <div v-for="(item, index) in group.items" :key="item.id"
+          :class="['result clothoid-corner', { 'selected': isSelected(groupIndex, index) }]"
+          @click="selectItem(groupIndex, index)"
+          :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el }">
+          <FileIcon />
+          {{ truncateContent(item.content) }}
+        </div>
+      </template>
     </OverlayScrollbarsComponent>
     <OverlayScrollbarsComponent class="content">
-      {{ filteredHistory[selectedIndex]?.content || '' }}
+      {{ selectedItem?.content || '' }}
     </OverlayScrollbarsComponent>
     <Noise />
   </div>
@@ -56,78 +60,95 @@ import { listen } from '@tauri-apps/api/event';
 const db = ref(null);
 const history = ref([]);
 const searchQuery = ref('');
-const selectedIndex = ref(0);
+const selectedGroupIndex = ref(0);
+const selectedItemIndex = ref(0);
 const resultsContainer = ref(null);
 const selectedElement = ref(null);
 const os = platform();
 
-const filteredHistory = computed(() => {
-  if (!searchQuery.value) return history.value;
-  return history.value
-    .filter(item => item.content.toLowerCase().includes(searchQuery.value.toLowerCase()))
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+const groupedHistory = computed(() => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const thisWeek = new Date(today);
+  thisWeek.setDate(thisWeek.getDate() - 7);
+  const thisYear = new Date(now.getFullYear(), 0, 1);
+
+  const groups = [
+    { label: 'Today', items: [] },
+    { label: 'Yesterday', items: [] },
+    { label: 'This Week', items: [] },
+    { label: 'This Year', items: [] },
+    { label: 'Last Year', items: [] },
+  ];
+
+  const filteredItems = searchQuery.value
+    ? history.value.filter(item => item.content.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    : history.value;
+
+  filteredItems.forEach(item => {
+    const itemDate = new Date(item.timestamp);
+    if (itemDate >= today) {
+      groups[0].items.push(item);
+    } else if (itemDate >= yesterday) {
+      groups[1].items.push(item);
+    } else if (itemDate >= thisWeek) {
+      groups[2].items.push(item);
+    } else if (itemDate >= thisYear) {
+      groups[3].items.push(item);
+    } else {
+      groups[4].items.push(item);
+    }
+  });
+
+  return groups.filter(group => group.items.length > 0);
 });
 
+const selectedItem = computed(() => {
+  const group = groupedHistory.value[selectedGroupIndex.value];
+  return group ? group.items[selectedItemIndex.value] : null;
+});
+
+const isSelected = (groupIndex, itemIndex) => {
+  return selectedGroupIndex.value === groupIndex && selectedItemIndex.value === itemIndex;
+};
+
 const searchHistory = () => {
-  selectedIndex.value = 0;
+  selectedGroupIndex.value = 0;
+  selectedItemIndex.value = 0;
 };
 
 const selectNext = () => {
-  if (selectedIndex.value < filteredHistory.value.length - 1) {
-    selectedIndex.value++;
-    scrollToSelectedItem();
+  const currentGroup = groupedHistory.value[selectedGroupIndex.value];
+  if (selectedItemIndex.value < currentGroup.items.length - 1) {
+    selectedItemIndex.value++;
+  } else if (selectedGroupIndex.value < groupedHistory.value.length - 1) {
+    selectedGroupIndex.value++;
+    selectedItemIndex.value = 0;
   }
+  scrollToSelectedItem();
 };
 
 const selectPrevious = () => {
-  if (selectedIndex.value > 0) {
-    selectedIndex.value--;
-    scrollToSelectedItem();
+  if (selectedItemIndex.value > 0) {
+    selectedItemIndex.value--;
+  } else if (selectedGroupIndex.value > 0) {
+    selectedGroupIndex.value--;
+    selectedItemIndex.value = groupedHistory.value[selectedGroupIndex.value].items.length - 1;
   }
+  scrollToSelectedItem();
 };
 
-const scrollToSelectedItem = () => {
-  nextTick(() => {
-    if (selectedElement.value && resultsContainer.value) {
-      const osInstance = resultsContainer.value.osInstance();
-      const { viewport } = osInstance.elements();
-      const element = selectedElement.value;
-
-      const viewportRect = viewport.getBoundingClientRect();
-      const elementRect = element.getBoundingClientRect();
-
-      const isAbove = elementRect.top < viewportRect.top;
-      const isBelow = elementRect.bottom > viewportRect.bottom - 8;
-
-      if (isAbove || isBelow) {
-        let scrollOffset;
-
-        if (isAbove && selectedIndex.value === 0) {
-          scrollOffset = elementRect.top - viewportRect.top - 14;
-        } else if (isAbove) {
-          scrollOffset = elementRect.top - viewportRect.top - 8;
-        } else {
-          scrollOffset = elementRect.bottom - viewportRect.bottom + 9;
-        }
-
-        viewport.scrollBy({
-          top: scrollOffset,
-          behavior: 'smooth'
-        });
-      }
-    }
-  });
-};
-
-const selectItem = (index) => {
-  selectedIndex.value = index;
+const selectItem = (groupIndex, itemIndex) => {
+  selectedGroupIndex.value = groupIndex;
+  selectedItemIndex.value = itemIndex;
   scrollToSelectedItem();
 };
 
 const pasteSelectedItem = async () => {
-  const selectedItem = filteredHistory.value[selectedIndex.value];
-  if (selectedItem) {
-    await writeText(selectedItem.content);
+  if (selectedItem.value) {
+    await writeText(selectedItem.value.content);
     await hideApp();
     await invoke("simulate_paste");
   }
@@ -164,10 +185,45 @@ const showApp = async () => {
   await refreshHistory();
   await app.show();
   await window.getCurrent().show();
-  selectedIndex.value = 0;
+  selectedGroupIndex.value = 0;
+  selectedItemIndex.value = 0;
 };
 
-watch(selectedIndex, scrollToSelectedItem);
+const scrollToSelectedItem = () => {
+  nextTick(() => {
+    if (selectedElement.value && resultsContainer.value) {
+      const osInstance = resultsContainer.value.osInstance();
+      const { viewport } = osInstance.elements();
+      const element = selectedElement.value;
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+
+      const isAbove = elementRect.top < viewportRect.top;
+      const isBelow = elementRect.bottom > viewportRect.bottom - 8;
+
+      if (isAbove || isBelow) {
+        let scrollOffset;
+
+        if (isAbove && selectedItemIndex.value === 0 && selectedGroupIndex.value === 0) {
+          scrollOffset = elementRect.top - viewportRect.top - 36;
+        } else if (isAbove) {
+          scrollOffset = elementRect.top - viewportRect.top - 8;
+        } else {
+          scrollOffset = elementRect.bottom - viewportRect.bottom + 9;
+        }
+
+        viewport.scrollBy({
+          top: scrollOffset,
+          behavior: 'smooth'
+        });
+      }
+    }
+  });
+};
+
+watch([selectedGroupIndex, selectedItemIndex], scrollToSelectedItem);
+
 </script>
 
 <style lang="scss">
