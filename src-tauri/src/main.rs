@@ -9,8 +9,24 @@ mod hotkeys;
 mod tray;
 
 use tauri::Manager;
+use tauri::PhysicalPosition;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
+
+fn center_window_on_current_monitor(window: &tauri::Window) {
+    if let Some(monitor) = window.current_monitor().unwrap() {
+        let monitor_size = monitor.size();
+        let window_size = window.outer_size().unwrap();
+
+        let x = (monitor_size.width as i32 - window_size.width as i32) / 2;
+        let y = (monitor_size.height as i32 - window_size.height as i32) / 2;
+
+        window.set_position(PhysicalPosition::new(
+            monitor.position().x + x,
+            monitor.position().y + y,
+        )).unwrap();
+    }
+}
 
 fn main() {
     tauri::Builder::default()
@@ -33,6 +49,7 @@ fn main() {
 
             if let Some(window) = app.get_window("main") {
                 let _ = window.restore_state(StateFlags::POSITION);
+                center_window_on_current_monitor(&window);
                 window.show().unwrap();
             }
 
@@ -50,6 +67,11 @@ fn main() {
             | tauri::WindowEvent::Destroyed
             | tauri::WindowEvent::Focused(false) => {
                 let _ = AppHandleExt::save_window_state(app.app_handle(), StateFlags::POSITION);
+            }
+            tauri::WindowEvent::Focused(true) => {
+                if let Some(window) = app.get_window("main") {
+                    center_window_on_current_monitor(&window);
+                }
             }
             _ => {}
         })
