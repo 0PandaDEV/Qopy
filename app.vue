@@ -6,7 +6,7 @@
     <div class="bottom-bar">
       <div class="left">
         <img src="/Logo.svg" alt="">
-        <p>Clipboard Manager</p>
+        <p>Qopy</p>
       </div>
       <div class="right">
         <div class="paste" @click="pasteSelectedItem">

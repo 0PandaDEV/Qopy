@@ -475,28 +475,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clipboard-manager"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "base64 0.22.1",
- "image 0.25.1",
- "rand 0.8.5",
- "rdev",
- "serde",
- "serde_json",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-os",
- "tauri-plugin-sql",
- "tauri-plugin-window-state",
- "tokio",
-]
-
-[[package]]
 name = "clipboard-win"
 version = "5.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3152,6 +3130,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "qopy"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "base64 0.22.1",
+ "image 0.25.1",
+ "rand 0.8.5",
+ "rdev",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-os",
+ "tauri-plugin-sql",
+ "tauri-plugin-window-state",
+ "tokio",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 {
-  "productName": "Clipboard Manager",
+  "productName": "Qopy",
   "version": "0.1.0",
-  "identifier": "net.pandadev.clipboard-manager",
+  "identifier": "net.pandadev.qopy",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Clipboard Manager",
+        "title": "Qopy",
         "titleBarStyle": "Overlay",
         "fullscreen": false,
         "resizable": false,

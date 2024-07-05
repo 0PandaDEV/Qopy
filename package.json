@@ -13,7 +13,7 @@
     "@tauri-apps/api": "^2.0.0-beta.14",
     "@tauri-apps/cli": "^2.0.0-beta.21",
     "@tauri-apps/plugin-autostart": "^2.0.0-beta.6",
-    "@tauri-apps/plugin-clipboard-manager": "^2.1.0-beta.4",
+    "@tauri-apps/plugin-qopy": "^2.1.0-beta.4",
     "@tauri-apps/plugin-global-shortcut": "^2.0.0-beta.6",
     "@tauri-apps/plugin-os": "^2.0.0-beta.6",
     "@tauri-apps/plugin-sql": "^2.0.0-beta.6",
