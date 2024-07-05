@@ -69,16 +69,22 @@ const os = platform();
 const groupedHistory = computed(() => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const thisWeek = new Date(today);
-  thisWeek.setDate(thisWeek.getDate() - 7);
-  const thisYear = new Date(now.getFullYear(), 0, 1);
+
+  const getWeekNumber = (d) => {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  };
+
+  const thisWeek = getWeekNumber(now);
+  const thisYear = now.getFullYear();
 
   const groups = [
     { label: 'Today', items: [] },
     { label: 'Yesterday', items: [] },
     { label: 'This Week', items: [] },
+    { label: 'Last Week', items: [] },
     { label: 'This Year', items: [] },
     { label: 'Last Year', items: [] },
   ];
@@ -89,16 +95,21 @@ const groupedHistory = computed(() => {
 
   filteredItems.forEach(item => {
     const itemDate = new Date(item.timestamp);
-    if (itemDate >= today) {
+    const itemWeek = getWeekNumber(itemDate);
+    const itemYear = itemDate.getFullYear();
+
+    if (itemDate.toDateString() === today.toDateString()) {
       groups[0].items.push(item);
-    } else if (itemDate >= yesterday) {
+    } else if (itemDate.toDateString() === new Date(today.getTime() - 86400000).toDateString()) {
       groups[1].items.push(item);
-    } else if (itemDate >= thisWeek) {
+    } else if (itemYear === thisYear && itemWeek === thisWeek) {
       groups[2].items.push(item);
-    } else if (itemDate >= thisYear) {
+    } else if (itemYear === thisYear && itemWeek === thisWeek - 1) {
       groups[3].items.push(item);
-    } else {
+    } else if (itemYear === thisYear) {
       groups[4].items.push(item);
+    } else {
+      groups[5].items.push(item);
     }
   });
 
