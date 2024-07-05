@@ -33,6 +33,7 @@
     "window:allow-show",
     "window:allow-set-focus",
     "window:allow-is-focused",
-    "window:allow-is-visible"
+    "window:allow-is-visible",
+    "clipboard-manager:allow-write-text" 
   ]
 }

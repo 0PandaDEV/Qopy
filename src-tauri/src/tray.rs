@@ -2,13 +2,15 @@ use tauri::{
     Manager,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    image::Image,
 };
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = app.get_window("main").unwrap();
     let window_clone_for_tray = window.clone();
     let window_clone_for_click = window.clone();
+
+    let icon_bytes = include_bytes!("../icons/Square71x71Logo.png");
+    let icon = tauri::image::Image::from_bytes(icon_bytes).unwrap();
 
     let _tray = TrayIconBuilder::new()
         .menu(
@@ -44,7 +46,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         })
-        .icon(Image::from_path("icons/Square71x71Logo.png").unwrap())
+        .icon(icon)
         .build(app)?;
 
     Ok(())
