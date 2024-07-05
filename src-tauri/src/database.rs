@@ -45,8 +45,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 .take(16)
                 .map(char::from)
                 .collect();
-            sqlx::query("INSERT INTO history (id, content_type, content) VALUES (?, text, ?)")
+            sqlx::query("INSERT INTO history (id, content_type, content) VALUES (?, ?, ?)")
                 .bind(id)
+                .bind("text")
                 .bind("Welcome to your clipboard history!")
                 .execute(&pool)
                 .await
