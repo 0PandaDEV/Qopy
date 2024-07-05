@@ -97,7 +97,7 @@ const scrollToSelectedItem = () => {
       const elementRect = element.getBoundingClientRect();
 
       const isAbove = elementRect.top < viewportRect.top;
-      const isBelow = elementRect.bottom > viewportRect.bottom - 48;
+      const isBelow = elementRect.bottom > viewportRect.bottom - 8;
 
       if (isAbove || isBelow) {
         let scrollOffset;
@@ -107,7 +107,7 @@ const scrollToSelectedItem = () => {
         } else if (isAbove) {
           scrollOffset = elementRect.top - viewportRect.top - 8;
         } else {
-          scrollOffset = elementRect.bottom - viewportRect.bottom + 48;
+          scrollOffset = elementRect.bottom - viewportRect.bottom + 9;
         }
 
         viewport.scrollBy({

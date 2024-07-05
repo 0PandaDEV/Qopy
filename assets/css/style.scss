@@ -53,8 +53,8 @@ body,
 }
 
 .bg {
-  width: 100vw;
-  height: 100vh;
+  width: 750px;
+  height: 474px;
   background-color: $primary;
   border: 1px solid $divider;
   border-radius: 12px;
@@ -84,13 +84,13 @@ body,
   width: 284px;
   top: 53px;
   left: 0;
-  height: calc(100vh - 55px);
+  height: calc(100vh - 96px);
   border-right: 1px solid $divider;
   display: flex;
   flex-direction: column;
   padding-inline: 8px;
   padding-top: 14px;
-  padding-bottom: 49px;
+  padding-bottom: 8px;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -127,7 +127,7 @@ body,
   width: calc(100vw - 286px);
   white-space: pre-wrap;
   word-wrap: break-word;
-  
+
   div {
     border-radius: 10px;
     font-family: SFMonoRegular !important;
@@ -136,14 +136,14 @@ body,
 
 .bottom-bar {
   height: 41px;
-  width: calc(100vw - 2px);
+  width: calc(100vw - 3px);
   backdrop-filter: blur(18px);
   background-color: rgba(46, 45, 43, 0.8);
   position: fixed;
-  bottom: 1px;
+  bottom: 2px;
   left: 1px;
   z-index: 100;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 12px 12px;
   display: flex;
   flex-direction: row;
   justify-content: space-between;

@@ -1,15 +1,15 @@
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use clipboard_win::{formats, get_clipboard, is_format_avail};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use rdev::{listen, simulate, EventType, Key};
+use sqlx::SqlitePool;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
-use arboard::{Clipboard, ImageData};
-use sqlx::SqlitePool;
 use tokio::runtime::Runtime;
-use rand::{thread_rng, Rng};
-use rand::distributions::Alphanumeric;
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
 
 #[tauri::command]
 pub fn simulate_paste() {
@@ -38,28 +38,41 @@ pub fn setup(app_handle: tauri::AppHandle) {
             }
             EventType::KeyRelease(Key::KeyC) => {
                 if rx.try_recv().is_ok() {
-                    let mut clipboard = Clipboard::new().unwrap();
                     let pool = app_handle.state::<SqlitePool>();
                     let rt = app_handle.state::<Runtime>();
 
-                    if let Ok(content) = clipboard.get_text() {
+                    if let Ok(content) = get_clipboard(formats::Unicode) {
                         rt.block_on(async {
                             insert_content_if_not_exists(&pool, "text", content).await;
                         });
                     }
 
-                    match clipboard.get_image() {
-                        Ok(image) => {
-                            println!("Image found in clipboard");
-                            rt.block_on(async {
-                                let base64_image = STANDARD.encode(&image.bytes);
-                                println!("Image encoded to base64");
-                                insert_content_if_not_exists(&pool, "image", base64_image).await;
-                                println!("Image inserted into database");
-                            });
-                        },
+                    if is_format_avail(formats::Bitmap.into()) {
+                        match get_clipboard(formats::Bitmap) {
+                            Ok(image) => {
+                                println!("Image found in clipboard");
+                                rt.block_on(async {
+                                    let base64_image = STANDARD.encode(&image);
+                                    println!("Image encoded to base64");
+                                    insert_content_if_not_exists(&pool, "image", base64_image)
+                                        .await;
+                                    println!("Image inserted into database");
+                                });
+                            }
+                            Err(e) => {
+                                println!("Error reading image from clipboard: {:?}", e);
+                            }
+                        }
+                    } else {
+                        println!("No image format available in clipboard");
+                    }
+
+                    match get_clipboard(formats::RawData(0)) {
+                        Ok(data) => {
+                            println!("{:?}", data);
+                        }
                         Err(e) => {
-                            println!("Error reading image from clipboard: {:?}", e);
+                            println!("Error reading raw data from clipboard: {:?}", e);
                         }
                     }
                 }
@@ -71,13 +84,14 @@ pub fn setup(app_handle: tauri::AppHandle) {
 }
 
 async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String) {
-    // Check if content already exists
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM history WHERE content_type = ? AND content = ?)")
-        .bind(content_type)
-        .bind(&content)
-        .fetch_one(pool)
-        .await
-        .unwrap_or(false);
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM history WHERE content_type = ? AND content = ?)",
+    )
+    .bind(content_type)
+    .bind(&content)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
 
     if !exists {
         let id: String = thread_rng()

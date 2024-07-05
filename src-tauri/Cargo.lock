@@ -3146,6 +3146,7 @@ version = "0.1.0"
 dependencies = [
  "arboard",
  "base64 0.22.1",
+ "clipboard-win",
  "image 0.25.1",
  "rand 0.8.5",
  "rdev",
