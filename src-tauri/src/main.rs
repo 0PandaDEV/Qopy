@@ -3,9 +3,9 @@
     windows_subsystem = "windows"
 )]
 
-mod clipboard_listener;
+mod clipboard;
 mod database;
-mod global_shortcut;
+mod hotkeys;
 mod tray;
 
 use tauri::Manager;
@@ -20,16 +20,15 @@ fn main() {
             Some(vec![]),
         ))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            global_shortcut::setup(app_handle.clone());
+            hotkeys::setup(app_handle.clone());
             tray::setup(app)?;
             database::setup(app)?;
-            clipboard_listener::setup(app_handle);
+            clipboard::setup(app_handle);
 
             if let Some(window) = app.get_window("main") {
                 let _ = window.restore_state(StateFlags::POSITION);
@@ -46,7 +45,7 @@ fn main() {
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![clipboard_listener::simulate_paste])
+        .invoke_handler(tauri::generate_handler![clipboard::simulate_paste])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

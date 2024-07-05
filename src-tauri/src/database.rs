@@ -30,6 +30,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS history (
                 id TEXT PRIMARY KEY,
+                content_type TEXT NOT NULL,
                 content TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
@@ -44,7 +45,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 .take(16)
                 .map(char::from)
                 .collect();
-            sqlx::query("INSERT INTO history (id, content) VALUES (?, ?)")
+            sqlx::query("INSERT INTO history (id, content_type, content) VALUES (?, text, ?)")
                 .bind(id)
                 .bind("Welcome to your clipboard history!")
                 .execute(&pool)

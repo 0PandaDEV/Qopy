@@ -11,7 +11,6 @@ tauri-build = { version = "2.0.0-beta.18", features = [] }
 
 [dependencies]
 tauri = { version = "2.0.0-beta.23", features = ["unstable", "tray-icon", "image-png"] }
-tauri-plugin-clipboard-manager = "2.1.0-beta.5"
 tauri-plugin-window-state = "2.0.0-beta.10"
 tauri-plugin-sql = {version = "2.0.0-beta.8", features = ["sqlite"] }
 tauri-plugin-global-shortcut = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2" }
@@ -23,3 +22,6 @@ tokio = { version = "1.0", features = ["full"] }
 serde_json = "1.0"
 rdev = "0.5.3"
 rand = "0.8"
+base64 = "0.22.1"
+arboard = "3.4.0"
+image = "0.25.1"
