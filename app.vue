@@ -59,6 +59,7 @@ import { platform } from '@tauri-apps/plugin-os';
 import { invoke } from '@tauri-apps/api/core';
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from '@tauri-apps/api/event';
+import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 
 const db = ref(null);
 const history = ref([]);
@@ -212,6 +213,23 @@ onMounted(async () => {
   if (!await isEnabled()) {
     await enable()
   }
+
+  if (await isRegistered("MetaLeft+V")) {
+    await unregister("MetaLeft+V")
+  }
+
+  await register('MetaLeft+V', (event) => {
+    if (event.state === "MetaLeft+V") {
+      if (isVisible.value == true) {
+        app.hide()
+        isVisible.value = false;
+      } else {
+        app.show()
+        isVisible.value = true;
+        selectedIndex.value = 0;
+      }
+    }
+  });
 
   await listen('tauri://blur', hideApp);
   await listen('tauri://focus', focusSearchInput);
