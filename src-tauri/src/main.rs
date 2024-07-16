@@ -50,15 +50,15 @@ fn main() {
             if let Some(window) = app.get_window("main") {
                 let _ = window.restore_state(StateFlags::POSITION);
                 center_window_on_current_monitor(&window);
-                window.show().unwrap();
+                window.hide().unwrap();
             }
 
-            #[cfg(dev)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-                window.close_devtools();
-            }
+            // #[cfg(dev)]
+            // {
+            //     let window = app.get_webview_window("main").unwrap();
+            //     window.open_devtools();
+            //     window.close_devtools();
+            // }
 
             Ok(())
         })

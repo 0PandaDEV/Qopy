@@ -32,7 +32,7 @@
           :class="['result clothoid-corner', { 'selected': isSelected(groupIndex, index) }]"
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el }">
-          <img v-if="isUrl(item.content)" :src="getFavicon(item.content)" alt="Favicon" class="favicon">
+          <img v-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon)" alt="Favicon" class="favicon">
           <FileIcon v-else />
           <img v-if="item.type === 'image'" :src="item.content" alt="Image" class="preview-image">
           <span v-else>{{ truncateContent(item.content) }}</span>
@@ -178,8 +178,12 @@ const truncateContent = (content) => {
 };
 
 const isUrl = (str) => {
-  const urlPattern = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
-  return urlPattern.test(str);
+  try {
+    new URL(str);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 const isYoutubeWatchUrl = (url) => {
@@ -191,19 +195,32 @@ const getYoutubeThumbnail = (url) => {
   return `https://img.youtube.com/vi/${videoId}/0.jpg`;
 };
 
-const getFavicon = (url) => {
-  const domain = url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+const getFaviconFromDb = (favicon) => {
+  return `data:image/png;base64,${favicon}`;
 };
 
 const refreshHistory = async () => {
-  const rawHistory = await db.value.select('SELECT * FROM history ORDER BY timestamp DESC');
-  history.value = rawHistory.map(item => {
+  history.value = [];
+  await loadMoreHistory();
+};
+
+const loadMoreHistory = async () => {
+  const lastTimestamp = history.value.length > 0 ? history.value[history.value.length - 1].timestamp : '9999-12-31T23:59:59Z';
+  const batchSize = 100;
+
+  const rawHistory = await db.value.select(
+    'SELECT * FROM history WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ?',
+    [lastTimestamp, batchSize]
+  );
+
+  const newItems = rawHistory.map(item => {
     if (item.type === 'image' && !item.content.startsWith('data:image')) {
       return { ...item, content: `data:image/png;base64,${item.content}` };
     }
     return item;
   });
+
+  history.value = [...history.value, ...newItems];
 };
 
 onMounted(async () => {
@@ -234,6 +251,13 @@ onMounted(async () => {
   await listen('tauri://blur', hideApp);
   await listen('tauri://focus', focusSearchInput);
   focusSearchInput();
+
+  const resultsElement = resultsContainer.value.$el;
+  resultsElement.addEventListener('scroll', () => {
+    if (resultsElement.scrollTop + resultsElement.clientHeight >= resultsElement.scrollHeight - 100) {
+      loadMoreHistory();
+    }
+  });
 });
 
 const hideApp = async () => {
@@ -242,6 +266,7 @@ const hideApp = async () => {
 };
 
 const showApp = async () => {
+  history.value = [];
   await refreshHistory();
   await app.show();
   await window.getCurrent().show();

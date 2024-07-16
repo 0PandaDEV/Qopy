@@ -1,6 +1,5 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use clipboard_win::{formats, get_clipboard, is_format_avail};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rdev::{listen, simulate, EventType, Key};
@@ -10,6 +9,10 @@ use std::thread;
 use std::time::Duration;
 use tauri::Manager;
 use tokio::runtime::Runtime;
+use url::Url;
+use reqwest::Client;
+use arboard::Clipboard;
+use regex::Regex;
 
 #[tauri::command]
 pub fn simulate_paste() {
@@ -30,6 +33,7 @@ pub fn simulate_paste() {
 
 pub fn setup(app_handle: tauri::AppHandle) {
     let (tx, rx) = mpsc::channel();
+    let mut is_processing = false;
 
     std::thread::spawn(move || {
         listen(move |event| match event.event_type {
@@ -37,33 +41,30 @@ pub fn setup(app_handle: tauri::AppHandle) {
                 let _ = tx.send(true);
             }
             EventType::KeyRelease(Key::KeyC) => {
-                if rx.try_recv().is_ok() {
+                if rx.try_recv().is_ok() && !is_processing {
+                    is_processing = true;
                     let pool = app_handle.state::<SqlitePool>();
                     let rt = app_handle.state::<Runtime>();
 
-                    if let Ok(content) = get_clipboard(formats::Unicode) {
+                    let mut clipboard = Clipboard::new().unwrap();
+
+                    if let Ok(content) = clipboard.get_text() {
                         rt.block_on(async {
                             insert_content_if_not_exists(&pool, "text", content).await;
                         });
                     }
 
-                    if is_format_avail(formats::Bitmap.into()) {
-                        match get_clipboard(formats::Bitmap) {
-                            Ok(image) => {
-                                rt.block_on(async {
-                                    let base64_image = STANDARD.encode(&image);
-                                    insert_content_if_not_exists(&pool, "image", base64_image)
-                                        .await;
-                                });
-                            }
-                            Err(e) => {
-                                println!("Error reading image from clipboard: {:?}", e);
-                            }
-                        }
-                    } else {
-                        println!("No image format available in clipboard");
+                    if let Ok(image) = clipboard.get_image() {
+                        rt.block_on(async {
+                            let base64_image = STANDARD.encode(&image.bytes);
+                            insert_content_if_not_exists(&pool, "image", base64_image).await;
+                        });
                     }
+                    is_processing = false;
                 }
+            }
+            EventType::KeyRelease(Key::ControlLeft | Key::ControlRight) => {
+                is_processing = false;
             }
             _ => {}
         })
@@ -72,27 +73,74 @@ pub fn setup(app_handle: tauri::AppHandle) {
 }
 
 async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String) {
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM history WHERE content_type = ? AND content = ?)",
+    let last_content: Option<String> = sqlx::query_scalar(
+        "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
     )
     .bind(content_type)
-    .bind(&content)
     .fetch_one(pool)
     .await
-    .unwrap_or(false);
+    .unwrap_or(None);
 
-    if !exists {
+    if last_content.as_deref() != Some(&content) {
         let id: String = thread_rng()
             .sample_iter(&Alphanumeric)
             .take(16)
             .map(char::from)
             .collect();
 
-        let _ = sqlx::query("INSERT INTO history (id, content_type, content) VALUES (?, ?, ?)")
+        let url_regex = Regex::new(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)").unwrap();
+        let favicon_base64 = if content_type == "text" {
+            if let Some(url_match) = url_regex.find(&content) {
+                let url_str = url_match.as_str();
+                match Url::parse(url_str) {
+                    Ok(url) => {
+                        match fetch_favicon_as_base64(url).await {
+                            Ok(Some(favicon)) => {
+                                println!("Favicon fetched successfully.");
+                                Some(favicon)
+                            },
+                            Ok(None) => {
+                                println!("No favicon found.");
+                                None
+                            },
+                            Err(e) => {
+                                println!("Failed to fetch favicon: {}", e);
+                                None
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("Failed to parse URL: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?)")
             .bind(id)
             .bind(content_type)
             .bind(content)
+            .bind(favicon_base64)
             .execute(pool)
             .await;
+    }
+}
+
+async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, reqwest::Error> {
+    println!("Checking for favicon at URL: {}", url.origin().ascii_serialization());
+    let client = Client::new();
+    let favicon_url = format!("https://icon.horse/icon/{}", url.host_str().unwrap());
+    let response = client.get(&favicon_url).send().await?;
+
+    if response.status().is_success() {
+        let bytes = response.bytes().await?;
+        Ok(Some(STANDARD.encode(&bytes)))
+    } else {
+        Ok(None)
     }
 }

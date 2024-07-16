@@ -32,6 +32,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 id TEXT PRIMARY KEY,
                 content_type TEXT NOT NULL,
                 content TEXT NOT NULL,
+                favicon TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )"
         )
@@ -45,7 +46,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 .take(16)
                 .map(char::from)
                 .collect();
-            sqlx::query("INSERT INTO history (id, content_type, content) VALUES (?, ?, ?)")
+            sqlx::query("INSERT INTO history (id, content_type, content, timestamp) VALUES (?, ?, ?, CURRENT_TIMESTAMP)")
                 .bind(id)
                 .bind("text")
                 .bind("Welcome to your clipboard history!")
