@@ -32,11 +32,10 @@
           :class="['result clothoid-corner', { 'selected': isSelected(groupIndex, index) }]"
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el }">
-          <img v-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon)" alt="Favicon" class="favicon">
-          <FileIcon v-else />
-          <img v-if="item.content_type === 'image'"
-            :src="item.content.startsWith('data:image') ? item.content : `data:image/bmp;base64,${item.content}`"
-            alt="Image" class="preview-image">
+          <img v-if="item.content_type === 'image'" :src="`data:image/bmp;base64,${item.content}`" alt="Image" class="favicon-image">
+          <img v-else-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon)" alt="Favicon" class="favicon">
+          <FileIcon class="file" v-else />
+          <span v-if="item.content_type === 'image'">Image ({{ getImageDimensions(item.content) }})</span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
       </template>
@@ -44,7 +43,7 @@
     <OverlayScrollbarsComponent class="content">
       <img v-if="selectedItem?.content_type === 'image'"
         :src="selectedItem.content.startsWith('data:image') ? selectedItem?.content : `data:image/bmp;base64,${selectedItem?.content}`"
-        alt="Image" class="full-image">
+        alt="Image" class="image">
       <img v-else-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)"
         alt="YouTube Thumbnail" class="full-image">
       <span v-else>{{ selectedItem?.content || '' }}</span>
@@ -192,16 +191,27 @@ const isUrl = (str) => {
 };
 
 const isYoutubeWatchUrl = (url) => {
-  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/watch\?v=[\w-]+/.test(url);
+  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/watch\?v=[\w-]+/.test(url) || /^(https?:\/\/)?(www\.)?youtu\.be\/[\w-]+/.test(url);
 };
 
 const getYoutubeThumbnail = (url) => {
-  const videoId = url.match(/[?&]v=([^&]+)/)[1];
+  let videoId;
+  if (url.includes('youtu.be')) {
+    videoId = url.split('youtu.be/')[1];
+  } else {
+    videoId = url.match(/[?&]v=([^&]+)/)[1];
+  }
   return `https://img.youtube.com/vi/${videoId}/0.jpg`;
 };
 
 const getFaviconFromDb = (favicon) => {
   return `data:image/png;base64,${favicon}`;
+};
+
+const getImageDimensions = (base64Image) => {
+  const img = new Image();
+  img.src = `data:image/bmp;base64,${base64Image}`;
+  return `${img.width}x${img.height}`;
 };
 
 const refreshHistory = async () => {
