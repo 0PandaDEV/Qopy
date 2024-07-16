@@ -248,7 +248,6 @@ onMounted(async () => {
     }
   });
 
-  await listen('tauri://blur', hideApp);
   await listen('tauri://focus', focusSearchInput);
   focusSearchInput();
 
@@ -262,7 +261,7 @@ onMounted(async () => {
 
 const hideApp = async () => {
   await app.hide();
-  await window.getCurrent().hide();
+  await window.getCurrentWindow().hide();
 };
 
 const showApp = async () => {

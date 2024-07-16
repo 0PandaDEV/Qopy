@@ -11,7 +11,6 @@ mod tray;
 use tauri::Manager;
 use tauri::PhysicalPosition;
 use tauri_plugin_autostart::MacosLauncher;
-use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 fn center_window_on_current_monitor(window: &tauri::Window) {
     if let Some(monitor) = window.current_monitor().unwrap() {
@@ -33,7 +32,6 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -48,30 +46,28 @@ fn main() {
             clipboard::setup(app_handle);
 
             if let Some(window) = app.get_window("main") {
-                let _ = window.restore_state(StateFlags::POSITION);
                 center_window_on_current_monitor(&window);
                 window.hide().unwrap();
             }
 
-            // #[cfg(dev)]
-            // {
-            //     let window = app.get_webview_window("main").unwrap();
-            //     window.open_devtools();
-            //     window.close_devtools();
-            // }
+            #[cfg(dev)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+                window.close_devtools();
+            }
 
             Ok(())
         })
         .on_window_event(|app, event| match event {
-            tauri::WindowEvent::CloseRequested { .. }
-            | tauri::WindowEvent::Destroyed
-            | tauri::WindowEvent::Focused(false) => {
-                let _ = AppHandleExt::save_window_state(app.app_handle(), StateFlags::POSITION);
+            tauri::WindowEvent::Focused(false) => {
+                println!("Window lost focus");
+                if let Some(window) = app.get_window("main") {
+                    window.hide().unwrap();
+                }
             }
             tauri::WindowEvent::Focused(true) => {
-                if let Some(window) = app.get_window("main") {
-                    center_window_on_current_monitor(&window);
-                }
+                println!("Window gained focus");
             }
             _ => {}
         })
