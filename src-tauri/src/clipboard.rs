@@ -13,6 +13,9 @@ use url::Url;
 use reqwest::Client;
 use arboard::Clipboard;
 use regex::Regex;
+use image::ImageFormat;
+use image::DynamicImage;
+use std::io::Cursor;
 
 #[tauri::command]
 pub fn simulate_paste() {
@@ -33,43 +36,56 @@ pub fn simulate_paste() {
 
 pub fn setup(app_handle: tauri::AppHandle) {
     let (tx, rx) = mpsc::channel();
-    let mut is_processing = false;
+    let is_processing = std::sync::Arc::new(std::sync::Mutex::new(false));
 
-    std::thread::spawn(move || {
-        listen(move |event| match event.event_type {
-            EventType::KeyPress(Key::ControlLeft | Key::ControlRight) => {
-                let _ = tx.send(true);
-            }
-            EventType::KeyRelease(Key::KeyC) => {
-                if rx.try_recv().is_ok() && !is_processing {
-                    is_processing = true;
-                    let pool = app_handle.state::<SqlitePool>();
-                    let rt = app_handle.state::<Runtime>();
-
-                    let mut clipboard = Clipboard::new().unwrap();
-
-                    if let Ok(content) = clipboard.get_text() {
-                        rt.block_on(async {
-                            insert_content_if_not_exists(&pool, "text", content).await;
-                        });
-                    }
-
-                    if let Ok(image) = clipboard.get_image() {
-                        rt.block_on(async {
-                            let base64_image = STANDARD.encode(&image.bytes);
-                            insert_content_if_not_exists(&pool, "image", base64_image).await;
-                        });
-                    }
-                    is_processing = false;
+    std::thread::spawn({
+        let is_processing = std::sync::Arc::clone(&is_processing);
+        move || {
+            listen(move |event| match event.event_type {
+                EventType::KeyPress(Key::ControlLeft | Key::ControlRight) => {
+                    let _ = tx.send(true);
                 }
-            }
-            EventType::KeyRelease(Key::ControlLeft | Key::ControlRight) => {
-                is_processing = false;
-            }
-            _ => {}
-        })
-        .unwrap();
+                EventType::KeyRelease(Key::KeyC) => {
+                    let mut is_processing = is_processing.lock().unwrap();
+                    if rx.try_recv().is_ok() && !*is_processing {
+                        *is_processing = true;
+                        let pool = app_handle.state::<SqlitePool>();
+                        let rt = app_handle.state::<Runtime>();
+
+                        let mut clipboard = Clipboard::new().unwrap();
+
+                        if let Ok(content) = clipboard.get_text() {
+                            rt.block_on(async {
+                                insert_content_if_not_exists(&pool, "text", content).await;
+                            });
+                        }
+
+                        if let Ok(image) = clipboard.get_image() {
+                            rt.block_on(async {
+                                let png_image = convert_to_png(image.bytes.to_vec());
+                                let base64_image = STANDARD.encode(&png_image);
+                                insert_content_if_not_exists(&pool, "image", base64_image).await;
+                            });
+                        }
+                        *is_processing = false;
+                    }
+                }
+                EventType::KeyRelease(Key::ControlLeft | Key::ControlRight) => {
+                    let mut is_processing = is_processing.lock().unwrap();
+                    *is_processing = false;
+                }
+                _ => {}
+            })
+            .unwrap();
+        }
     });
+}
+
+fn convert_to_png(image_bytes: Vec<u8>) -> Vec<u8> {
+    let img = image::load_from_memory(&image_bytes).unwrap();
+    let mut png_bytes: Vec<u8> = Vec::new();
+    img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png).unwrap();
+    png_bytes
 }
 
 async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String) {

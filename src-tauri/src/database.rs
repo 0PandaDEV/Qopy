@@ -40,6 +40,13 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Failed to create table");
 
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_timestamp ON history (timestamp)"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create index");
+
         if is_new_db {
             let id: String = thread_rng()
                 .sample_iter(&Alphanumeric)

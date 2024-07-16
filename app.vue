@@ -1,8 +1,8 @@
 <template>
   <div class="bg" @keydown.down.prevent="selectNext" @keydown.up.prevent="selectPrevious"
     @keydown.enter.prevent="pasteSelectedItem" @keydown.esc="hideApp" tabindex="0">
-    <input ref="searchInput" v-model="searchQuery" @input="searchHistory" autocorrect="off" autocapitalize="off" spellcheck="false"
-      class="search" type="text" placeholder="Type to filter entries...">
+    <input ref="searchInput" v-model="searchQuery" @input="searchHistory" autocorrect="off" autocapitalize="off"
+      spellcheck="false" class="search" type="text" placeholder="Type to filter entries...">
     <div class="bottom-bar">
       <div class="left">
         <img src="/Logo.svg" alt="">
@@ -34,14 +34,19 @@
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el }">
           <img v-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon)" alt="Favicon" class="favicon">
           <FileIcon v-else />
-          <img v-if="item.type === 'image'" :src="item.content" alt="Image" class="preview-image">
+          <img v-if="item.content_type === 'image'"
+            :src="item.content.startsWith('data:image') ? item.content : `data:image/bmp;base64,${item.content}`"
+            alt="Image" class="preview-image">
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
       </template>
     </OverlayScrollbarsComponent>
     <OverlayScrollbarsComponent class="content">
-      <img v-if="selectedItem?.type === 'image'" :src="selectedItem.content" alt="Image" class="full-image">
-      <img v-else-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)" alt="YouTube Thumbnail" class="full-image">
+      <img v-if="selectedItem?.content_type === 'image'"
+        :src="selectedItem.content.startsWith('data:image') ? selectedItem?.content : `data:image/bmp;base64,${selectedItem?.content}`"
+        alt="Image" class="full-image">
+      <img v-else-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)"
+        alt="YouTube Thumbnail" class="full-image">
       <span v-else>{{ selectedItem?.content || '' }}</span>
     </OverlayScrollbarsComponent>
     <Noise />
@@ -204,6 +209,15 @@ const refreshHistory = async () => {
   await loadMoreHistory();
 };
 
+const onScroll = () => {
+  const resultsElement = resultsContainer.value.$el;
+  console.log('Scroll position:', resultsElement.scrollTop, 'Client height:', resultsElement.clientHeight, 'Scroll height:', resultsElement.scrollHeight);
+  if (resultsElement.scrollTop + resultsElement.clientHeight >= resultsElement.scrollHeight - 10) {
+    console.log('Scrolled to the end, loading more history...');
+    loadMoreHistory();
+  }
+};
+
 const loadMoreHistory = async () => {
   const lastTimestamp = history.value.length > 0 ? history.value[history.value.length - 1].timestamp : '9999-12-31T23:59:59Z';
   const batchSize = 100;
@@ -215,17 +229,28 @@ const loadMoreHistory = async () => {
 
   const newItems = rawHistory.map(item => {
     if (item.type === 'image' && !item.content.startsWith('data:image')) {
-      return { ...item, content: `data:image/png;base64,${item.content}` };
+      return { ...item, content: `data:image/bmp;base64,${item.content}` };
     }
     return item;
   });
 
   history.value = [...history.value, ...newItems];
+  console.log('Loaded more history:', newItems.length, 'items');
+  if (newItems.length < batchSize) {
+    resultsContainer.value.$el.removeEventListener('scroll', onScroll);
+  }
 };
 
 onMounted(async () => {
   db.value = await Database.load('sqlite:data.db');
-  await refreshHistory();
+
+  await listen('tauri://focus', focusSearchInput);
+  focusSearchInput();
+
+  const resultsElement = resultsContainer.value.$el;
+  resultsElement.addEventListener('scroll', onScroll);
+  console.log('Scroll event listener added');
+  onScroll();
 
   if (!await isEnabled()) {
     await enable()
@@ -243,20 +268,11 @@ onMounted(async () => {
       } else {
         app.show()
         isVisible.value = true;
-        selectedIndex.value = 0;
+        selectedItemIndex.value = 0;
       }
     }
   });
 
-  await listen('tauri://focus', focusSearchInput);
-  focusSearchInput();
-
-  const resultsElement = resultsContainer.value.$el;
-  resultsElement.addEventListener('scroll', () => {
-    if (resultsElement.scrollTop + resultsElement.clientHeight >= resultsElement.scrollHeight - 100) {
-      loadMoreHistory();
-    }
-  });
 });
 
 const hideApp = async () => {

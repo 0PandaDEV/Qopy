@@ -10,7 +10,7 @@ rust-version = "1.70"
 tauri-build = { version = "2.0.0-beta.18", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-beta.23", features = ["unstable", "tray-icon", "image-png"] }
+tauri = { version = "2.0.0-beta.23", features = ["tray-icon", "image-png"] }
 tauri-plugin-sql = {version = "2.0.0-beta.8", features = ["sqlite"] }
 tauri-plugin-clipboard-manager = "2.1.0-beta.5"
 tauri-plugin-global-shortcut = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2" }
@@ -27,6 +27,4 @@ arboard = "3.4.0"
 image = "0.25.1"
 reqwest = { version = "0.12.5", features = ["blocking"] }
 url = "2.5.2"
-log = "0.4"
-simplelog = "0.12.2"
 regex = "1"

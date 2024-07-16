@@ -29,7 +29,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
                     println!("V key pressed");
                     if meta_pressed {
                         println!("Meta+V detected");
-                        let window = app_handle.get_window("main").unwrap();
+                        let window = app_handle.get_webview_window("main").unwrap();
                         let is_visible = window.is_visible().unwrap();
                         if is_visible {
                             println!("Hiding window");

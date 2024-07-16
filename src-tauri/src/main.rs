@@ -12,7 +12,7 @@ use tauri::Manager;
 use tauri::PhysicalPosition;
 use tauri_plugin_autostart::MacosLauncher;
 
-fn center_window_on_current_monitor(window: &tauri::Window) {
+fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
     if let Some(monitor) = window.current_monitor().unwrap() {
         let monitor_size = monitor.size();
         let window_size = window.outer_size().unwrap();
@@ -43,9 +43,9 @@ fn main() {
             hotkeys::setup(app_handle.clone());
             tray::setup(app)?;
             database::setup(app)?;
-            clipboard::setup(app_handle);
+            clipboard::setup(app_handle.clone());
 
-            if let Some(window) = app.get_window("main") {
+            if let Some(window) = app.get_webview_window("main") {
                 center_window_on_current_monitor(&window);
                 window.hide().unwrap();
             }
@@ -60,14 +60,11 @@ fn main() {
             Ok(())
         })
         .on_window_event(|app, event| match event {
+            #[cfg(not(dev))]
             tauri::WindowEvent::Focused(false) => {
-                println!("Window lost focus");
-                if let Some(window) = app.get_window("main") {
+                if let Some(window) = app.get_webview_window("main") {
                     window.hide().unwrap();
                 }
-            }
-            tauri::WindowEvent::Focused(true) => {
-                println!("Window gained focus");
             }
             _ => {}
         })

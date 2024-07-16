@@ -5,7 +5,7 @@ use tauri::{
 };
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let window = app.get_window("main").unwrap();
+    let window = app.get_webview_window("main").unwrap();
     let window_clone_for_tray = window.clone();
     let window_clone_for_click = window.clone();
 
