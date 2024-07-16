@@ -53,7 +53,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
                         if content != last_text {
                             last_text = content.clone();
                             rt.block_on(async {
-                                insert_content_if_not_exists(&pool, "text", content, None).await;
+                                insert_content_if_not_exists(&pool, "text", content).await;
                             });
                         }
                     }
@@ -64,9 +64,9 @@ pub fn setup(app_handle: tauri::AppHandle) {
                             last_image = image_bytes.clone();
                             rt.block_on(async {
                                 match convert_to_png(image_bytes) {
-                                    Ok((png_image, image_name)) => {
+                                    Ok(png_image) => {
                                         let base64_image = STANDARD.encode(&png_image);
-                                        insert_content_if_not_exists(&pool, "image", base64_image, Some(image_name)).await;
+                                        insert_content_if_not_exists(&pool, "image", base64_image).await;
                                     }
                                     Err(e) => {
                                         println!("Failed to convert image to PNG: {}", e);
@@ -83,7 +83,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
     });
 }
 
-fn convert_to_png(image_bytes: Vec<u8>) -> Result<(Vec<u8>, String), image::ImageError> {
+fn convert_to_png(image_bytes: Vec<u8>) -> Result<Vec<u8>, image::ImageError> {
     match image::guess_format(&image_bytes) {
         Ok(format) => println!("Image format: {:?}", format),
         Err(e) => println!("Failed to guess image format: {}", e),
@@ -91,11 +91,10 @@ fn convert_to_png(image_bytes: Vec<u8>) -> Result<(Vec<u8>, String), image::Imag
     let img = image::load_from_memory(&image_bytes)?;
     let mut png_bytes: Vec<u8> = Vec::new();
     img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)?;
-    let image_name = format!("{}.png", thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect::<String>());
-    Ok((png_bytes, image_name))
+    Ok(png_bytes)
 }
 
-async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String, name: Option<String>) {
+async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String) {
     let last_content: Option<String> = sqlx::query_scalar(
         "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
     )
@@ -144,12 +143,11 @@ async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, con
             None
         };
 
-        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon, name) VALUES (?, ?, ?, ?, ?)")
+        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?, ?)")
             .bind(id)
             .bind(content_type)
             .bind(content)
             .bind(favicon_base64)
-            .bind(name)
             .execute(pool)
             .await;
     }
