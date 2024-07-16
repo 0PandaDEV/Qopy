@@ -1,20 +1,18 @@
+use arboard::Clipboard;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use rdev::{listen, simulate, EventType, Key};
+use rdev::{simulate, EventType, Key};
 use sqlx::SqlitePool;
-use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
 use tokio::runtime::Runtime;
 use url::Url;
 use reqwest::Client;
-use arboard::Clipboard;
 use regex::Regex;
 use image::ImageFormat;
-use image::DynamicImage;
 use std::io::Cursor;
 
 #[tauri::command]
@@ -35,60 +33,69 @@ pub fn simulate_paste() {
 }
 
 pub fn setup(app_handle: tauri::AppHandle) {
-    let (tx, rx) = mpsc::channel();
     let is_processing = std::sync::Arc::new(std::sync::Mutex::new(false));
 
     std::thread::spawn({
         let is_processing = std::sync::Arc::clone(&is_processing);
         move || {
-            listen(move |event| match event.event_type {
-                EventType::KeyPress(Key::ControlLeft | Key::ControlRight) => {
-                    let _ = tx.send(true);
-                }
-                EventType::KeyRelease(Key::KeyC) => {
-                    let mut is_processing = is_processing.lock().unwrap();
-                    if rx.try_recv().is_ok() && !*is_processing {
-                        *is_processing = true;
-                        let pool = app_handle.state::<SqlitePool>();
-                        let rt = app_handle.state::<Runtime>();
+            let mut clipboard = Clipboard::new().unwrap();
+            let mut last_text = String::new();
+            let mut last_image = Vec::new();
 
-                        let mut clipboard = Clipboard::new().unwrap();
+            loop {
+                let mut is_processing = is_processing.lock().unwrap();
+                if !*is_processing {
+                    *is_processing = true;
+                    let pool = app_handle.state::<SqlitePool>();
+                    let rt = app_handle.state::<Runtime>();
 
-                        if let Ok(content) = clipboard.get_text() {
+                    if let Ok(content) = clipboard.get_text() {
+                        if content != last_text {
+                            last_text = content.clone();
                             rt.block_on(async {
-                                insert_content_if_not_exists(&pool, "text", content).await;
+                                insert_content_if_not_exists(&pool, "text", content, None).await;
                             });
                         }
-
-                        if let Ok(image) = clipboard.get_image() {
-                            rt.block_on(async {
-                                let png_image = convert_to_png(image.bytes.to_vec());
-                                let base64_image = STANDARD.encode(&png_image);
-                                insert_content_if_not_exists(&pool, "image", base64_image).await;
-                            });
-                        }
-                        *is_processing = false;
                     }
-                }
-                EventType::KeyRelease(Key::ControlLeft | Key::ControlRight) => {
-                    let mut is_processing = is_processing.lock().unwrap();
+
+                    if let Ok(image) = clipboard.get_image() {
+                        let image_bytes = image.bytes.to_vec();
+                        if image_bytes != last_image {
+                            last_image = image_bytes.clone();
+                            rt.block_on(async {
+                                match convert_to_png(image_bytes) {
+                                    Ok((png_image, image_name)) => {
+                                        let base64_image = STANDARD.encode(&png_image);
+                                        insert_content_if_not_exists(&pool, "image", base64_image, Some(image_name)).await;
+                                    }
+                                    Err(e) => {
+                                        println!("Failed to convert image to PNG: {}", e);
+                                    }
+                                }
+                            });
+                        }
+                    }
                     *is_processing = false;
                 }
-                _ => {}
-            })
-            .unwrap();
+                thread::sleep(Duration::from_millis(100));
+            }
         }
     });
 }
 
-fn convert_to_png(image_bytes: Vec<u8>) -> Vec<u8> {
-    let img = image::load_from_memory(&image_bytes).unwrap();
+fn convert_to_png(image_bytes: Vec<u8>) -> Result<(Vec<u8>, String), image::ImageError> {
+    match image::guess_format(&image_bytes) {
+        Ok(format) => println!("Image format: {:?}", format),
+        Err(e) => println!("Failed to guess image format: {}", e),
+    }
+    let img = image::load_from_memory(&image_bytes)?;
     let mut png_bytes: Vec<u8> = Vec::new();
-    img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png).unwrap();
-    png_bytes
+    img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)?;
+    let image_name = format!("{}.png", thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect::<String>());
+    Ok((png_bytes, image_name))
 }
 
-async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String) {
+async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, content: String, name: Option<String>) {
     let last_content: Option<String> = sqlx::query_scalar(
         "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
     )
@@ -137,11 +144,12 @@ async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, con
             None
         };
 
-        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?)")
+        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon, name) VALUES (?, ?, ?, ?, ?)")
             .bind(id)
             .bind(content_type)
             .bind(content)
             .bind(favicon_base64)
+            .bind(name)
             .execute(pool)
             .await;
     }
