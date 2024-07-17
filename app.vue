@@ -265,24 +265,6 @@ onMounted(async () => {
   if (!await isEnabled()) {
     await enable()
   }
-
-  if (await isRegistered("MetaLeft+V")) {
-    await unregister("MetaLeft+V")
-  }
-
-  await register('MetaLeft+V', (event) => {
-    if (event.state === "MetaLeft+V") {
-      if (isVisible.value == true) {
-        app.hide()
-        isVisible.value = false;
-      } else {
-        app.show()
-        isVisible.value = true;
-        selectedItemIndex.value = 0;
-      }
-    }
-  });
-
 });
 
 const hideApp = async () => {
