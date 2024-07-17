@@ -1,19 +1,20 @@
 use arboard::Clipboard;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use image::io::Reader as ImageReader;
+use image::ImageFormat;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rdev::{simulate, EventType, Key};
+use regex::Regex;
+use reqwest::Client;
 use sqlx::SqlitePool;
+use std::io::Cursor;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
 use tokio::runtime::Runtime;
 use url::Url;
-use reqwest::Client;
-use regex::Regex;
-use image::ImageFormat;
-use std::io::Cursor;
 
 #[tauri::command]
 pub fn simulate_paste() {
@@ -110,58 +111,55 @@ async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, con
             .map(char::from)
             .collect();
 
-        let url_regex = Regex::new(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)").unwrap();
-        let favicon_base64 = if content_type == "text" {
-            if let Some(url_match) = url_regex.find(&content) {
-                let url_str = url_match.as_str();
-                match Url::parse(url_str) {
-                    Ok(url) => {
-                        match fetch_favicon_as_base64(url).await {
-                            Ok(Some(favicon)) => {
-                                println!("Favicon fetched successfully.");
-                                Some(favicon)
-                            },
-                            Ok(None) => {
-                                println!("No favicon found.");
-                                None
-                            },
-                            Err(e) => {
-                                println!("Failed to fetch favicon: {}", e);
-                                None
-                            }
-                        }
-                    },
+        let url_regex = Regex::new(r"^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$").unwrap();
+        let favicon_base64 = if content_type == "text" && url_regex.is_match(&content) {
+            match Url::parse(&content) {
+                Ok(url) => match fetch_favicon_as_base64(url).await {
+                    Ok(Some(favicon)) => Some(favicon),
+                    Ok(None) => None,
                     Err(e) => {
-                        println!("Failed to parse URL: {}", e);
+                        println!("Failed to fetch favicon: {}", e);
                         None
                     }
+                },
+                Err(e) => {
+                    println!("Failed to parse URL: {}", e);
+                    None
                 }
-            } else {
-                None
             }
         } else {
             None
         };
 
-        let _ = sqlx::query("INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?, ?)")
-            .bind(id)
-            .bind(content_type)
-            .bind(content)
-            .bind(favicon_base64)
-            .execute(pool)
-            .await;
+        let _ = sqlx::query(
+            "INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?)",
+        )
+        .bind(id)
+        .bind(content_type)
+        .bind(content)
+        .bind(favicon_base64)
+        .execute(pool)
+        .await;
     }
 }
 
-async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, reqwest::Error> {
-    println!("Checking for favicon at URL: {}", url.origin().ascii_serialization());
+async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    println!(
+        "Checking for favicon at URL: {}",
+        url.origin().ascii_serialization()
+    );
     let client = Client::new();
     let favicon_url = format!("https://icon.horse/icon/{}", url.host_str().unwrap());
     let response = client.get(&favicon_url).send().await?;
 
     if response.status().is_success() {
         let bytes = response.bytes().await?;
-        Ok(Some(STANDARD.encode(&bytes)))
+        let img = ImageReader::new(Cursor::new(bytes))
+            .with_guessed_format()?
+            .decode()?;
+        let mut png_bytes: Vec<u8> = Vec::new();
+        img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)?;
+        Ok(Some(STANDARD.encode(&png_bytes)))
     } else {
         Ok(None)
     }
