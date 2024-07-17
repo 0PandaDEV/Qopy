@@ -59,7 +59,7 @@ fn main() {
 
             Ok(())
         })
-        .on_window_event(|_app, event| match event {
+        .on_window_event(|app, event| match event {
             #[cfg(not(dev))]
             tauri::WindowEvent::Focused(false) => {
                 if let Some(window) = app.get_webview_window("main") {
