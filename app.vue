@@ -40,10 +40,11 @@
         </div>
       </template>
     </OverlayScrollbarsComponent>
-    <OverlayScrollbarsComponent class="content">
-      <img v-if="selectedItem?.content_type === 'image'" :src="getComputedImageUrl(selectedItem)" alt="Image"
-        class="image">
-      <img v-else-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)"
+    <div class="content" v-if="selectedItem?.content_type === 'image'">
+      <img :src="getComputedImageUrl(selectedItem)" alt="Image" class="image">
+    </div>
+    <OverlayScrollbarsComponent v-else class="content">
+      <img v-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)"
         alt="YouTube Thumbnail" class="full-image">
       <span v-else>{{ selectedItem?.content || '' }}</span>
     </OverlayScrollbarsComponent>
