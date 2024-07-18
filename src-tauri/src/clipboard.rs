@@ -2,7 +2,7 @@ use arboard::Clipboard;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use image::io::Reader as ImageReader;
-use image::ImageFormat;
+use image::{DynamicImage, ImageBuffer, ImageFormat, Rgba};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rdev::{simulate, EventType, Key};
@@ -19,10 +19,10 @@ use url::Url;
 #[tauri::command]
 pub fn simulate_paste() {
     let mut events = vec![
-        EventType::KeyPress(Key::MetaLeft),
+        EventType::KeyPress(Key::ControlLeft),
         EventType::KeyPress(Key::KeyV),
         EventType::KeyRelease(Key::KeyV),
-        EventType::KeyRelease(Key::MetaLeft),
+        EventType::KeyRelease(Key::ControlLeft),
     ];
 
     thread::sleep(Duration::from_millis(100));
@@ -41,7 +41,6 @@ pub fn setup(app_handle: tauri::AppHandle) {
         move || {
             let mut clipboard = Clipboard::new().unwrap();
             let mut last_text = String::new();
-            let mut last_image = Vec::new();
 
             loop {
                 let mut is_processing = is_processing.lock().unwrap();
@@ -60,20 +59,16 @@ pub fn setup(app_handle: tauri::AppHandle) {
                     }
 
                     if let Ok(image) = clipboard.get_image() {
-                        let image_bytes = image.bytes.to_vec();
-                        if image_bytes != last_image {
-                            last_image = image_bytes.clone();
-                            rt.block_on(async {
-                                match convert_to_png(image_bytes) {
-                                    Ok(png_image) => {
-                                        let base64_image = STANDARD.encode(&png_image);
-                                        insert_content_if_not_exists(&pool, "image", base64_image).await;
-                                    }
-                                    Err(e) => {
-                                        println!("Failed to convert image to PNG: {}", e);
-                                    }
-                                }
-                            });
+                        match process_clipboard_image(image) {
+                            Ok(png_image) => {
+                                let base64_image = STANDARD.encode(&png_image);
+                                rt.block_on(async {
+                                    insert_content_if_not_exists(&pool, "image", base64_image).await;
+                                });
+                            }
+                            Err(e) => {
+                                println!("Failed to process clipboard image: {}", e);
+                            }
                         }
                     }
                     *is_processing = false;
@@ -84,14 +79,21 @@ pub fn setup(app_handle: tauri::AppHandle) {
     });
 }
 
-fn convert_to_png(image_bytes: Vec<u8>) -> Result<Vec<u8>, image::ImageError> {
-    match image::guess_format(&image_bytes) {
-        Ok(format) => println!("Image format: {:?}", format),
-        Err(e) => println!("Failed to guess image format: {}", e),
-    }
-    let img = image::load_from_memory(&image_bytes)?;
+fn process_clipboard_image(
+    image_data: arboard::ImageData,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let img = ImageBuffer::<Rgba<u8>, _>::from_raw(
+        image_data.width as u32,
+        image_data.height as u32,
+        image_data.bytes.into_owned(),
+    )
+    .ok_or("Failed to create ImageBuffer")?;
+
+    let dynamic_image = DynamicImage::ImageRgba8(img);
+
     let mut png_bytes: Vec<u8> = Vec::new();
-    img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)?;
+    dynamic_image.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)?;
+
     Ok(png_bytes)
 }
 
@@ -144,10 +146,6 @@ async fn insert_content_if_not_exists(pool: &SqlitePool, content_type: &str, con
 }
 
 async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    println!(
-        "Checking for favicon at URL: {}",
-        url.origin().ascii_serialization()
-    );
     let client = Client::new();
     let favicon_url = format!("https://icon.horse/icon/{}", url.host_str().unwrap());
     let response = client.get(&favicon_url).send().await?;
