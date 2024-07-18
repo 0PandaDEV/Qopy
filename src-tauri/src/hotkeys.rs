@@ -1,6 +1,8 @@
 use rdev::{listen, EventType, Key};
 use tauri::Manager;
 
+use crate::center_window_on_current_monitor;
+
 pub fn setup(app_handle: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut meta_pressed = false;
@@ -18,6 +20,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
                         let window = app_handle.get_webview_window("main").unwrap();
                         window.show().unwrap();
                         window.set_focus().unwrap();
+                        center_window_on_current_monitor(&window);
                     }
                 }
                 _ => {}

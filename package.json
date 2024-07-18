@@ -14,7 +14,6 @@
     "@tauri-apps/cli": "^2.0.0-beta.22",
     "@tauri-apps/plugin-autostart": "^2.0.0-beta.7",
     "@tauri-apps/plugin-clipboard-manager": "^2.1.0-beta.5",
-    "@tauri-apps/plugin-global-shortcut": "^2.0.0-beta.7",
     "@tauri-apps/plugin-os": "^2.0.0-beta.7",
     "@tauri-apps/plugin-sql": "^2.0.0-beta.7",
     "nuxt": "^3.12.3",

@@ -32,18 +32,17 @@
           :class="['result clothoid-corner', { 'selected': isSelected(groupIndex, index) }]"
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el }">
-          <img v-if="item.content_type === 'image'" :src="`data:image/bmp;base64,${item.content}`" alt="Image" class="favicon-image">
+          <img v-if="item.content_type === 'image'" :src="getComputedImageUrl(item)" alt="Image" class="favicon-image">
           <img v-else-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon)" alt="Favicon" class="favicon">
           <FileIcon class="file" v-else />
-          <span v-if="item.content_type === 'image'">Image ({{ getImageDimensions(item.content) }})</span>
+          <span v-if="item.content_type === 'image'">Image ({{ item.dimensions || 'Loading...' }})</span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
       </template>
     </OverlayScrollbarsComponent>
     <OverlayScrollbarsComponent class="content">
-      <img v-if="selectedItem?.content_type === 'image'"
-        :src="selectedItem.content.startsWith('data:image') ? selectedItem?.content : `data:image/bmp;base64,${selectedItem?.content}`"
-        alt="Image" class="image">
+      <img v-if="selectedItem?.content_type === 'image'" :src="getComputedImageUrl(selectedItem)" alt="Image"
+        class="image">
       <img v-else-if="isYoutubeWatchUrl(selectedItem?.content)" :src="getYoutubeThumbnail(selectedItem.content)"
         alt="YouTube Thumbnail" class="full-image">
       <span v-else>{{ selectedItem?.content || '' }}</span>
@@ -53,9 +52,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, shallowRef } from 'vue';
 import Database from '@tauri-apps/plugin-sql';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { writeText, writeImage } from '@tauri-apps/plugin-clipboard-manager';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 import { app, window } from '@tauri-apps/api';
@@ -63,7 +62,6 @@ import { platform } from '@tauri-apps/plugin-os';
 import { invoke } from '@tauri-apps/api/core';
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from '@tauri-apps/api/event';
-import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 
 const db = ref(null);
 const history = ref([]);
@@ -168,7 +166,11 @@ const selectItem = (groupIndex, itemIndex) => {
 
 const pasteSelectedItem = async () => {
   if (selectedItem.value) {
-    await writeText(selectedItem.value.content);
+    if (selectedItem.value.content_type === 'image') {
+      await writeImage(selectedItem.value.content);
+    } else {
+      await writeText(selectedItem.value.content);
+    }
     await hideApp();
     await invoke("simulate_paste");
   }
@@ -208,60 +210,87 @@ const getFaviconFromDb = (favicon) => {
   return `data:image/png;base64,${favicon}`;
 };
 
-const getImageDimensions = (base64Image) => {
-  const img = new Image();
-  img.src = `data:image/bmp;base64,${base64Image}`;
-  return `${img.width}x${img.height}`;
+const getImageDimensions = (path) => {
+  return new Promise(async (resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(`${img.width}x${img.height}`);
+    img.onerror = () => resolve('0x0');
+    if (path.includes('AppData\\Roaming\\net.pandadev.qopy\\images\\')) {
+      const filename = path.split('\\').pop();
+      try {
+        const imageData = await invoke("read_image", { filename: filename });
+        const blob = new Blob([new Uint8Array(imageData)], { type: 'image/png' });
+        img.src = URL.createObjectURL(blob);
+      } catch (error) {
+        console.error('Error reading image file:', error);
+        resolve('0x0');
+      }
+    } else {
+      img.src = `data:image/png;base64,${path}`;
+    }
+  });
 };
 
-const refreshHistory = async () => {
-  history.value = [];
-  await loadMoreHistory();
+const imageUrls = shallowRef({});
+
+const getComputedImageUrl = (item) => {
+  if (!imageUrls.value[item.id]) {
+    imageUrls.value[item.id] = '';
+    getImageUrl(item.content).then(url => {
+      imageUrls.value = { ...imageUrls.value, [item.id]: url };
+    });
+  }
+  return imageUrls.value[item.id] || '';
 };
 
-const onScroll = () => {
-  const resultsElement = resultsContainer.value.$el;
-  console.log('Scroll position:', resultsElement.scrollTop, 'Client height:', resultsElement.clientHeight, 'Scroll height:', resultsElement.scrollHeight);
-  if (resultsElement.scrollTop + resultsElement.clientHeight >= resultsElement.scrollHeight - 10) {
-    console.log('Scrolled to the end, loading more history...');
-    loadMoreHistory();
+const getImageUrl = async (path) => {
+  if (path.includes('AppData\\Roaming\\net.pandadev.qopy\\images\\')) {
+    const filename = path.split('\\').pop();
+    try {
+      const imageData = await invoke("read_image", { filename: filename });
+      const blob = new Blob([new Uint8Array(imageData)], { type: 'image/png' });
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Error reading image file:', error);
+      return '';
+    }
+  } else {
+    return `data:image/png;base64,${path}`;
   }
 };
 
-const loadMoreHistory = async () => {
-  const lastTimestamp = history.value.length > 0 ? history.value[history.value.length - 1].timestamp : '9999-12-31T23:59:59Z';
-  const batchSize = 100;
+const loadAllHistory = async () => {
+  if (!db.value) return;
 
   const rawHistory = await db.value.select(
-    'SELECT * FROM history WHERE timestamp < ? ORDER BY timestamp DESC LIMIT ?',
-    [lastTimestamp, batchSize]
+    'SELECT * FROM history ORDER BY timestamp DESC'
   );
 
-  const newItems = rawHistory.map(item => {
-    if (item.type === 'image' && !item.content.startsWith('data:image')) {
-      return { ...item, content: `data:image/bmp;base64,${item.content}` };
+  history.value = await Promise.all(rawHistory.map(async item => {
+    if (item.content_type === 'image') {
+      const dimensions = await getImageDimensions(item.content);
+      return { ...item, dimensions };
     }
     return item;
-  });
-
-  history.value = [...history.value, ...newItems];
-  console.log('Loaded more history:', newItems.length, 'items');
-  if (newItems.length < batchSize) {
-    resultsContainer.value.$el.removeEventListener('scroll', onScroll);
-  }
+  }));
 };
 
 onMounted(async () => {
   db.value = await Database.load('sqlite:data.db');
+  await loadAllHistory();
 
-  await listen('tauri://focus', focusSearchInput);
-  focusSearchInput();
+  await listen('tauri://focus', async () => {
+    await loadAllHistory();
+    focusSearchInput();
+  });
 
-  const resultsElement = resultsContainer.value.$el;
-  resultsElement.addEventListener('scroll', onScroll);
-  console.log('Scroll event listener added');
-  onScroll();
+  await listen('tauri://blur', () => {
+    if (searchInput.value) {
+      searchInput.value.blur();
+    }
+  });
 
+  // autostart 
   if (!await isEnabled()) {
     await enable()
   }
@@ -270,16 +299,6 @@ onMounted(async () => {
 const hideApp = async () => {
   await app.hide();
   await window.getCurrentWindow().hide();
-};
-
-const showApp = async () => {
-  history.value = [];
-  await refreshHistory();
-  await app.show();
-  await window.getCurrent().show();
-  selectedGroupIndex.value = 0;
-  selectedItemIndex.value = 0;
-  focusSearchInput();
 };
 
 const focusSearchInput = () => {

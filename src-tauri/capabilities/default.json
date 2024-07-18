@@ -18,11 +18,6 @@
     "sql:allow-load",
     "sql:allow-select",
     "sql:allow-execute",
-    "global-shortcut:default",
-    "global-shortcut:allow-is-registered",
-    "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister",
-    "global-shortcut:allow-unregister-all",
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
@@ -34,6 +29,7 @@
     "window:allow-set-focus",
     "window:allow-is-focused",
     "window:allow-is-visible",
-    "clipboard-manager:allow-write-text" 
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-write-image"
   ]
 }
