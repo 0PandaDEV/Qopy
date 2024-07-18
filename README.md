@@ -10,6 +10,8 @@ The fixed clipboard manager. The goal is simple be a alternative to the standart
 #### [⬇️ Download Qopy](https://github.com/0PandaDEV/Qopy/releases)
 
 ## 🚧 Roadmap
+- [ ] Setup guide
+- [ ] Option for custom keybind
 - [ ] More metadata for images
 - [ ] Code highlighting
 
