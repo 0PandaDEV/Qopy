@@ -34,6 +34,7 @@
     "withGlobalTauri": true
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [
@@ -43,6 +44,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlCNjc2MUJCOTUzRUY1MzMKUldRejlUNlZ1MkZubTE0UWZzUHVmclZZNUVvNldOMG9aQ3RLWGhiMFYrYlp1a2xiaXpvRy9yZ08K",
+      "endpoints": [
+        "https://qopy-updater-server.pandadev.workers.dev/",
+        "https://qopy.pandadev.net/updater"
+      ]
+    }
   },
   "$schema": "../node_modules/@tauri-apps/cli/schema.json"
 }

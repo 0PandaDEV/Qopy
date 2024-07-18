@@ -7,6 +7,7 @@ mod clipboard;
 mod database;
 mod hotkeys;
 mod tray;
+mod updater;
 
 use tauri::Manager;
 use tauri::PhysicalPosition;
@@ -46,6 +47,8 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![]),
@@ -72,6 +75,10 @@ fn main() {
 
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");
             clipboard::set_app_data_dir(app_data_dir);
+
+            tauri::async_runtime::spawn(async move {
+                updater::check_for_updates(app_handle).await;
+            });
 
             Ok(())
         })
