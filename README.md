@@ -9,6 +9,10 @@ The fixed clipboard manager. The goal is simple be a alternative to the standart
 ❌ macOS will probably be not supported if you want something similar on macOS take a look at [Raycast](https://www.raycast.com/) and their clipboard history extension.
 #### [⬇️ Download Qopy](https://github.com/0PandaDEV/Qopy/releases)
 
+## 🚧 Roadmap
+- [ ] More metadata for images
+- [ ] Code highlighting
+
 ## 🖼️ Preview
 <img width="800px" src="https://github.com/user-attachments/assets/18e1f9e3-414c-46e2-9c51-61c6e63a06d2"/>
 <img width="800px" src="https://github.com/user-attachments/assets/46ec4672-f156-4426-a2cb-3a40d00dbcd6"/>
