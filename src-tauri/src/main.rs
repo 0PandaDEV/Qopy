@@ -12,6 +12,7 @@ mod updater;
 use tauri::Manager;
 use tauri::PhysicalPosition;
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_prevent_default::Flags;
 
 pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
     if let Some(monitor) = window.available_monitors().unwrap().iter().find(|m| {
@@ -53,6 +54,11 @@ fn main() {
             MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
+        .plugin(
+            tauri_plugin_prevent_default::Builder::new()
+                .with_flags(Flags::all().difference(Flags::CONTEXT_MENU))
+                .build(),
+        )
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -73,7 +79,10 @@ fn main() {
                 window.close_devtools();
             }
 
-            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data directory");
             clipboard::set_app_data_dir(app_data_dir);
 
             tauri::async_runtime::spawn(async move {
