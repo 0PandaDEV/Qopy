@@ -26,7 +26,7 @@ Qopy is an open-source project, and I rely on the support of the community to co
 
 Please note that Qopy is and will always be free to use. Your donation is entirely voluntary and is not required to use the app.
 
-<a href="https://ko-fi.com/pandadev_"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-323842?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white"/></a>
+<a href="https://buymeacoffee.com/pandadev_"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-323842?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white"/></a>
 
 Find more options by clicking the Sponsor ❤️ button on the top of this page.
 
