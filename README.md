@@ -14,6 +14,7 @@ The fixed clipboard manager. The goal is simple be a alternative to the standart
 - [ ] Option for custom keybind
 - [ ] More metadata for images
 - [ ] Code highlighting
+- [ ] Streamshare integration
 
 ## 🖼️ Preview
 <img width="800px" src="https://github.com/user-attachments/assets/18e1f9e3-414c-46e2-9c51-61c6e63a06d2"/>
