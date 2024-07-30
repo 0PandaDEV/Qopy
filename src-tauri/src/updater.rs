@@ -15,15 +15,15 @@ pub async fn check_for_updates(app: AppHandle) {
             let new_ver = &update.version;
             let mut msg = String::new();
             msg.extend([
-                &format!("New Version: {new_ver}\nCurrent Version: {cur_ver}\n\n"),
+                &format!("{cur_ver} -> {new_ver}\n\n"),
                 "Would you like to install it now?",
             ]);
 
             app.dialog()
                 .message(msg)
                 .title("Update Available")
-                .ok_button_label("Yes")
-                .cancel_button_label("No")
+                .ok_button_label("Install")
+                .cancel_button_label("Cancel")
                 .show(move |response| {
                     if !response {
                         return;
