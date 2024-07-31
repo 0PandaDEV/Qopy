@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: "\U0001F41E Bug report"
 about: Create a report to help us improve
 title: ''
 labels: Bug
@@ -24,9 +24,9 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Operating system**
-Windows, macOS or Linux
+Windows or Linux
 
-**Version of Vleer**
+**Version of Qopy**
 0.1.0
 
 **Additional context**
