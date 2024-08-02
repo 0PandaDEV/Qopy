@@ -36,7 +36,7 @@ Qopy is a fixed clipboard manager designed as a simple alternative to the standa
 ❌ macOS will probably be not supported if you want something similar on macOS take a look at [Raycast](https://www.raycast.com/) and their clipboard history extension.
 
 ## 🚧 Roadmap
-- [ ] Setup guide
+- [ ] [Setup guide](https://github.com/0PandaDEV/Qopy/blob/main/GET_STARTED.md)
 - [ ] Settings https://github.com/0PandaDEV/Qopy/issues/2
 - [ ] Option for custom keybind https://github.com/0PandaDEV/Qopy/issues/3
 - [ ] Metadata for copied items https://github.com/0PandaDEV/Qopy/issues/5
