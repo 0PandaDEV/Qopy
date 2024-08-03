@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/723f9e07-3190-46ec-9bb7-15dfc112f620
 
 To disable the default clipboard manager popup from windows open Command prompt and run this command
 ```cmd
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v DisabledHotkeys /t REG_SZ /d V
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v AllowClipboardHistory /t REG_DWORD /d 0 /f
 ```
 
 After that a restart may be reqired.
