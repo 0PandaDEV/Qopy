@@ -1,20 +1,30 @@
 <div align="center">
-   <img align="center" width="128px" src="src-tauri/icons/128x128@2x.png" />
-	<h1 align="center"><b>Qopy</b></h1>
-	<p align="center">
-		The fixed, simple and reliable clipboard manager for both Windows and Linux.
-    <br />
-    <br />
-    <b>Download for </b>
-    Windows (<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_x64_en-US.msi">msi</a>)
-    ·
-    Linux (<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_amd64.AppImage">AppImage</a> |
-       <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_amd64.deb">deb</a> |
-      <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy-0.1.0-1.x86_64.rpm">rpm</a>)
-    <br />
-    <br />
-   <sup>(Unstable Nightly releases can be found <a href="https://github.com/0PandaDEV/qopy/actions/workflows/build.yml">here</a>) </sup>
-  </p>
+
+<img align="center" width="128px" src="src-tauri/icons/128x128@2x.png" />
+<h1 align="center"><b>Qopy</b></h1>
+
+The fixed, simple and reliable clipboard manager for both Windows and Linux.
+
+<table>
+  <tbody>
+    <tr>
+      <td>Download for</td>
+      <td>
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.0_x64_en-US.msi">
+          <img src="./public/windows.png"> Windows
+        </a>
+      </td>
+      <td>
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_amd6AppImage">
+          <img src="./public/linux.png"> Linux
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<sup>Unstable Nightly releases can be found <a href="https://github.com/0PandaDEV/qopy/actions/workflows/build.yml">here</a> </sup>
+
 </div>
 
 > \[!IMPORTANT]
