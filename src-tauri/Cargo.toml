@@ -1,24 +1,24 @@
 [package]
 name = "qopy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Qopy"
 authors = ["pandadev"]
 edition = "2021"
 rust-version = "1.70"
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-beta.18", features = [] }
+tauri-build = { version = "2.0.0-rc.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-beta.23", features = ["tray-icon", "image-png"] }
-tauri-plugin-sql = {version = "2.0.0-beta.8", features = ["sqlite"] }
-tauri-plugin-clipboard-manager = "2.1.0-beta.5"
-tauri-plugin-autostart = "2.0.0-beta.8"
-tauri-plugin-os = "2.0.0-beta.7"
-tauri-plugin-updater = "2.0.0-beta.10"
-tauri-plugin-dialog = "2.0.0-beta.11"
-tauri-plugin-prevent-default = "0.1"
-sqlx = { version = "0.7.4", features = ["runtime-tokio-native-tls", "sqlite"] }
+tauri = { version = "2.0.0-rc.0", features = ["tray-icon", "image-png"] }
+tauri-plugin-sql = {version = "2.0.0-rc.0", features = ["sqlite"] }
+tauri-plugin-clipboard-manager = "2.0.0-rc.0"
+tauri-plugin-autostart = "2.0.0-rc.0"
+tauri-plugin-os = "2.0.0-rc.0"
+tauri-plugin-updater = "2.0.0-rc.0"
+tauri-plugin-dialog = "2.0.0-rc.0"
+tauri-plugin-prevent-default = "0.3.0"
+sqlx = { version = "0.8.0", features = ["runtime-tokio-native-tls", "sqlite"] }
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
 serde_json = "1.0"
@@ -32,3 +32,6 @@ url = "2.5.2"
 regex = "1"
 sha2 = "0.10.6"
 lazy_static = "1.4.0"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
