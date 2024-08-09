@@ -79,12 +79,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                             insert_content_if_not_exists(app.clone(), pool.clone(), "image", base64_image).await;
                         }
                         let _ = app.emit("plugin:clipboard://image-changed", ());
-                    } else if available_types.html {
-                        println!("Handling HTML change");
-                        if let Ok(html) = clipboard.read_html() {
-                            insert_content_if_not_exists(app.clone(), pool.clone(), "html", html).await;
-                        }
-                        let _ = app.emit("plugin:clipboard://html-changed", ());
                     } else if available_types.rtf {
                         println!("Handling RTF change");
                         if let Ok(rtf) = clipboard.read_rtf() {
