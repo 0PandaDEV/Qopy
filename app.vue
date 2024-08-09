@@ -66,10 +66,13 @@ import { listen } from '@tauri-apps/api/event';
 
 const db = ref(null);
 const history = ref([]);
+const chunkSize = 50;
+let offset = 0;
+let isLoading = false;
+const resultsContainer = ref(null);
 const searchQuery = ref('');
 const selectedGroupIndex = ref(0);
 const selectedItemIndex = ref(0);
-const resultsContainer = ref(null);
 const selectedElement = ref(null);
 const searchInput = ref(null);
 const os = platform();
@@ -133,9 +136,25 @@ const isSelected = (groupIndex, itemIndex) => {
   return selectedGroupIndex.value === groupIndex && selectedItemIndex.value === itemIndex;
 };
 
-const searchHistory = () => {
-  selectedGroupIndex.value = 0;
-  selectedItemIndex.value = 0;
+const searchHistory = async () => {
+  if (!db.value) return;
+
+  history.value = [];
+  offset = 0;
+
+  const query = `%${searchQuery.value}%`;
+  const results = await db.value.select(
+    'SELECT * FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT ?',
+    [query, chunkSize]
+  );
+
+  history.value = await Promise.all(results.map(async item => {
+    if (item.content_type === 'image') {
+      const dimensions = await getImageDimensions(item.content);
+      return { ...item, dimensions };
+    }
+    return item;
+  }));
 };
 
 const selectNext = () => {
@@ -260,42 +279,53 @@ const getImageUrl = async (path) => {
   }
 };
 
-const loadAllHistory = async () => {
-  if (!db.value) return;
+const loadHistoryChunk = async () => {
+  if (!db.value || isLoading) return;
 
-  const rawHistory = await db.value.select(
-    'SELECT * FROM history ORDER BY timestamp DESC'
-  );
+  isLoading = true;
+  let results;
 
-  history.value = await Promise.all(rawHistory.map(async item => {
+  if (searchQuery.value) {
+    const query = `%${searchQuery.value}%`;
+    results = await db.value.select(
+      'SELECT * FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+      [query, chunkSize, offset]
+    );
+  } else {
+    results = await db.value.select(
+      'SELECT * FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+      [chunkSize, offset]
+    );
+  }
+
+  if (results.length === 0) {
+    isLoading = false;
+    return;
+  }
+
+  const processedChunk = await Promise.all(results.map(async item => {
     if (item.content_type === 'image') {
       const dimensions = await getImageDimensions(item.content);
       return { ...item, dimensions };
     }
     return item;
   }));
+
+  history.value = [...history.value, ...processedChunk];
+  offset += chunkSize;
+  isLoading = false;
 };
 
-onMounted(async () => {
-  db.value = await Database.load('sqlite:data.db');
-  await loadAllHistory();
-
-  await listen('tauri://focus', async () => {
-    await loadAllHistory();
-    focusSearchInput();
-  });
-
-  await listen('tauri://blur', () => {
-    if (searchInput.value) {
-      searchInput.value.blur();
-    }
-  });
-
-  // autostart 
-  if (!await isEnabled()) {
-    await enable()
+const handleScroll = () => {
+  if (!resultsContainer.value) return;
+  
+  const { viewport } = resultsContainer.value.osInstance().elements();
+  const { scrollTop, scrollHeight, clientHeight } = viewport;
+  
+  if (scrollHeight - scrollTop - clientHeight < 100) {
+    loadHistoryChunk();
   }
-});
+};
 
 const hideApp = async () => {
   await app.hide();
@@ -342,6 +372,36 @@ const scrollToSelectedItem = () => {
 };
 
 watch([selectedGroupIndex, selectedItemIndex], scrollToSelectedItem);
+
+watch(searchQuery, () => {
+  searchHistory();
+});
+
+onMounted(async () => {
+  db.value = await Database.load('sqlite:data.db');
+  await loadHistoryChunk();
+
+  if (resultsContainer.value) {
+    resultsContainer.value.osInstance().elements().viewport.addEventListener('scroll', handleScroll);
+  }
+
+  await listen('tauri://focus', async () => {
+    history.value = [];
+    offset = 0;
+    await loadHistoryChunk();
+    focusSearchInput();
+  });
+
+  await listen('tauri://blur', () => {
+    if (searchInput.value) {
+      searchInput.value.blur();
+    }
+  });
+
+  if (!await isEnabled()) {
+    await enable()
+  }
+});
 
 </script>
 

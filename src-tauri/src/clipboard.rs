@@ -219,17 +219,3 @@ pub fn start_monitor(app_handle: AppHandle) -> Result<(), String> {
     app_handle.emit("plugin:clipboard://clipboard-monitor/status", true).map_err(|e| e.to_string())?;
     Ok(())
 }
-
-#[tauri::command]
-pub fn stop_monitor(app_handle: AppHandle) -> Result<(), String> {
-    let clipboard = app_handle.state::<Clipboard>();
-    clipboard.stop_monitor(app_handle.clone()).map_err(|e| e.to_string())?;
-    app_handle.emit("plugin:clipboard://clipboard-monitor/status", false).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-pub fn is_monitor_running(app_handle: AppHandle) -> bool {
-    let clipboard = app_handle.state::<Clipboard>();
-    clipboard.is_monitor_running()
-}
