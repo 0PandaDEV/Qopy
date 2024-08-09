@@ -45,7 +45,7 @@ pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
@@ -65,7 +65,8 @@ fn main() {
             hotkeys::setup(app_handle.clone());
             tray::setup(app)?;
             database::setup(app)?;
-            clipboard::setup(app_handle.clone());
+            clipboard::setup(app.handle());
+            let _ = clipboard::start_monitor(app_handle.clone());
 
             if let Some(window) = app.get_webview_window("main") {
                 center_window_on_current_monitor(&window);

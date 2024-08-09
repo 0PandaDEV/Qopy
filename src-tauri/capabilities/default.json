@@ -28,8 +28,6 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:window:allow-is-focused",
-    "core:window:allow-is-visible",
-    "clipboard-manager:allow-write-text",
-    "clipboard-manager:allow-write-image"
+    "core:window:allow-is-visible"
   ]
 }
