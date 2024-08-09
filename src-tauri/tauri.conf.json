@@ -1,6 +1,6 @@
 {
   "productName": "Qopy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "net.pandadev.qopy",
   "build": {
     "frontendDist": "../dist",

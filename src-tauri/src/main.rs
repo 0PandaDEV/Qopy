@@ -73,12 +73,12 @@ fn main() {
                 window.hide().unwrap();
             }
 
-            #[cfg(dev)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-                window.close_devtools();
-            }
+            // #[cfg(dev)]
+            // {
+            //     let window = app.get_webview_window("main").unwrap();
+            //     window.open_devtools();
+            //     window.close_devtools();
+            // }
 
             let app_data_dir = app
                 .path()

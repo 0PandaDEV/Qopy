@@ -198,7 +198,7 @@ async fn save_image<R: Runtime>(app_handle: &AppHandle<R>, base64_image: &str) -
 
 async fn fetch_favicon_as_base64(url: url::Url) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
-    let favicon_url = format!("https://icon.horse/icon/{}", url.host_str().unwrap());
+    let favicon_url = format!("https://favicone.com/{}", url.host_str().unwrap());
     let response = client.get(&favicon_url).send().await?;
 
     if response.status().is_success() {
