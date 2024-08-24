@@ -9,6 +9,7 @@ mod utils;
 use tauri::{Manager, Listener};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
+use tauri::WindowEvent;
 
 fn main() {
     tauri::Builder::default()
