@@ -3,33 +3,39 @@ name: "Nightly Builds"
 on:
   push:
     branches:
-      - '*'
+      - main
   pull_request:
     branches:
-      - '*'
+      - main
   workflow_dispatch:
 
 jobs:
-  publish-tauri:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: "ubuntu-latest"
-            args: ""
-          - platform: "windows-latest"
-            args: ""
-
+        platform: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 20
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -40,7 +46,7 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: pnpm cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -58,29 +64,65 @@ jobs:
         run: npm install -g pnpm && pnpm install
 
       - uses: tauri-apps/tauri-action@v0
-        with:
-          args: ${{ matrix.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Windows Artifact
+      - name: Rename and Publish Windows Artifacts
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v3
+        run: |
+          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi
+          mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi.sig
+
+      - name: Publish Windows Artifacts
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
         with:
           name: build-windows-msi
           path: src-tauri/target/release/bundle/msi/*.msi
 
+      - name: Publish Windows Updater Files
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-files-windows
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+
+      - name: Rename and Publish Ubuntu Artifacts
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          mv src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}.deb
+          mv src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage
+          mv src-tauri/target/release/bundle/appimage/*.AppImage.sig src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage.sig
+          mv src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}.rpm
+
       - name: Publish Ubuntu Artifacts
         if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-deb
           path: src-tauri/target/release/bundle/deb/*.deb
-      - uses: actions/upload-artifact@v3
+
+      - name: Publish Ubuntu AppImage
         if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-appimage
           path: src-tauri/target/release/bundle/appimage/*.AppImage
-      - uses: actions/upload-artifact@v3
+
+      - name: Publish Ubuntu RPM
         if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-rpm
           path: src-tauri/target/release/bundle/rpm/*.rpm
+
+      - name: Publish Ubuntu Updater Files
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-files-ubuntu
+          path: |
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
