@@ -4,6 +4,12 @@ labels: [Feature]
 assignees: 
   - 0PandaDEV
 body:
+  #
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  #
   - type: textarea
     id: description
     attributes:
