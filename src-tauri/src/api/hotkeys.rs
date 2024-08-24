@@ -1,9 +1,18 @@
-use rdev::{listen, EventType, Key};
+use tauri::plugin::TauriPlugin;
 use tauri::Manager;
+use rdev::{listen, EventType, Key};
+use crate::utils::commands;
 
-use crate::center_window_on_current_monitor;
+pub fn init() -> TauriPlugin<tauri::Wry> {
+    tauri::plugin::Builder::new("hotkeys")
+        .setup(|app, _| {
+            setup(app.app_handle().clone());
+            Ok(())
+        })
+        .build()
+}
 
-pub fn setup(app_handle: tauri::AppHandle) {
+fn setup(app_handle: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut meta_pressed = false;
         listen(move |event| {
@@ -20,7 +29,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
                         let window = app_handle.get_webview_window("main").unwrap();
                         window.show().unwrap();
                         window.set_focus().unwrap();
-                        center_window_on_current_monitor(&window);
+                        commands::center_window_on_current_monitor(&window);
                     }
                 }
                 _ => {}

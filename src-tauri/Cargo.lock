@@ -3625,6 +3625,7 @@ dependencies = [
  "tauri-plugin-prevent-default",
  "tauri-plugin-sql",
  "tauri-plugin-updater",
+ "time",
  "tokio",
  "url",
 ]

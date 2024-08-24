@@ -31,7 +31,8 @@
     "security": {
       "csp": null
     },
-    "withGlobalTauri": true
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true
   },
   "bundle": {
     "createUpdaterArtifacts": true,
@@ -49,8 +50,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDExNDIzNjA1QjE0NjU1OTkKUldTWlZVYXhCVFpDRWNvNmt0UE5lQmZkblEyZGZiZ2tHelJvT2YvNVpLU1RIM1RKZFQrb2tzWWwK",
       "endpoints": [
-        "https://qopy-updater-server.pandadev.workers.dev/",
-        "https://qopy.pandadev.net/updater"
+        "https://qopy.pandadev.net/"
       ]
     }
   },

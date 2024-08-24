@@ -10,7 +10,7 @@ rust-version = "1.70"
 tauri-build = { version = "2.0.0-rc.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc.6", features = ["tray-icon", "image-png"] }
+tauri = { version = "2.0.0-rc.6", features = [ "macos-private-api", "tray-icon", "image-png"] }
 tauri-plugin-sql = {version = "2.0.0-rc.0", features = ["sqlite"] }
 tauri-plugin-autostart = "2.0.0-rc.0"
 tauri-plugin-os = "2.0.0-rc.0"
@@ -31,6 +31,7 @@ url = "2.5.2"
 regex = "1"
 sha2 = "0.10.6"
 lazy_static = "1.4.0"
+time = "0.3"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
