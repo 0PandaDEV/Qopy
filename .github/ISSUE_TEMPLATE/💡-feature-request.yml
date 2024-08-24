@@ -1,0 +1,13 @@
+name: "\U0001F4A1 Feature request"
+description: Suggest an idea for this project
+labels: [Feature]
+assignees: 
+  - 0PandaDEV
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe your requested feature
+      description: Give as many details as possible about your feature idea.
+    validations:
+      required: true
