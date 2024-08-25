@@ -3621,6 +3621,7 @@ dependencies = [
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard",
  "tauri-plugin-dialog",
+ "tauri-plugin-fs",
  "tauri-plugin-os",
  "tauri-plugin-prevent-default",
  "tauri-plugin-sql",

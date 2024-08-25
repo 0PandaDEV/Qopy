@@ -16,9 +16,11 @@ use sha2::{Sha256, Digest};
 use rdev::{simulate, Key, EventType};
 use lazy_static::lazy_static;
 use image::ImageFormat;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 lazy_static! {
     static ref APP_DATA_DIR: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
+    static ref IS_PROGRAMMATIC_PASTE: AtomicBool = AtomicBool::new(false);
 }
 
 pub fn set_app_data_dir(path: std::path::PathBuf) {
@@ -35,7 +37,33 @@ pub fn read_image(filename: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn simulate_paste() {
+pub async fn write_and_paste<R: Runtime>(app_handle: tauri::AppHandle<R>, content: String, content_type: String) -> Result<(), String> {
+    let clipboard = app_handle.state::<Clipboard>();
+
+    match content_type.as_str() {
+        "text" => clipboard.write_text(content).map_err(|e| e.to_string())?,
+        "image" => {
+            clipboard.write_image_base64(content).map_err(|e| e.to_string())?;
+        },
+        "files" => {
+            clipboard.write_files_uris(content.split(", ").map(|file| file.to_string()).collect::<Vec<String>>()).map_err(|e| e.to_string())?;
+        },
+        _ => return Err("Unsupported content type".to_string()),
+    }
+
+    IS_PROGRAMMATIC_PASTE.store(true, Ordering::SeqCst);
+
+    simulate_paste();
+
+    tokio::spawn(async {
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        IS_PROGRAMMATIC_PASTE.store(false, Ordering::SeqCst);
+    });
+
+    Ok(())
+}
+
+fn simulate_paste() {
     let mut events = vec![
         EventType::KeyPress(Key::ControlLeft),
         EventType::KeyPress(Key::KeyV),
@@ -65,6 +93,11 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
     app.clone().listen("plugin:clipboard://clipboard-monitor/update", move |_event| {
         let app = app.clone();
         runtime.block_on(async move {
+            if IS_PROGRAMMATIC_PASTE.load(Ordering::SeqCst) {
+                println!("Ignoring programmatic paste");
+                return;
+            }
+
             let clipboard = app.state::<Clipboard>();
             let available_types = clipboard.available_types().unwrap();
             
@@ -79,12 +112,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                             insert_content_if_not_exists(app.clone(), pool.clone(), "image", base64_image).await;
                         }
                         let _ = app.emit("plugin:clipboard://image-changed", ());
-                    } else if available_types.rtf {
-                        println!("Handling RTF change");
-                        if let Ok(rtf) = clipboard.read_rtf() {
-                            insert_content_if_not_exists(app.clone(), pool.clone(), "rtf", rtf).await;
-                        }
-                        let _ = app.emit("plugin:clipboard://rtf-changed", ());
                     } else if available_types.files {
                         println!("Handling files change");
                         if let Ok(files) = clipboard.read_files() {

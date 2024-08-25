@@ -10,12 +10,17 @@ rust-version = "1.70"
 tauri-build = { version = "2.0.0-rc.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc.6", features = [ "macos-private-api", "tray-icon", "image-png"] }
-tauri-plugin-sql = {version = "2.0.0-rc.0", features = ["sqlite"] }
+tauri = { version = "2.0.0-rc.6", features = [
+  "macos-private-api",
+  "tray-icon",
+  "image-png",
+] }
+tauri-plugin-sql = { version = "2.0.0-rc.0", features = ["sqlite"] }
 tauri-plugin-autostart = "2.0.0-rc.0"
 tauri-plugin-os = "2.0.0-rc.0"
 tauri-plugin-updater = "2.0.0-rc.1"
 tauri-plugin-dialog = "2.0.0-rc.0"
+tauri-plugin-fs = "2.0.0-rc.0"
 tauri-plugin-clipboard = "2.1.6"
 tauri-plugin-prevent-default = "0.4.0"
 sqlx = { version = "0.8.0", features = ["runtime-tokio-native-tls", "sqlite"] }

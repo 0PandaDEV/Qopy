@@ -17,6 +17,7 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -69,9 +70,9 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            api::clipboard::simulate_paste,
             api::clipboard::get_image_path,
-            api::clipboard::read_image
+            api::clipboard::write_and_paste,
+            api::clipboard::read_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
