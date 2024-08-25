@@ -5,7 +5,7 @@
       spellcheck="false" class="search" type="text" placeholder="Type to filter entries...">
     <div class="bottom-bar">
       <div class="left">
-        <img class="logo" width="18px" src="/Logo.svg" alt="">
+        <img class="logo" width="18px" src="/logo.png" alt="">
         <p>Qopy</p>
       </div>
       <div class="right">
@@ -33,7 +33,7 @@
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el as HTMLElement }">
           <img v-if="item.content_type === 'image'" :src="getComputedImageUrl(item)" alt="Image" class="favicon-image">
-          <img v-else-if="isUrl(item.content)" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon" class="favicon">
+          <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon" class="favicon">
           <FileIcon class="file" v-else />
           <span v-if="item.content_type === 'image'">Image ({{ item.dimensions || 'Loading...' }})</span>
           <span v-else>{{ truncateContent(item.content) }}</span>
@@ -225,13 +225,8 @@ const truncateContent = (content: string): string => {
   return content.length > maxChars ? content.slice(0, maxChars - 3) + '...' : content;
 };
 
-const isUrl = (str: string): boolean => {
-  try {
-    new URL(str);
-    return true;
-  } catch {
-    return false;
-  }
+const hasFavicon = (str: string): boolean => {
+  return str.trim() !== '';
 };
 
 const isYoutubeWatchUrl = (url: string): boolean => {
