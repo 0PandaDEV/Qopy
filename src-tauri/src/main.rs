@@ -6,11 +6,12 @@
 mod api;
 mod utils;
 
-use tauri::{Manager, Listener};
+use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
 
 fn main() {
+    #[allow(unused_variables)]
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_os::init())
@@ -21,11 +22,6 @@ fn main() {
             MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .plugin(api::updater::init())
-        .plugin(api::database::init())
-        .plugin(api::tray::init())
-        .plugin(api::hotkeys::init())
-        .plugin(api::clipboard::init())
         .plugin(
             tauri_plugin_prevent_default::Builder::new()
                 .with_flags(Flags::all().difference(Flags::CONTEXT_MENU))
@@ -33,26 +29,33 @@ fn main() {
         )
         .setup(|app| {
             let app_handle = app.handle().clone();
-            
-            let app_data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("Failed to get app data directory");
-            api::clipboard::set_app_data_dir(app_data_dir);
+
+            api::hotkeys::setup(app_handle.clone());
+            api::tray::setup(app)?;
+            api::database::setup(app)?;
+            api::clipboard::setup(app.handle());
+            let _ = api::clipboard::start_monitor(app_handle.clone());
 
             if let Some(window) = app.get_webview_window("main") {
                 utils::commands::center_window_on_current_monitor(&window);
                 window.hide().unwrap();
             }
 
-            let update_handle = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                api::updater::check_for_updates(update_handle).await;
-            });
+            // #[cfg(dev)]
+            // {
+            //     let window = app.get_webview_window("main").unwrap();
+            //     window.open_devtools();
+            //     window.close_devtools();
+            // }
 
-            let monitor_handle = app_handle.clone();
-            app_handle.listen("database_initialized", move |_| {
-                let _ = api::clipboard::start_monitor(monitor_handle.clone());
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data directory");
+            api::clipboard::set_app_data_dir(app_data_dir);
+
+            tauri::async_runtime::spawn(async move {
+                api::updater::check_for_updates(app_handle).await;
             });
 
             Ok(())

@@ -1,19 +1,10 @@
-use tauri::AppHandle;
-use tauri::plugin::TauriPlugin;
-use tauri::Manager;
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
-use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::{
+    Manager,
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+};
 
-pub fn init() -> TauriPlugin<tauri::Wry> {
-    tauri::plugin::Builder::new("tray")
-        .setup(|app, _api| {
-            setup(app)?;
-            Ok(())
-        })
-        .build()
-}
-
-fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = app.get_webview_window("main").unwrap();
     let window_clone_for_tray = window.clone();
     let window_clone_for_click = window.clone();

@@ -1,21 +1,11 @@
-use tauri::plugin::TauriPlugin;
-use tauri::{AppHandle, Manager, Emitter};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use tokio::runtime::Runtime;
+use tauri::Manager;
 use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
 
-pub fn init() -> TauriPlugin<tauri::Wry> {
-    tauri::plugin::Builder::new("database")
-        .setup(|app_handle: &AppHandle, _api| {
-            setup(app_handle)?;
-            Ok(())
-        })
-        .build()
-}
-
-fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let rt = Runtime::new().expect("Failed to create Tokio runtime");
 
     let app_data_dir = app.path().app_data_dir().unwrap();
@@ -75,8 +65,6 @@ fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     app.manage(pool);
     app.manage(rt);
-
-    app.emit("database_initialized", ()).expect("Failed to emit database_initialized event");
 
     Ok(())
 }

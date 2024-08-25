@@ -1,6 +1,6 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use tauri::{AppHandle, Manager, Emitter, Listener};
+use tauri::{AppHandle, Manager, Runtime, Emitter, Listener};
 use tauri_plugin_clipboard::Clipboard;
 use tokio::runtime::Runtime as TokioRuntime;
 use regex::Regex;
@@ -16,20 +16,14 @@ use sha2::{Sha256, Digest};
 use rdev::{simulate, Key, EventType};
 use lazy_static::lazy_static;
 use image::ImageFormat;
-use tauri::plugin::TauriPlugin;
 
-pub fn init() -> TauriPlugin<tauri::Wry> {
-    tauri::plugin::Builder::new("clipboard")
-        .invoke_handler(tauri::generate_handler![
-            read_image,
-            simulate_paste,
-            get_image_path
-        ])
-        .setup(|app_handle, _api| {
-            setup(app_handle.clone());
-            Ok(())
-        })
-        .build()
+lazy_static! {
+    static ref APP_DATA_DIR: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
+}
+
+pub fn set_app_data_dir(path: std::path::PathBuf) {
+    let mut dir = APP_DATA_DIR.lock().unwrap();
+    *dir = Some(path);
 }
 
 #[tauri::command]
@@ -64,15 +58,7 @@ pub fn get_image_path(app_handle: tauri::AppHandle, filename: String) -> String 
     image_path.to_str().unwrap_or("").to_string()
 }
 
-#[tauri::command]
-pub fn start_monitor(app_handle: tauri::AppHandle) -> Result<(), String> {
-    let clipboard = app_handle.state::<Clipboard>();
-    clipboard.start_monitor(app_handle.clone()).map_err(|e| e.to_string())?;
-    app_handle.emit("plugin:clipboard://clipboard-monitor/status", true).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-fn setup<R: tauri::Runtime>(app: AppHandle<R>) {
+pub fn setup<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
     let runtime = TokioRuntime::new().expect("Failed to create Tokio runtime");
 
@@ -124,14 +110,14 @@ fn setup<R: tauri::Runtime>(app: AppHandle<R>) {
     });
 }
 
-async fn get_pool<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) -> Result<SqlitePool, Box<dyn std::error::Error + Send + Sync>> {
+async fn get_pool<R: Runtime>(app_handle: &AppHandle<R>) -> Result<SqlitePool, Box<dyn std::error::Error + Send + Sync>> {
     let app_data_dir = app_handle.path().app_data_dir().expect("Failed to get app data directory");
     let db_path = app_data_dir.join("data.db");
     let database_url = format!("sqlite:{}", db_path.to_str().unwrap());
     SqlitePool::connect(&database_url).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
 }
 
-async fn insert_content_if_not_exists<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>, pool: SqlitePool, content_type: &str, content: String) {
+async fn insert_content_if_not_exists<R: Runtime>(app_handle: AppHandle<R>, pool: SqlitePool, content_type: &str, content: String) {
     let last_content: Option<String> = sqlx::query_scalar(
         "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
     )
@@ -191,7 +177,7 @@ async fn insert_content_if_not_exists<R: tauri::Runtime>(app_handle: tauri::AppH
     }
 }
 
-async fn save_image<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, base64_image: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn save_image<R: Runtime>(app_handle: &AppHandle<R>, base64_image: &str) -> Result<String, Box<dyn std::error::Error>> {
     let image_data = STANDARD.decode(base64_image)?;
     let mut hasher = Sha256::new();
     hasher.update(&image_data);
@@ -226,11 +212,10 @@ async fn fetch_favicon_as_base64(url: url::Url) -> Result<Option<String>, Box<dy
     }
 }
 
-lazy_static! {
-    static ref APP_DATA_DIR: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
-}
-
-pub fn set_app_data_dir(path: std::path::PathBuf) {
-    let mut dir = APP_DATA_DIR.lock().unwrap();
-    *dir = Some(path);
+#[tauri::command]
+pub fn start_monitor(app_handle: AppHandle) -> Result<(), String> {
+    let clipboard = app_handle.state::<Clipboard>();
+    clipboard.start_monitor(app_handle.clone()).map_err(|e| e.to_string())?;
+    app_handle.emit("plugin:clipboard://clipboard-monitor/status", true).map_err(|e| e.to_string())?;
+    Ok(())
 }
