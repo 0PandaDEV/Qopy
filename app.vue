@@ -32,9 +32,14 @@
           :class="['result clothoid-corner', { 'selected': isSelected(groupIndex, index) }]"
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el as HTMLElement }">
-          <img v-if="item.content_type === 'image'" :src="getComputedImageUrl(item)" alt="Image" class="favicon-image">
+          <template v-if="item.content_type === 'image'">
+            <img :src="getComputedImageUrl(item)" alt="Image" class="image" @error="onImageError">
+            <IconsImage v-show="imageLoadError" class="icon" />
+          </template>
           <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon" class="favicon">
-          <FileIcon class="file" v-else />
+          <IconsFile class="icon" v-else-if="item.content_type === 'files'" />
+          <IconsText class="icon" v-else-if="item.content_type === 'text'" />
+          <IconsCode class="icon" v-else-if="item.content_type === 'code'" />
           <span v-if="item.content_type === 'image'">Image ({{ item.dimensions || 'Loading...' }})</span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
