@@ -5,7 +5,7 @@
       spellcheck="false" class="search" type="text" placeholder="Type to filter entries...">
     <div class="bottom-bar">
       <div class="left">
-        <img src="/Logo.svg" alt="">
+        <img class="logo" width="18px" src="/Logo.svg" alt="">
         <p>Qopy</p>
       </div>
       <div class="right">
@@ -202,7 +202,8 @@ const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
   
   let content = selectedItem.value.content;
-  if (selectedItem.value.content_type === 'image') {
+  let contentType: String = selectedItem.value.content_type;
+  if (contentType === 'image') {
     try {
       content = readFile(content).toString();
     } catch (error) {
@@ -210,8 +211,11 @@ const pasteSelectedItem = async (): Promise<void> => {
       return;
     }
   }
-  await invoke("write_and_paste", { content, content_type: selectedItem.value.content_type });
   await hideApp();
+  await invoke("write_and_paste", { 
+    content, 
+    contentType 
+  });
 };
 
 const truncateContent = (content: string): string => {
