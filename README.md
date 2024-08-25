@@ -5,6 +5,8 @@
 
 The fixed, simple and reliable clipboard manager for both Windows and Linux.
 
+<ins>**This project is not yet stable!**</ins>
+
 <table>
   <tbody>
     <tr>
