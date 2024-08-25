@@ -9,7 +9,6 @@ mod utils;
 use tauri::{Manager, Listener};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
-use tauri::WindowEvent;
 
 fn main() {
     tauri::Builder::default()
@@ -60,7 +59,7 @@ fn main() {
         })
         .on_window_event(|app, event| {
             #[cfg(not(dev))]
-            if let WindowEvent::Focused(false) = event {
+            if let tauri::WindowEvent::Focused(false) = event {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
