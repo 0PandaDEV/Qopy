@@ -1,6 +1,6 @@
 # Get Started
 
-The hotkey for Qopy is Windows+V which is also the hotkey for the default clipboard manager to turn that off follow [this guide](https://github.com/0PandaDEV/Qopy/new/main#disable-windowsv-for-default-clipboard-manager). 
+The hotkey for Qopy is Windows+V which is also the hotkey for the default clipboard manager to turn that off follow [this guide](https://github.com/0PandaDEV/Qopy/blob/main/GET_STARTED.md#disable-windowsv-for-default-clipboard-manager). 
 
 All the data of Qopy is stored inside of a SQLite database. The location for the file differs for windows and linux.
 
