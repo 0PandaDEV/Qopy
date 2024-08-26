@@ -1,7 +1,7 @@
 use tauri::{
-    Manager,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    Manager,
 };
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -15,6 +15,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _tray = TrayIconBuilder::new()
         .menu(
             &MenuBuilder::new(app)
+                .items(&[&MenuItemBuilder::with_id("app_name", "Qopy")
+                    .enabled(false)
+                    .build(app)?])
                 .items(&[&MenuItemBuilder::with_id("show", "Show/Hide").build(app)?])
                 .items(&[&MenuItemBuilder::with_id("quit", "Quit").build(app)?])
                 .build()?,
@@ -34,18 +37,14 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => (),
         })
-        .on_tray_icon_event(move |_tray, event| {
-            if let TrayIconEvent::Click { button, .. } = event {
-                if button == MouseButton::Left {
-                    let is_visible = window_clone_for_click.is_visible().unwrap();
-                    if is_visible {
-                        window_clone_for_click.hide().unwrap();
-                    } else {
-                        window_clone_for_click.show().unwrap();
-                    }
-                }
-            }
-        })
+        // .on_tray_icon_event(move |_tray, event| {
+        //     if let TrayIconEvent::Click { button, .. } = event {
+        //         if button == MouseButton::Left {
+        //             window_clone_for_click.show().unwrap();
+        //             window_clone_for_click.set_focus().unwrap();
+        //         }
+        //     }
+        // })
         .icon(icon)
         .build(app)?;
 

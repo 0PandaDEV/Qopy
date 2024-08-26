@@ -9,25 +9,25 @@ $mutedtext: #78756F;
 @font-face {
   font-family: SFRoundedRegular;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedRegular.otf") format("woff2");
+  src: url("~/assets/fonts/SFRoundedRegular.otf") format("opentype");
 }
 
 @font-face {
   font-family: SFRoundedMedium;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedMedium.otf") format("woff2");
+  src: url("~/assets/fonts/SFRoundedMedium.otf") format("opentype");
 }
 
 @font-face {
   font-family: SFRoundedSemiBold;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("woff2");
+  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("opentype");
 }
 
 @font-face {
-  font-family: SFMonoRegular;
+  font-family: CommitMono;
   font-display: swap;
-  src: url("~/assets/fonts/SFMonoRegular.otf") format("woff2");
+  src: url("~/assets/fonts/CommitMono.woff2") format("woff2");
 }
 
 * {
@@ -149,7 +149,7 @@ body,
   left: 284px;
   padding: 8px;
   height: calc(100vh - 96px);
-  font-family: SFMonoRegular !important;
+  font-family: CommitMono !important;
   font-size: 14px;
   letter-spacing: 1;
   border-radius: 10px;
@@ -159,7 +159,7 @@ body,
 
   div {
     border-radius: 10px;
-    font-family: SFMonoRegular !important;
+    font-family: CommitMono !important;
   }
 
   .full-image {
