@@ -30,7 +30,8 @@ fn main() {
         )
         .setup(|app| {
             let app_handle = app.handle().clone();
-
+            
+            #[cfg(not(target_os = "macos"))]
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
             api::database::setup(app)?;
