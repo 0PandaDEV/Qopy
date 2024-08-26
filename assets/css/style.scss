@@ -88,7 +88,7 @@ body,
   width: 284px;
   top: 53px;
   left: 0;
-  height: calc(100vh - 96px);
+  height: calc(100vh - 95px);
   border-right: 1px solid $divider;
   display: flex;
   flex-direction: column;
@@ -179,12 +179,12 @@ body,
 }
 
 .bottom-bar {
-  height: 41px;
-  width: calc(100vw - 3px);
+  height: 40px;
+  width: calc(100vw - 2px);
   backdrop-filter: blur(18px);
-  background-color: rgba(46, 45, 43, 0.8);
+  background-color: hsla(40, 3%, 16%, 0.8);
   position: fixed;
-  bottom: 2px;
+  bottom: 1px;
   left: 1px;
   z-index: 100;
   border-radius: 0 0 12px 12px;
@@ -192,6 +192,8 @@ body,
   flex-direction: row;
   justify-content: space-between;
   padding-inline: 12px;
+  padding-right: 6px;
+  padding-top: 1px;
   align-items: center;
   font-size: 14px;
   border-top: 1px solid $divider;
@@ -241,9 +243,10 @@ body,
       display: flex;
       align-items: center;
       gap: 8px;
-      border-radius: 6px;
+      border-radius: 7px;
       background-color: transparent;
       transition: all .2s;
+      cursor: pointer;
     }
 
     .paste:hover,
