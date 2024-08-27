@@ -6,56 +6,6 @@ $text: #E5DFD5;
 $text2: #ADA9A1;
 $mutedtext: #78756F;
 
-@font-face {
-  font-family: SFRoundedRegular;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedRegular.otf") format("opentype");
-}
-
-@font-face {
-  font-family: SFRoundedMedium;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedMedium.otf") format("opentype");
-}
-
-@font-face {
-  font-family: SFRoundedSemiBold;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("opentype");
-}
-
-@font-face {
-  font-family: CommitMono;
-  font-display: swap;
-  src: url("~/assets/fonts/CommitMono.woff2") format("woff2");
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  color: $text;
-  text-decoration: none;
-  font-family: SFRoundedRegular;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  user-select: none;
-
-  --os-handle-bg: #ADA9A1;
-  --os-handle-bg-hover: #78756F;
-  --os-handle-bg-active: #78756F;
-}
-
-html,
-body,
-#__nuxt {
-  background-color: transparent;
-}
-
-.os-scrollbar-horizontal {
-  display: none;
-}
-
 .bg {
   width: 750px;
   height: 474px;
