@@ -28,6 +28,7 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:window:allow-is-focused",
-    "core:window:allow-is-visible"
+    "core:window:allow-is-visible",
+    "fs:allow-read"
   ]
 }

@@ -6,56 +6,6 @@ $text: #E5DFD5;
 $text2: #ADA9A1;
 $mutedtext: #78756F;
 
-@font-face {
-  font-family: SFRoundedRegular;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedRegular.otf") format("woff2");
-}
-
-@font-face {
-  font-family: SFRoundedMedium;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedMedium.otf") format("woff2");
-}
-
-@font-face {
-  font-family: SFRoundedSemiBold;
-  font-display: swap;
-  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("woff2");
-}
-
-@font-face {
-  font-family: SFMonoRegular;
-  font-display: swap;
-  src: url("~/assets/fonts/SFMonoRegular.otf") format("woff2");
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  color: $text;
-  text-decoration: none;
-  font-family: SFRoundedRegular;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  user-select: none;
-
-  --os-handle-bg: #ADA9A1;
-  --os-handle-bg-hover: #78756F;
-  --os-handle-bg-active: #78756F;
-}
-
-html,
-body,
-#__nuxt {
-  background-color: transparent;
-}
-
-.os-scrollbar-horizontal {
-  display: none;
-}
-
 .bg {
   width: 750px;
   height: 474px;
@@ -88,7 +38,7 @@ body,
   width: 284px;
   top: 53px;
   left: 0;
-  height: calc(100vh - 96px);
+  height: calc(100vh - 95px);
   border-right: 1px solid $divider;
   display: flex;
   flex-direction: column;
@@ -105,7 +55,7 @@ body,
     padding: 10px;
     padding-inline: 10px;
     letter-spacing: 0.5px;
-    gap: 16px;
+    gap: 10px;
     overflow: hidden;
     text-overflow: clip;
     white-space: nowrap;
@@ -129,12 +79,13 @@ body,
   }
 
   .favicon {
-    width: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .image {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .icon {
@@ -149,7 +100,7 @@ body,
   left: 284px;
   padding: 8px;
   height: calc(100vh - 96px);
-  font-family: SFMonoRegular !important;
+  font-family: CommitMono !important;
   font-size: 14px;
   letter-spacing: 1;
   border-radius: 10px;
@@ -159,7 +110,7 @@ body,
 
   div {
     border-radius: 10px;
-    font-family: SFMonoRegular !important;
+    font-family: CommitMono !important;
   }
 
   .full-image {
@@ -178,12 +129,12 @@ body,
 }
 
 .bottom-bar {
-  height: 41px;
-  width: calc(100vw - 3px);
+  height: 40px;
+  width: calc(100vw - 2px);
   backdrop-filter: blur(18px);
-  background-color: rgba(46, 45, 43, 0.8);
+  background-color: hsla(40, 3%, 16%, 0.8);
   position: fixed;
-  bottom: 2px;
+  bottom: 1px;
   left: 1px;
   z-index: 100;
   border-radius: 0 0 12px 12px;
@@ -191,6 +142,8 @@ body,
   flex-direction: row;
   justify-content: space-between;
   padding-inline: 12px;
+  padding-right: 6px;
+  padding-top: 1px;
   align-items: center;
   font-size: 14px;
   border-top: 1px solid $divider;
@@ -240,9 +193,10 @@ body,
       display: flex;
       align-items: center;
       gap: 8px;
-      border-radius: 6px;
+      border-radius: 7px;
       background-color: transparent;
       transition: all .2s;
+      cursor: pointer;
     }
 
     .paste:hover,

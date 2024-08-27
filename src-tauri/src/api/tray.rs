@@ -1,13 +1,10 @@
 use tauri::{
-    Manager,
-    menu::{MenuBuilder, MenuItemBuilder},
-    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    menu::{MenuBuilder, MenuItemBuilder}, tray::TrayIconBuilder, Emitter, Manager
 };
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = app.get_webview_window("main").unwrap();
     let window_clone_for_tray = window.clone();
-    let window_clone_for_click = window.clone();
 
     let icon_bytes = include_bytes!("../../icons/Square71x71Logo.png");
     let icon = tauri::image::Image::from_bytes(icon_bytes).unwrap();
@@ -15,7 +12,11 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _tray = TrayIconBuilder::new()
         .menu(
             &MenuBuilder::new(app)
+                .items(&[&MenuItemBuilder::with_id("app_name", "Qopy")
+                    .enabled(false)
+                    .build(app)?])
                 .items(&[&MenuItemBuilder::with_id("show", "Show/Hide").build(app)?])
+                .items(&[&MenuItemBuilder::with_id("keybind", "Change keybind").build(app)?])
                 .items(&[&MenuItemBuilder::with_id("quit", "Quit").build(app)?])
                 .build()?,
         )
@@ -31,20 +32,12 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     window_clone_for_tray.show().unwrap();
                     window_clone_for_tray.set_focus().unwrap();
                 }
+                window_clone_for_tray.emit("main_route", ()).unwrap();
+            }
+            "keybind" => {
+                window_clone_for_tray.emit("change_keybind", ()).unwrap();
             }
             _ => (),
-        })
-        .on_tray_icon_event(move |_tray, event| {
-            if let TrayIconEvent::Click { button, .. } = event {
-                if button == MouseButton::Left {
-                    let is_visible = window_clone_for_click.is_visible().unwrap();
-                    if is_visible {
-                        window_clone_for_click.hide().unwrap();
-                    } else {
-                        window_clone_for_click.show().unwrap();
-                    }
-                }
-            }
         })
         .icon(icon)
         .build(app)?;
