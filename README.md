@@ -12,12 +12,12 @@ The fixed, simple and reliable clipboard manager for both Windows and Linux.
     <tr>
       <td>Download for</td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_x64_en-US.msi">
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.1/Qopy-0.1.1.msi">
           <img src="./public/windows.png"> Windows
         </a>
       </td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.0/Qopy_0.1.0_amd64.AppImage">
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.1.1/Qopy-0.1.1.AppImage">
           <img src="./public/linux.png"> Linux
         </a>
       </td>
