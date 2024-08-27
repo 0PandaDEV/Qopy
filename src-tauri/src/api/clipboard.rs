@@ -24,11 +24,12 @@ pub fn set_app_data_dir(path: std::path::PathBuf) {
 }
 
 #[tauri::command]
-pub fn read_image(filename: String) -> Result<Vec<u8>, String> {
+pub fn read_image(filename: String) -> Result<String, String> {
     let app_data_dir = APP_DATA_DIR.lock().unwrap();
     let app_data_dir = app_data_dir.as_ref().expect("App data directory not set");
     let image_path = app_data_dir.join("images").join(filename);
-    fs::read(image_path).map_err(|e| e.to_string())
+    let image_data = fs::read(image_path).map_err(|e| e.to_string())?;
+    Ok(STANDARD.encode(image_data))
 }
 
 #[tauri::command]
@@ -107,26 +108,22 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
             let app = app.clone();
             runtime.block_on(async move {
                 if IS_PROGRAMMATIC_PASTE.load(Ordering::SeqCst) {
-                    println!("Ignoring programmatic paste");
                     return;
                 }
 
                 let clipboard = app.state::<Clipboard>();
                 let available_types = clipboard.available_types().unwrap();
 
-                println!("Clipboard update detected");
-
                 match get_pool(&app).await {
                     Ok(pool) => {
                         if available_types.image {
                             println!("Handling image change");
                             if let Ok(image_data) = clipboard.read_image_base64() {
-                                let base64_image = STANDARD.encode(&image_data);
                                 insert_content_if_not_exists(
                                     app.clone(),
                                     pool.clone(),
                                     "image",
-                                    base64_image,
+                                    image_data,
                                 )
                                 .await;
                             }

@@ -3,6 +3,7 @@ use tauri::Manager;
 
 use crate::utils::commands::center_window_on_current_monitor;
 
+#[warn(dead_code)]
 pub fn setup(app_handle: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut meta_pressed = false;

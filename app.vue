@@ -33,10 +33,15 @@
           @click="selectItem(groupIndex, index)"
           :ref="el => { if (isSelected(groupIndex, index)) selectedElement = el as HTMLElement }">
           <template v-if="item.content_type === 'image'">
-            <img :src="getComputedImageUrl(item)" alt="Image" class="image" @error="onImageError">
-            <IconsImage v-show="imageLoadError" class="icon" />
+            <img v-if="!imageLoading && !imageLoadError" 
+                 :src="getComputedImageUrl(item)" 
+                 alt="Image" 
+                 class="image" 
+                 @error="onImageError">
+            <IconsImage v-if="imageLoading || imageLoadError" class="icon" />
           </template>
-          <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon" class="favicon">
+          <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon"
+            class="favicon">
           <IconsFile class="icon" v-else-if="item.content_type === 'files'" />
           <IconsText class="icon" v-else-if="item.content_type === 'text'" />
           <IconsCode class="icon" v-else-if="item.content_type === 'code'" />
@@ -49,8 +54,8 @@
       <img :src="getComputedImageUrl(selectedItem)" alt="Image" class="image">
     </div>
     <OverlayScrollbarsComponent v-else class="content">
-      <img v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)" :src="getYoutubeThumbnail(selectedItem.content)"
-        alt="YouTube Thumbnail" class="full-image">
+      <img v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)"
+        :src="getYoutubeThumbnail(selectedItem.content)" alt="YouTube Thumbnail" class="full-image">
       <span v-else>{{ selectedItem?.content || '' }}</span>
     </OverlayScrollbarsComponent>
     <Noise />
@@ -95,6 +100,9 @@ const selectedItemIndex: Ref<number> = ref(0);
 const selectedElement: Ref<HTMLElement | null> = ref(null);
 const searchInput: Ref<HTMLInputElement | null> = ref(null);
 const os: Ref<string> = ref('');
+const imageLoadError = ref(false);
+const imageLoading = ref(true);
+const imageUrls: Ref<Record<number, string>> = shallowRef({});
 
 const groupedHistory: ComputedRef<GroupedHistory[]> = computed(() => {
   const now = new Date();
@@ -205,7 +213,7 @@ const selectItem = (groupIndex: number, itemIndex: number): void => {
 
 const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
-  
+
   let content = selectedItem.value.content;
   let contentType: String = selectedItem.value.content_type;
   if (contentType === 'image') {
@@ -217,9 +225,9 @@ const pasteSelectedItem = async (): Promise<void> => {
     }
   }
   await hideApp();
-  await invoke("write_and_paste", { 
-    content, 
-    contentType 
+  await invoke("write_and_paste", {
+    content,
+    contentType
   });
 };
 
@@ -255,50 +263,72 @@ const getFaviconFromDb = (favicon: string): string => {
 const getImageDimensions = (path: string): Promise<string> => {
   return new Promise(async (resolve) => {
     const img = new Image();
-    img.onload = () => resolve(`${img.width}x${img.height}`);
-    img.onerror = () => resolve('0x0');
-    if (path.includes('AppData\\Roaming\\net.pandadev.qopy\\images\\')) {
-      const filename = path.split('\\').pop();
-      try {
-        const imageData = await invoke<Uint8Array>("read_image", { filename: filename });
-        const blob = new Blob([imageData], { type: 'image/png' });
-        img.src = URL.createObjectURL(blob);
-      } catch (error) {
-        console.error('Error reading image file:', error);
-        resolve('0x0');
-      }
-    } else {
-      img.src = `data:image/png;base64,${path}`;
+    img.onload = () => {
+      imageLoadError.value = false;
+      imageLoading.value = false;
+      resolve(`${img.width}x${img.height}`);
+    };
+    img.onerror = (e) => {
+      console.error('Error loading image:', e);
+      imageLoadError.value = true;
+      imageLoading.value = false;
+      resolve('0x0');
+    };
+
+    try {
+      imageLoading.value = true;
+      const dataUrl = await getImageUrl(path);
+      img.src = dataUrl;
+    } catch (error) {
+      console.error('Error getting image URL:', error);
+      imageLoadError.value = true;
+      imageLoading.value = false;
+      resolve('0x0');
     }
   });
 };
 
-const imageUrls: Ref<Record<number, string>> = shallowRef({});
+const getImageUrl = async (path: string): Promise<string> => {
+  const isWindows = path.includes('\\');
+  const separator = isWindows ? '\\' : '/';
+  const filename = path.split(separator).pop();
+  
+  try {
+    imageLoading.value = true;
+    const base64 = await invoke<string>("read_image", { filename });
+    console.log('Image data received, length:', base64.length);
+    if (!base64 || base64.length === 0) {
+      throw new Error('Received empty image data');
+    }
+    
+    const dataUrl = `data:image/png;base64,${base64}`;
+    
+    console.log('Data URL preview:', dataUrl.substring(0, 50) + '...');
+    
+    imageLoadError.value = false;
+    imageLoading.value = false;
+    return dataUrl;
+  } catch (error) {
+    console.error('Error reading image file:', error);
+    imageLoadError.value = true;
+    imageLoading.value = false;
+    return '';
+  }
+};
 
 const getComputedImageUrl = (item: HistoryItem): string => {
   if (!imageUrls.value[item.id]) {
     imageUrls.value[item.id] = '';
-    getImageUrl(item.content).then(url => {
-      imageUrls.value = { ...imageUrls.value, [item.id]: url };
-    });
+    getImageUrl(item.content)
+      .then(url => {
+        imageUrls.value = { ...imageUrls.value, [item.id]: url };
+      })
+      .catch(error => {
+        console.error('Failed to get image URL:', error);
+        imageUrls.value = { ...imageUrls.value, [item.id]: '' };
+      });
   }
   return imageUrls.value[item.id] || '';
-};
-
-const getImageUrl = async (path: string): Promise<string> => {
-  if (path.includes('AppData\\Roaming\\net.pandadev.qopy\\images\\')) {
-    const filename = path.split('\\').pop();
-    try {
-      const imageData = await invoke<Uint8Array>("read_image", { filename: filename });
-      const blob = new Blob([imageData], { type: 'image/png' });
-      return URL.createObjectURL(blob);
-    } catch (error) {
-      console.error('Error reading image file:', error);
-      return '';
-    }
-  } else {
-    return `data:image/png;base64,${path}`;
-  }
 };
 
 const loadHistoryChunk = async (): Promise<void> => {
@@ -328,6 +358,7 @@ const loadHistoryChunk = async (): Promise<void> => {
   const processedChunk = await Promise.all(results.map(async item => {
     if (item.content_type === 'image') {
       const dimensions = await getImageDimensions(item.content);
+      getComputedImageUrl(item);
       return { ...item, dimensions };
     }
     return item;
@@ -340,10 +371,10 @@ const loadHistoryChunk = async (): Promise<void> => {
 
 const handleScroll = (): void => {
   if (!resultsContainer.value) return;
-  
+
   const { viewport } = resultsContainer.value?.osInstance().elements() ?? {};
   const { scrollTop = 0, scrollHeight = 0, clientHeight = 0 } = viewport ?? {};
-  
+
   if (scrollHeight - scrollTop - clientHeight < 100) {
     loadHistoryChunk();
   }
