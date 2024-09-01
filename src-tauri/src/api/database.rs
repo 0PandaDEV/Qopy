@@ -1,9 +1,16 @@
-use sqlx::sqlite::SqlitePoolOptions;
-use std::fs;
-use tokio::runtime::Runtime;
-use tauri::Manager;
-use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use std::fs;
+use tauri::Manager;
+use tauri::State;
+use tokio::runtime::Runtime;
+
+#[derive(Deserialize, Serialize)]
+struct KeybindSetting {
+    keybind: Vec<String>,
+}
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let rt = Runtime::new().expect("Failed to create Tokio runtime");
@@ -27,6 +34,46 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     rt.block_on(async {
+        // Setup settings table
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create settings table");
+
+        let existing_keybind = sqlx::query_scalar::<_, Option<String>>(
+            "SELECT value FROM settings WHERE key = 'keybind'"
+        )
+        .fetch_one(&pool)
+        .await;
+
+        match existing_keybind {
+            Ok(Some(_)) => {
+            },
+            Ok(None) => {
+                let default_keybind = KeybindSetting {
+                    keybind: vec!["Meta".to_string(), "V".to_string()],
+                };
+                let json = serde_json::to_string(&default_keybind).unwrap();
+
+                sqlx::query(
+                    "INSERT INTO settings (key, value) VALUES ('keybind', ?)"
+                )
+                .bind(json)
+                .execute(&pool)
+                .await
+                .expect("Failed to insert default keybind");
+            },
+            Err(e) => {
+                eprintln!("Failed to check existing keybind: {}", e);
+            }
+        }
+
+        // Setup history table
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS history (
                 id TEXT PRIMARY KEY,
@@ -38,7 +85,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         )
         .execute(&pool)
         .await
-        .expect("Failed to create table");
+        .expect("Failed to create history table");
 
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_timestamp ON history (timestamp)"
@@ -67,4 +114,41 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(rt);
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn save_keybind(
+    keybind: Vec<String>,
+    pool: State<'_, SqlitePool>,
+) -> Result<(), String> {
+    let setting = KeybindSetting { keybind };
+    let json = serde_json::to_string(&setting).map_err(|e| e.to_string())?;
+
+    sqlx::query(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)"
+    )
+    .bind(json)
+    .execute(&*pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_keybind(pool: State<'_, SqlitePool>) -> Result<Vec<String>, String> {
+    let result = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'keybind'"
+    )
+    .fetch_optional(&*pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    match result {
+        Some(json) => {
+            let setting: KeybindSetting = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+            Ok(setting.keybind)
+        },
+        None => Ok(vec!["Meta".to_string(), "V".to_string()]),
+    }
 }

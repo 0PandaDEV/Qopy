@@ -121,16 +121,3 @@ pub fn start_keybind_capture() {
 pub fn stop_keybind_capture() {
     IS_CAPTURING_KEYBIND.store(false, Ordering::SeqCst);
 }
-
-#[tauri::command]
-pub fn get_current_keybind() -> String {
-    // Implement logic to retrieve the current keybind from your configuration
-    "Meta+V".to_string() // Placeholder
-}
-
-#[tauri::command]
-pub fn save_keybind(keybind: String) -> Result<(), String> {
-    // Implement logic to save the new keybind to your configuration
-    println!("Saving keybind: {}", keybind);
-    Ok(())
-}

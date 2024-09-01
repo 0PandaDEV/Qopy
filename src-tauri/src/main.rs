@@ -31,10 +31,10 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            // #[cfg(not(target_os = "macos"))]
+            #[cfg(not(target_os = "macos"))]
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
-            api::database::setup(app)?;
+            let _ = api::database::setup(app);
             api::clipboard::setup(app.handle());
             let _ = api::clipboard::start_monitor(app_handle.clone());
 
@@ -76,8 +76,8 @@ fn main() {
             api::clipboard::read_image,
             api::hotkeys::start_keybind_capture,
             api::hotkeys::stop_keybind_capture,
-            api::hotkeys::get_current_keybind,
-            api::hotkeys::save_keybind,
+            api::database::save_keybind,
+            api::database::get_keybind
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
