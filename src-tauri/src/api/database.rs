@@ -135,7 +135,9 @@ pub async fn save_keybind(
 }
 
 #[tauri::command]
-pub async fn get_keybind(pool: State<'_, SqlitePool>) -> Result<Vec<String>, String> {
+pub async fn get_keybind(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let pool = app_handle.state::<SqlitePool>();
+
     let result = sqlx::query_scalar::<_, String>(
         "SELECT value FROM settings WHERE key = 'keybind'"
     )

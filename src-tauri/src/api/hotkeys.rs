@@ -10,10 +10,7 @@ fn key_to_string(key: &Key) -> String {
 #[warn(dead_code)]
 pub fn setup(app_handle: tauri::AppHandle) {
     std::thread::spawn(move || {
-        let pool = app_handle.state::<sqlx::SqlitePool>();
-        let rt = app_handle.state::<tokio::runtime::Runtime>();
-
-        let keybind = rt.block_on(async { get_keybind(pool).await.unwrap_or_default() });
+        let keybind = tauri::async_runtime::block_on(async { get_keybind(app_handle.clone()).await.unwrap_or_default() });
 
         println!("Listening for keybind: {:?}", keybind);
 

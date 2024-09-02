@@ -31,10 +31,9 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            // #[cfg(not(target_os = "macos"))]
+            let _ = api::database::setup(app);
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
-            let _ = api::database::setup(app);
             api::clipboard::setup(app.handle());
             let _ = api::clipboard::start_monitor(app_handle.clone());
 
