@@ -23,15 +23,15 @@ tauri-plugin-dialog = "2.0.0-rc.0"
 tauri-plugin-fs = "2.0.0-rc.0"
 tauri-plugin-clipboard = "2.1.6"
 tauri-plugin-prevent-default = "0.4.0"
-sqlx = { version = "0.8.0", features = ["runtime-tokio-native-tls", "sqlite"] }
-serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.0", features = ["full"] }
-serde_json = "1.0"
+sqlx = { version = "0.8.1", features = ["runtime-tokio-native-tls", "sqlite"] }
+serde = { version = "1.0.209", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["full"] }
+serde_json = "1.0.127"
 rdev = "0.5.3"
 rand = "0.8"
 base64 = "0.22.1"
 image = "0.25.1"
-reqwest = { version = "0.12.5", features = ["blocking"] }
+reqwest = { version = "0.12.7", features = ["blocking"] }
 url = "2.5.2"
 regex = "1"
 sha2 = "0.10.6"
