@@ -31,7 +31,7 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            #[cfg(not(target_os = "macos"))]
+            // #[cfg(not(target_os = "macos"))]
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
             let _ = api::database::setup(app);
@@ -74,8 +74,6 @@ fn main() {
             api::clipboard::get_image_path,
             api::clipboard::write_and_paste,
             api::clipboard::read_image,
-            api::hotkeys::start_keybind_capture,
-            api::hotkeys::stop_keybind_capture,
             api::database::save_keybind,
             api::database::get_keybind
         ])

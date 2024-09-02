@@ -121,8 +121,7 @@ pub async fn save_keybind(
     keybind: Vec<String>,
     pool: State<'_, SqlitePool>,
 ) -> Result<(), String> {
-    let setting = KeybindSetting { keybind };
-    let json = serde_json::to_string(&setting).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string(&keybind).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)"

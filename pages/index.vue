@@ -454,6 +454,6 @@ onMounted(async () => {
 
 </script>
 
-<style lang="scss">
+<style scoped lang="scss">
 @import '~/assets/css/index.scss';
 </style>

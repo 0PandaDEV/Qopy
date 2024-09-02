@@ -17,50 +17,133 @@ $mutedtext: #78756F;
   outline: none;
 }
 
+.back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  img{
+    background-color: $divider;
+    border-radius: 6px;
+    padding: 8px 6px;
+  }
+
+  p {
+    color: $text2;
+  }
+}
+
 .keybind-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  padding: 20px;
+  height: 100vh;
+  gap: 6px;
+
+  .title {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .keybind-input {
+    padding: 6px;
+    border: 1px solid $divider;
+    color: $text2;
+    display: flex;
+    border-radius: 13px;
+    outline: none;
+    gap: 6px;
+
+    .key {
+      color: $text2;
+      font-family: SFRoundedMedium;
+      background-color: $divider;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+  }
+
+  .keybind-input:focus {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
 }
 
-h2 {
-  margin-bottom: 20px;
-}
-
-.keybind-input {
-  width: 300px;
-  height: 50px;
-  border: 2px solid $accent;
-  border-radius: 5px;
+.bottom-bar {
+  height: 40px;
+  width: calc(100vw - 2px);
+  backdrop-filter: blur(18px);
+  background-color: hsla(40, 3%, 16%, 0.8);
+  position: fixed;
+  bottom: 1px;
+  left: 1px;
+  z-index: 100;
+  border-radius: 0 0 12px 12px;
   display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-inline: 12px;
+  padding-right: 6px;
+  padding-top: 1px;
   align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  cursor: pointer;
-  margin-bottom: 20px;
-  background-color: rgba($accent, 0.1);
-  user-select: none;
-}
+  font-size: 14px;
+  border-top: 1px solid $divider;
 
-.keybind-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba($accent, 0.5);
-}
+  p {
+    color: $text2;
+  }
 
-button {
-  padding: 10px 20px;
-  background-color: $accent;
-  color: $primary;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-}
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    .logo {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .right {
+    display: flex;
+    align-items: center;
+
+    .actions div {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .divider {
+      width: 2px;
+      height: 12px;
+      background-color: $divider;
+      margin-left: 8px;
+      margin-right: 4px;
+      transition: all .2s;
+    }
+
+    .actions {
+      padding: 4px;
+      padding-left: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 7px;
+      background-color: transparent;
+      transition: all .2s;
+      cursor: pointer;
+    }
+
+    .actions:hover {
+      background-color: $divider;
+    }
+
+    &:hover .actions:hover~.divider {
+      opacity: 0;
+    }
+  }
 }
