@@ -35,13 +35,13 @@
           <template v-if="item.content_type === 'image'">
             <img v-if="!imageLoading && !imageLoadError" :src="getComputedImageUrl(item)" alt="Image" class="image"
               @error="onImageError">
-            <IconsImage v-if="imageLoading || imageLoadError" class="icon" />
+            <img v-if="imageLoading || imageLoadError" src="../public/icons/Image.svg" class="icon" />
           </template>
           <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon"
             class="favicon">
-          <IconsFile class="icon" v-else-if="item.content_type === 'files'" />
-          <IconsText class="icon" v-else-if="item.content_type === 'text'" />
-          <IconsCode class="icon" v-else-if="item.content_type === 'code'" />
+          <img src="../public/icons/File.svg" class="icon" v-else-if="item.content_type === 'files'" />
+          <img src="../public/icons/Text.svg" class="icon" v-else-if="item.content_type === 'text'" />
+          <img src="../public/icons/Code.svg" class="icon" v-else-if="item.content_type === 'code'" />
           <span v-if="item.content_type === 'image'">Image ({{ item.dimensions || 'Loading...' }})</span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
@@ -366,8 +366,10 @@ const loadHistoryChunk = async (): Promise<void> => {
 const handleScroll = (): void => {
   if (!resultsContainer.value) return;
 
-  const { viewport } = resultsContainer.value?.osInstance().elements() ?? {};
-  const { scrollTop = 0, scrollHeight = 0, clientHeight = 0 } = viewport ?? {};
+  const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
+  const scrollTop = viewport?.scrollTop ?? 0;
+  const scrollHeight = viewport?.scrollHeight ?? 0;
+  const clientHeight = viewport?.clientHeight ?? 0;
 
   if (scrollHeight - scrollTop - clientHeight < 100) {
     loadHistoryChunk();
@@ -418,6 +420,11 @@ const scrollToSelectedItem = (): void => {
   });
 };
 
+const onImageError = (): void => {
+  imageLoadError.value = true;
+  imageLoading.value = false;
+};
+
 watch([selectedGroupIndex, selectedItemIndex], scrollToSelectedItem);
 
 watch(searchQuery, () => {
@@ -428,9 +435,7 @@ onMounted(async () => {
   db.value = await Database.load('sqlite:data.db');
   await loadHistoryChunk();
 
-  if (resultsContainer.value) {
-    resultsContainer.value.osInstance().elements().viewport.addEventListener('scroll', handleScroll);
-  }
+  resultsContainer.value?.osInstance()?.elements()?.viewport?.addEventListener('scroll', handleScroll);
 
   await listen('tauri://focus', async () => {
     history.value = [];
