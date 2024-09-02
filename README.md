@@ -43,6 +43,8 @@ The fixed, simple and reliable clipboard manager for both Windows and Linux.
   </a>
 </details>
 
+[![wakatime](https://wakatime.com/badge/user/018ce503-097f-4057-9599-db20b190920c/project/fe76359d-56c2-4a13-8413-55207b6ad298.svg?style=flat_square)](https://wakatime.com/badge/user/018ce503-097f-4057-9599-db20b190920c/project/fe76359d-56c2-4a13-8413-55207b6ad298)
+
 ## 📋 What is Qopy
 
 Qopy is a fixed clipboard manager designed as a simple alternative to the standard clipboard in Windows. It aims to provide a smoother, more reliable experience. Plus, it's compatible with Linux, so you can enjoy the same great features on both operating systems.
