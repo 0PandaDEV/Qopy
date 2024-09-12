@@ -3,7 +3,7 @@
 <img align="center" width="128px" src="src-tauri/icons/icon.png" />
 <h1 align="center"><b>Qopy</b></h1>
 
-The fixed, simple and reliable clipboard manager for both Windows and Linux.
+The fixed and simple clipboard manager for both Windows and Linux.
 
 <ins>**This project is not yet stable!**</ins>
 
