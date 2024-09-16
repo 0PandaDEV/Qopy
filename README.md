@@ -72,8 +72,6 @@ Qopy is open-source and free to use. I appreciate donations to support ongoing d
 
 <a href="https://buymeacoffee.com/pandadev_"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black"/></a>
 
-More options available via the Sponsor ❤️ button above.
-
 ## ⌨️ Local development
 
 You can use GitHub Codespaces for online development:
@@ -91,7 +89,7 @@ pnpm dev
 
 > \[!TIP]
 >
-> If you are interested in contributing code, feel free to check out our GitHub [Issues](https://github.com/0pandadev/Qopy/issues).
+> If you are interested in contributing code, feel free to check out the [Issues](https://github.com/0pandadev/Qopy/issues) section.
 
 ## 🔨 Building for production
 
@@ -109,7 +107,7 @@ pnpm build
 
 ## 📝 License
 
-Qopy is licensed under the Creative Commons Attribution-Noncommercial-Share Alike. See the [LICENSE file](./LICENCE) for more information.
+Qopy is licensed under GPL-3. See the [LICENSE file](./LICENCE) for more information.
 
 [codespaces-link]: https://codespaces.new/0pandadev/Qopy
 [codespaces-shield]: https://github.com/codespaces/badge.svg
