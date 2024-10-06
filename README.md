@@ -5,8 +5,6 @@
 
 The fixed and simple clipboard manager for both Windows and Linux.
 
-<ins>**This project is not yet stable! However its usable.**</ins>
-
 <table>
   <tbody>
     <tr>
@@ -25,9 +23,11 @@ The fixed and simple clipboard manager for both Windows and Linux.
   </tbody>
 </table>
 
-<sup>Unstable Nightly releases can be found <a href="https://github.com/0PandaDEV/qopy/actions/workflows/build.yml">here</a> </sup>
+<sup>Nightly releases can be found <a href="https://github.com/0PandaDEV/qopy/actions/workflows/build.yml">here</a> </sup>
 
 </div>
+
+» [discord](https://discord.gg/invite/Y7SbYphVw9)
 
 > \[!IMPORTANT]
 >
