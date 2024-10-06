@@ -27,7 +27,7 @@ The fixed and simple clipboard manager for both Windows and Linux.
 
 </div>
 
-» [discord](https://discord.gg/invite/Y7SbYphVw9)
+[discord »](https://discord.gg/invite/Y7SbYphVw9)
 
 > \[!IMPORTANT]
 >
