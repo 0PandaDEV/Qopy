@@ -7,11 +7,12 @@ mod api;
 mod utils;
 
 use tauri::Manager;
+use tauri::WebviewUrl;
+use tauri::WebviewWindow;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
 
 fn main() {
-    #[allow(unused_variables)]
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_os::init())
@@ -31,23 +32,35 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
+            let main_window = if let Some(window) = app.get_webview_window("main") {
+                window
+            } else {
+                WebviewWindow::builder(
+                    app.handle(),
+                    "main",
+                    WebviewUrl::App("index.html".into())
+                )
+                .title("Qopy")
+                .resizable(false)
+                .fullscreen(false)
+                .inner_size(750.0, 474.0)
+                .focused(true)
+                .skip_taskbar(true)
+                .visible(false)
+                .decorations(false)
+                .transparent(true)
+                .always_on_top(false)
+                .build()?
+            };
+
             let _ = api::database::setup(app);
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
             api::clipboard::setup(app.handle());
             let _ = api::clipboard::start_monitor(app_handle.clone());
 
-            if let Some(window) = app.get_webview_window("main") {
-                utils::commands::center_window_on_current_monitor(&window);
-                window.hide().unwrap();
-            }
-
-            // #[cfg(dev)]
-            // {
-            //     let window = app.get_webview_window("main").unwrap();
-            //     window.open_devtools();
-            //     window.close_devtools();
-            // }
+            utils::commands::center_window_on_current_monitor(&main_window);
+            main_window.hide()?;
 
             let app_data_dir = app
                 .path()
@@ -61,10 +74,10 @@ fn main() {
 
             Ok(())
         })
-        .on_window_event(|app, event| {
+        .on_window_event(|_app, _event| {
             #[cfg(not(dev))]
-            if let tauri::WindowEvent::Focused(false) = event {
-                if let Some(window) = app.get_webview_window("main") {
+            if let tauri::WindowEvent::Focused(false) = _event {
+                if let Some(window) = _app.get_webview_window("main") {
                     let _ = window.hide();
                 }
             }
