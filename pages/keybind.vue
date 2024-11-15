@@ -172,5 +172,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import '~/assets/css/keybind.scss';
+@use '~/assets/css/keybind.scss';
 </style>
