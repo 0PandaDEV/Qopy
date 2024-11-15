@@ -20,107 +20,192 @@ jobs:
         id: get_version
         run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
 
-  build:
+  build-macos:
     needs: prepare
     strategy:
-      fail-fast: false
       matrix:
-        platform: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        include:
+          - args: "--target aarch64-apple-darwin"
+            arch: "silicon"
+          - args: "--target x86_64-apple-darwin"
+            arch: "intel"
+    runs-on: macos-latest
     env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: setup node
-        uses: actions/setup-node@v4
+      - name: Redact Sensitive Information
+        run: |
+          function redact_output {
+            sed -e "s/${{ secrets.REDACT_PATTERN }}/REDACTED/g"
+          }
+          exec > >(redact_output) 2>&1
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          workspaces: "./src-tauri -> target"
-
-      - name: pnpm cache
-        uses: actions/cache@v4
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          cache-directories: "~/.cargo/registry/index/,~/.cargo/registry/cache/,~/.cargo/git/db/"
+          shared-key: "macos-rust-cache"
+          save-if: "true"
+      - uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
+      - run: npm install -g pnpm && pnpm install
+      - name: Import Apple Developer Certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security find-identity -v -p codesigning build.keychain
+      - name: Verify Certificate
+        run: |
+          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Apple Development")
+          CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+          echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
+          echo "Certificate imported."
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+        with:
+          args: ${{ matrix.args }}
+      - name: Debug Signing Process
+        if: failure()
+        run: |
+          echo "Attempting manual signing:"
+          codesign --force --options runtime --sign "$CERT_ID" --entitlements src-tauri/entitlements.plist src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app
+          echo "Verifying signature:"
+          codesign -dv --verbose=4 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app | sed 's/.*Authority=.*/Authority=REDACTED/'
+      - name: Rename and Publish macOS Artifacts
+        run: |
+          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
+          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz
+          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz.sig src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz.sig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-macos-dmg-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-files-macos-${{ matrix.arch }}
+          path: |
+            src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz.sig
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          cache-directories: "~/.cargo/registry/index/,~/.cargo/registry/cache/,~/.cargo/git/db/"
+          shared-key: "windows-rust-cache"
+          save-if: "true"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      - run: npm install -g pnpm && pnpm install
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename and Publish Windows Artifacts
+        run: |
+          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi
+          mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi.sig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-windows-msi
+          path: src-tauri/target/release/bundle/msi/*.msi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-files-windows
+          path: | 
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+
+  build-ubuntu:
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          cache-directories: "~/.cargo/registry/index/,~/.cargo/registry/cache/,~/.cargo/git/db/"
+          shared-key: "ubuntu-rust-cache"
+          save-if: "true"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      - name: install dependencies
         run: |
           sudo apt update
           sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-
-      - name: install frontend dependencies
-        run: npm install -g pnpm && pnpm install
-
+      - run: npm install -g pnpm && pnpm install
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Rename and Publish Windows Artifacts
-        if: matrix.platform == 'windows-latest'
-        run: |
-          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi
-          mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi.sig
-
-      - name: Publish Windows Artifacts
-        if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-windows-msi
-          path: src-tauri/target/release/bundle/msi/*.msi
-
-      - name: Publish Windows Updater Files
-        if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: updater-files-windows
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.sig
-
       - name: Rename and Publish Ubuntu Artifacts
-        if: matrix.platform == 'ubuntu-latest'
         run: |
           mv src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}.deb
           mv src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage
           mv src-tauri/target/release/bundle/appimage/*.AppImage.sig src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage.sig
           mv src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}.rpm
-
-      - name: Publish Ubuntu Artifacts
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-deb
           path: src-tauri/target/release/bundle/deb/*.deb
-
-      - name: Publish Ubuntu AppImage
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-appimage
           path: src-tauri/target/release/bundle/appimage/*.AppImage
-
-      - name: Publish Ubuntu RPM
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu-rpm
           path: src-tauri/target/release/bundle/rpm/*.rpm
-
-      - name: Publish Ubuntu Updater Files
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: updater-files-ubuntu
           path: |
