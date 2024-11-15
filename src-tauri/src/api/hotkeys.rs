@@ -4,35 +4,41 @@ use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
 };
 use std::str::FromStr;
-use tauri::{AppHandle, Listener, Manager};
-use std::sync::Arc;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager, Listener};
+
+lazy_static::lazy_static! {
+    static ref HOTKEY_MANAGER: Mutex<Option<GlobalHotKeyManager>> = Mutex::new(None);
+}
 
 pub fn setup(app_handle: tauri::AppHandle) {
     let app_handle_clone = app_handle.clone();
 
-    let manager = Arc::new(GlobalHotKeyManager::new().expect("Failed to initialize hotkey manager"));
-    let manager_clone = manager.clone();
-    let manager_clone2 = manager.clone();
+    let manager = GlobalHotKeyManager::new().expect("Failed to initialize hotkey manager");
+    *HOTKEY_MANAGER.lock().unwrap() = Some(manager);
 
     let rt = app_handle.state::<tokio::runtime::Runtime>();
     let initial_keybind = rt.block_on(crate::api::database::get_keybind(app_handle_clone.clone()))
         .expect("Failed to get initial keybind");
     let initial_shortcut = initial_keybind.join("+");
     
-    let initial_shortcut_clone = initial_shortcut.clone();
+    let initial_shortcut_for_update = initial_shortcut.clone();
+    let initial_shortcut_for_save = initial_shortcut.clone();
     
-    if let Err(e) = register_shortcut(&manager, &initial_shortcut) {
+    if let Err(e) = register_shortcut(&initial_shortcut) {
         eprintln!("Error registering initial shortcut: {:?}", e);
     }
 
     app_handle.listen("update-shortcut", move |event| {
         let payload_str = event.payload().to_string();
         
-        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_clone) {
-            let _ = manager_clone.unregister(old_hotkey);
+        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_update) {
+            if let Some(manager) = HOTKEY_MANAGER.lock().unwrap().as_ref() {
+                let _ = manager.unregister(old_hotkey);
+            }
         }
 
-        if let Err(e) = register_shortcut(&manager_clone, &payload_str) {
+        if let Err(e) = register_shortcut(&payload_str) {
             eprintln!("Error re-registering shortcut: {:?}", e);
         }
     });
@@ -40,11 +46,13 @@ pub fn setup(app_handle: tauri::AppHandle) {
     app_handle.listen("save_keybind", move |event| {
         let payload_str = event.payload().to_string();
         
-        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut) {
-            let _ = manager_clone2.unregister(old_hotkey);
+        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_save) {
+            if let Some(manager) = HOTKEY_MANAGER.lock().unwrap().as_ref() {
+                let _ = manager.unregister(old_hotkey);
+            }
         }
 
-        if let Err(e) = register_shortcut(&manager_clone2, &payload_str) {
+        if let Err(e) = register_shortcut(&payload_str) {
             eprintln!("Error registering saved shortcut: {:?}", e);
         }
     });
@@ -67,12 +75,11 @@ pub fn setup(app_handle: tauri::AppHandle) {
     });
 }
 
-fn register_shortcut(
-    manager: &Arc<GlobalHotKeyManager>,
-    shortcut: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn register_shortcut(shortcut: &str) -> Result<(), Box<dyn std::error::Error>> {
     let hotkey = parse_hotkey(shortcut)?;
-    manager.register(hotkey)?;
+    if let Some(manager) = HOTKEY_MANAGER.lock().unwrap().as_ref() {
+        manager.register(hotkey)?;
+    }
     Ok(())
 }
 
