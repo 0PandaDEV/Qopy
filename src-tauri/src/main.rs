@@ -64,9 +64,7 @@ fn main() {
         .on_window_event(|app, event| {
             #[cfg(not(dev))]
             if let tauri::WindowEvent::Focused(false) = event {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
-                }
+                return;
             }
         })
         .invoke_handler(tauri::generate_handler![

@@ -2,6 +2,52 @@ use tauri::{
     menu::{MenuBuilder, MenuItemBuilder}, tray::TrayIconBuilder, Emitter, Manager
 };
 
+#[cfg(target_os = "windows")]
+mod platform {
+    use std::ptr::null_mut;
+    use winapi::um::winuser::{AttachThreadInput, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow};
+
+    pub fn manage_focus(window: &tauri::Window) {
+        unsafe {
+            let foreground_window = GetForegroundWindow();
+            let current_thread_id = GetWindowThreadProcessId(foreground_window, null_mut());
+            let target_thread_id = GetWindowThreadProcessId(window.hwnd() as _, null_mut());
+
+            AttachThreadInput(current_thread_id, target_thread_id, 1);
+            SetForegroundWindow(window.hwnd() as _);
+            AttachThreadInput(current_thread_id, target_thread_id, 0);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod platform {
+    use cocoa::appkit::NSWindow;
+    use cocoa::base::id;
+    use objc::runtime::YES;
+
+    pub fn manage_focus(window: &tauri::Window) {
+        unsafe {
+            let ns_window: id = window.ns_window().unwrap() as _;
+            ns_window.makeKeyAndOrderFront_(YES);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+mod platform {
+    use x11::xlib::{Display, XSetInputFocus, XDefaultRootWindow, XOpenDisplay, XCloseDisplay, RevertToParent};
+
+    pub fn manage_focus(window: &tauri::Window) {
+        unsafe {
+            let display: *mut Display = XOpenDisplay(null_mut());
+            let root_window = XDefaultRootWindow(display);
+            XSetInputFocus(display, root_window, RevertToParent, 0);
+            XCloseDisplay(display);
+        }
+    }
+}
+
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = app.get_webview_window("main").unwrap();
     let window_clone_for_tray = window.clone();
@@ -30,7 +76,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     window_clone_for_tray.hide().unwrap();
                 } else {
                     window_clone_for_tray.show().unwrap();
-                    window_clone_for_tray.set_focus().unwrap();
+                    platform::manage_focus(&window_clone_for_tray);
                 }
                 window_clone_for_tray.emit("main_route", ()).unwrap();
             }
