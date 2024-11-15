@@ -1,10 +1,10 @@
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use serde_json;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::fs;
-use tauri::Manager;
-use tauri::State;
+use tauri::{Manager, Emitter};
 use tokio::runtime::Runtime;
 
 #[derive(Deserialize, Serialize)]
@@ -118,18 +118,22 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tauri::command]
 pub async fn save_keybind(
+    app_handle: tauri::AppHandle,
     keybind: Vec<String>,
-    pool: State<'_, SqlitePool>,
+    pool: tauri::State<'_, SqlitePool>,
 ) -> Result<(), String> {
     let json = serde_json::to_string(&keybind).map_err(|e| e.to_string())?;
 
-    sqlx::query(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)"
-    )
-    .bind(json)
-    .execute(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)")
+        .bind(json)
+        .execute(&*pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let keybind_str = keybind.join("+");
+    app_handle
+        .emit("update-shortcut", keybind_str)
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -138,18 +142,20 @@ pub async fn save_keybind(
 pub async fn get_keybind(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
     let pool = app_handle.state::<SqlitePool>();
 
-    let result = sqlx::query_scalar::<_, String>(
-        "SELECT value FROM settings WHERE key = 'keybind'"
-    )
-    .fetch_optional(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    let result =
+        sqlx::query_scalar::<_, String>("SELECT value FROM settings WHERE key = 'keybind'")
+            .fetch_optional(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
     match result {
         Some(json) => {
-            let setting: KeybindSetting = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-            Ok(setting.keybind)
-        },
-        None => Ok(vec!["Meta".to_string(), "V".to_string()]),
+            let keybind: Vec<String> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+            Ok(keybind)
+        }
+        None => {
+            let default_keybind = vec!["Meta".to_string(), "V".to_string()];
+            Ok(default_keybind)
+        }
     }
 }

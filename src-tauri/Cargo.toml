@@ -1,13 +1,13 @@
 [package]
 name = "qopy"
-version = "0.1.1"
+version = "0.2.0"
 description = "Qopy"
 authors = ["pandadev"]
 edition = "2021"
 rust-version = "1.70"
 
 [build-dependencies]
-tauri-build = { version = "2.0.1", features = [] }
+tauri-build = { version = "2.0.3", features = [] }
 
 [dependencies]
 tauri = { version = "2.0.1", features = [
@@ -15,29 +15,30 @@ tauri = { version = "2.0.1", features = [
   "tray-icon",
   "image-png",
 ] }
-tauri-plugin-sql = { version = "2.0.1", features = ["sqlite"] }
+tauri-plugin-sql = { version = "2.0.2", features = ["sqlite"] }
 tauri-plugin-autostart = "2.0.1"
 tauri-plugin-os = "2.0.1"
 tauri-plugin-updater = "2.0.2"
-tauri-plugin-dialog = "2.0.1"
-tauri-plugin-fs = "2.0.1"
-tauri-plugin-clipboard = "2.1.9"
-tauri-plugin-prevent-default = "0.6.1"
+tauri-plugin-dialog = "2.0.3"
+tauri-plugin-fs = "2.0.3"
+tauri-plugin-clipboard = "2.1.11"
+tauri-plugin-prevent-default = "0.7.5"
 tauri-plugin-global-shortcut = "2.0.1"
 sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "sqlite"] }
-serde = { version = "1.0.210", features = ["derive"] }
-tokio = { version = "1.40.0", features = ["full"] }
-serde_json = "1.0.128"
+serde = { version = "1.0.215", features = ["derive"] }
+tokio = { version = "1.41.1", features = ["full"] }
+serde_json = "1.0.132"
 rdev = "0.5.3"
 rand = "0.8"
 base64 = "0.22.1"
-image = "0.25.2"
-reqwest = { version = "0.12.8", features = ["blocking"] }
-url = "2.5.2"
-regex = "1.11.0"
+image = "0.25.5"
+reqwest = { version = "0.12.9", features = ["blocking"] }
+url = "2.5.3"
+regex = "1.11.1"
 sha2 = "0.10.6"
 lazy_static = "1.4.0"
 time = "0.3"
+global-hotkey = "0.6.3"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
