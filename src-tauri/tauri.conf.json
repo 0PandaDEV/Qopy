@@ -46,16 +46,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "category": "DeveloperTool",
-    "copyright": "",
-    "externalBin": [],
-    "macOS": {
-      "entitlements": "entitlements.plist",
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": null,
-      "signingIdentity": null
-    }
+    "category": "DeveloperTool"
   },
   "plugins": {
     "updater": {
