@@ -20,7 +20,7 @@ pub async fn check_for_updates(app: AppHandle) {
 
             app.dialog()
                 .message(msg)
-                .title("Update Available")
+                .title("Qopy Update Available")
                 .buttons(MessageDialogButtons::OkCancelCustom(String::from("Install"), String::from("Cancel")))
                 .show(move |response| {
                     if !response {
@@ -31,7 +31,7 @@ pub async fn check_for_updates(app: AppHandle) {
                             Ok(_) => {
                                 app.dialog()
                                     .message("Update installed successfully. The application needs to restart to apply the changes.")
-                                    .title("Update Installed")
+                                    .title("Qopy Update Installed")
                                     .buttons(MessageDialogButtons::OkCancelCustom(String::from("Restart"), String::from("Cancel")))
                                     .show(move |response| {
                                         if response {
