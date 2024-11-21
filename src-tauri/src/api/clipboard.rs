@@ -62,7 +62,28 @@ pub async fn write_and_paste<R: Runtime>(
 
     IS_PROGRAMMATIC_PASTE.store(true, Ordering::SeqCst);
 
-    simulate_paste();
+    thread::spawn(|| {
+        thread::sleep(Duration::from_millis(100));
+
+        #[cfg(target_os = "macos")]
+        let modifier_key = Key::MetaLeft;
+        #[cfg(not(target_os = "macos"))]
+        let modifier_key = Key::ControlLeft;
+
+        let events = vec![
+            EventType::KeyPress(modifier_key),
+            EventType::KeyPress(Key::KeyV),
+            EventType::KeyRelease(Key::KeyV),
+            EventType::KeyRelease(modifier_key),
+        ];
+
+        for event in events {
+            if let Err(e) = simulate(&event) {
+                println!("Simulation error: {:?}", e);
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+    });
 
     tokio::spawn(async {
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -70,22 +91,6 @@ pub async fn write_and_paste<R: Runtime>(
     });
 
     Ok(())
-}
-
-fn simulate_paste() {
-    let mut events = vec![
-        EventType::KeyPress(Key::ControlLeft),
-        EventType::KeyPress(Key::KeyV),
-        EventType::KeyRelease(Key::KeyV),
-        EventType::KeyRelease(Key::ControlLeft),
-    ];
-
-    thread::sleep(Duration::from_millis(100));
-
-    for event in events.drain(..) {
-        simulate(&event).unwrap();
-        thread::sleep(Duration::from_millis(20));
-    }
 }
 
 #[tauri::command]
@@ -246,6 +251,8 @@ async fn insert_content_if_not_exists<R: Runtime>(
         .bind(favicon_base64)
         .execute(&pool)
         .await;
+
+        let _ = app_handle.emit("clipboard-content-updated", ());
     }
 }
 
