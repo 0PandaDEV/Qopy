@@ -35,22 +35,18 @@ fn main() {
             let main_window = if let Some(window) = app.get_webview_window("main") {
                 window
             } else {
-                WebviewWindow::builder(
-                    app.handle(),
-                    "main",
-                    WebviewUrl::App("index.html".into())
-                )
-                .title("Qopy")
-                .resizable(false)
-                .fullscreen(false)
-                .inner_size(750.0, 474.0)
-                .focused(true)
-                .skip_taskbar(true)
-                .visible(false)
-                .decorations(false)
-                .transparent(true)
-                .always_on_top(false)
-                .build()?
+                WebviewWindow::builder(app.handle(), "main", WebviewUrl::App("index.html".into()))
+                    .title("Qopy")
+                    .resizable(false)
+                    .fullscreen(false)
+                    .inner_size(750.0, 474.0)
+                    .focused(true)
+                    .skip_taskbar(true)
+                    .visible(false)
+                    .decorations(false)
+                    .transparent(true)
+                    .always_on_top(false)
+                    .build()?
             };
 
             let _ = api::database::setup(app);
