@@ -1,10 +1,10 @@
-$primary: #2E2D2B;
-$accent: #FEB453;
+$primary: #2e2d2b;
+$accent: #feb453;
 $divider: #ffffff0d;
 
-$text: #E5DFD5;
-$text2: #ADA9A1;
-$mutedtext: #78756F;
+$text: #e5dfd5;
+$text2: #ada9a1;
+$mutedtext: #78756f;
 
 .bg {
   width: 750px;
@@ -100,7 +100,7 @@ $mutedtext: #78756F;
   left: 284px;
   padding: 8px;
   height: calc(100vh - 96px);
-  font-family: CommitMono !important;
+  font-family: CommitMono Nerd Font !important;
   font-size: 14px;
   letter-spacing: 1;
   border-radius: 10px;
@@ -108,9 +108,8 @@ $mutedtext: #78756F;
   white-space: pre-wrap;
   word-wrap: break-word;
 
-  div {
-    border-radius: 10px;
-    font-family: CommitMono !important;
+  span {
+    font-family: CommitMono Nerd Font !important;
   }
 
   .full-image {
@@ -183,7 +182,7 @@ $mutedtext: #78756F;
       background-color: $divider;
       margin-left: 8px;
       margin-right: 4px;
-      transition: all .2s;
+      transition: all 0.2s;
     }
 
     .paste,
@@ -195,7 +194,7 @@ $mutedtext: #78756F;
       gap: 8px;
       border-radius: 7px;
       background-color: transparent;
-      transition: all .2s;
+      transition: all 0.2s;
       cursor: pointer;
     }
 
@@ -204,97 +203,99 @@ $mutedtext: #78756F;
       background-color: $divider;
     }
 
-    &:hover .paste:hover~.divider,
-    &:hover .actions:hover~.divider {
+    &:hover .paste:hover ~ .divider,
+    &:hover .actions:hover ~ .divider {
       opacity: 0;
     }
   }
 }
 
 .clothoid-corner {
-  clip-path: polygon(13.890123px 0px,
-      calc(100% - 13.890123px) 0px,
-      calc(100% - 12.723414px) 0.004211px,
-      calc(100% - 11.556933px) 0.025635px,
-      calc(100% - 10.391895px) 0.085062px,
-      calc(100% - 9.231074px) 0.199291px,
-      calc(100% - 8.079275px) 0.382298px,
-      calc(100% - 6.947448px) 0.662609px,
-      calc(100% - 5.844179px) 1.039291px,
-      calc(100% - 4.793324px) 1.542842px,
-      calc(100% - 3.811369px) 2.169728px,
-      calc(100% - 2.926417px) 2.926417px,
-      calc(100% - 2.169728px) 3.811369px,
-      calc(100% - 1.542842px) 4.793324px,
-      calc(100% - 1.039291px) 5.844179px,
-      calc(100% - 0.662609px) 6.947448px,
-      calc(100% - 0.382298px) 8.079275px,
-      calc(100% - 0.199291px) 9.231074px,
-      calc(100% - 0.085062px) 10.391895px,
-      calc(100% - 0.025635px) 11.556933px,
-      calc(100% - 0.004211px) 12.723414px,
-      100% 13.890123px,
-      100% calc(100% - 13.890123px),
-      calc(100% - 0.004211px) calc(100% - 12.723414px),
-      calc(100% - 0.025635px) calc(100% - 11.556933px),
-      calc(100% - 0.085062px) calc(100% - 10.391895px),
-      calc(100% - 0.199291px) calc(100% - 9.231074px),
-      calc(100% - 0.382298px) calc(100% - 8.079275px),
-      calc(100% - 0.662609px) calc(100% - 6.947448px),
-      calc(100% - 1.039291px) calc(100% - 5.844179px),
-      calc(100% - 1.542842px) calc(100% - 4.793324px),
-      calc(100% - 2.169728px) calc(100% - 3.811369px),
-      calc(100% - 2.926417px) calc(100% - 2.926417px),
-      calc(100% - 3.811369px) calc(100% - 2.169728px),
-      calc(100% - 4.793324px) calc(100% - 1.542842px),
-      calc(100% - 5.844179px) calc(100% - 1.039291px),
-      calc(100% - 6.947448px) calc(100% - 0.662609px),
-      calc(100% - 8.079275px) calc(100% - 0.382298px),
-      calc(100% - 9.231074px) calc(100% - 0.199291px),
-      calc(100% - 10.391895px) calc(100% - 0.085062px),
-      calc(100% - 11.556933px) calc(100% - 0.025635px),
-      calc(100% - 12.723414px) calc(100% - 0.004211px),
-      calc(100% - 13.890123px) 100%,
-      13.890123px 100%,
-      12.723414px calc(100% - 0.004211px),
-      11.556933px calc(100% - 0.025635px),
-      10.391895px calc(100% - 0.085062px),
-      9.231074px calc(100% - 0.199291px),
-      8.079275px calc(100% - 0.382298px),
-      6.947448px calc(100% - 0.662609px),
-      5.844179px calc(100% - 1.039291px),
-      4.793324px calc(100% - 1.542842px),
-      3.811369px calc(100% - 2.169728px),
-      2.926417px calc(100% - 2.926417px),
-      2.169728px calc(100% - 3.811369px),
-      1.542842px calc(100% - 4.793324px),
-      1.039291px calc(100% - 5.844179px),
-      0.662609px calc(100% - 6.947448px),
-      0.382298px calc(100% - 8.079275px),
-      0.199291px calc(100% - 9.231074px),
-      0.085062px calc(100% - 10.391895px),
-      0.025635px calc(100% - 11.556933px),
-      0.004211px calc(100% - 12.723414px),
-      0px calc(100% - 13.890123px),
-      0px 13.890123px,
-      0.004211px 12.723414px,
-      0.025635px 11.556933px,
-      0.085062px 10.391895px,
-      0.199291px 9.231074px,
-      0.382298px 8.079275px,
-      0.662609px 6.947448px,
-      1.039291px 5.844179px,
-      1.542842px 4.793324px,
-      2.169728px 3.811369px,
-      2.926417px 2.926417px,
-      3.811369px 2.169728px,
-      4.793324px 1.542842px,
-      5.844179px 1.039291px,
-      6.947448px 0.662609px,
-      8.079275px 0.382298px,
-      9.231074px 0.199291px,
-      10.391895px 0.085062px,
-      11.556933px 0.025635px,
-      12.723414px 0.004211px,
-      13.890123px 0px);
+  clip-path: polygon(
+    13.890123px 0px,
+    calc(100% - 13.890123px) 0px,
+    calc(100% - 12.723414px) 0.004211px,
+    calc(100% - 11.556933px) 0.025635px,
+    calc(100% - 10.391895px) 0.085062px,
+    calc(100% - 9.231074px) 0.199291px,
+    calc(100% - 8.079275px) 0.382298px,
+    calc(100% - 6.947448px) 0.662609px,
+    calc(100% - 5.844179px) 1.039291px,
+    calc(100% - 4.793324px) 1.542842px,
+    calc(100% - 3.811369px) 2.169728px,
+    calc(100% - 2.926417px) 2.926417px,
+    calc(100% - 2.169728px) 3.811369px,
+    calc(100% - 1.542842px) 4.793324px,
+    calc(100% - 1.039291px) 5.844179px,
+    calc(100% - 0.662609px) 6.947448px,
+    calc(100% - 0.382298px) 8.079275px,
+    calc(100% - 0.199291px) 9.231074px,
+    calc(100% - 0.085062px) 10.391895px,
+    calc(100% - 0.025635px) 11.556933px,
+    calc(100% - 0.004211px) 12.723414px,
+    100% 13.890123px,
+    100% calc(100% - 13.890123px),
+    calc(100% - 0.004211px) calc(100% - 12.723414px),
+    calc(100% - 0.025635px) calc(100% - 11.556933px),
+    calc(100% - 0.085062px) calc(100% - 10.391895px),
+    calc(100% - 0.199291px) calc(100% - 9.231074px),
+    calc(100% - 0.382298px) calc(100% - 8.079275px),
+    calc(100% - 0.662609px) calc(100% - 6.947448px),
+    calc(100% - 1.039291px) calc(100% - 5.844179px),
+    calc(100% - 1.542842px) calc(100% - 4.793324px),
+    calc(100% - 2.169728px) calc(100% - 3.811369px),
+    calc(100% - 2.926417px) calc(100% - 2.926417px),
+    calc(100% - 3.811369px) calc(100% - 2.169728px),
+    calc(100% - 4.793324px) calc(100% - 1.542842px),
+    calc(100% - 5.844179px) calc(100% - 1.039291px),
+    calc(100% - 6.947448px) calc(100% - 0.662609px),
+    calc(100% - 8.079275px) calc(100% - 0.382298px),
+    calc(100% - 9.231074px) calc(100% - 0.199291px),
+    calc(100% - 10.391895px) calc(100% - 0.085062px),
+    calc(100% - 11.556933px) calc(100% - 0.025635px),
+    calc(100% - 12.723414px) calc(100% - 0.004211px),
+    calc(100% - 13.890123px) 100%,
+    13.890123px 100%,
+    12.723414px calc(100% - 0.004211px),
+    11.556933px calc(100% - 0.025635px),
+    10.391895px calc(100% - 0.085062px),
+    9.231074px calc(100% - 0.199291px),
+    8.079275px calc(100% - 0.382298px),
+    6.947448px calc(100% - 0.662609px),
+    5.844179px calc(100% - 1.039291px),
+    4.793324px calc(100% - 1.542842px),
+    3.811369px calc(100% - 2.169728px),
+    2.926417px calc(100% - 2.926417px),
+    2.169728px calc(100% - 3.811369px),
+    1.542842px calc(100% - 4.793324px),
+    1.039291px calc(100% - 5.844179px),
+    0.662609px calc(100% - 6.947448px),
+    0.382298px calc(100% - 8.079275px),
+    0.199291px calc(100% - 9.231074px),
+    0.085062px calc(100% - 10.391895px),
+    0.025635px calc(100% - 11.556933px),
+    0.004211px calc(100% - 12.723414px),
+    0px calc(100% - 13.890123px),
+    0px 13.890123px,
+    0.004211px 12.723414px,
+    0.025635px 11.556933px,
+    0.085062px 10.391895px,
+    0.199291px 9.231074px,
+    0.382298px 8.079275px,
+    0.662609px 6.947448px,
+    1.039291px 5.844179px,
+    1.542842px 4.793324px,
+    2.169728px 3.811369px,
+    2.926417px 2.926417px,
+    3.811369px 2.169728px,
+    4.793324px 1.542842px,
+    5.844179px 1.039291px,
+    6.947448px 0.662609px,
+    8.079275px 0.382298px,
+    9.231074px 0.199291px,
+    10.391895px 0.085062px,
+    11.556933px 0.025635px,
+    12.723414px 0.004211px,
+    13.890123px 0px
+  );
 }
