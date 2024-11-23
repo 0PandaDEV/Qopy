@@ -1,0 +1,39 @@
+# Rust
+/target/
+/src-tauri/target/
+Cargo.lock
+*.rs
+
+# Node
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Build
+/build/
+/out/
+
+# Tauri
+.tauri/
+
+# System
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln 
