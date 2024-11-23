@@ -8,6 +8,7 @@ on:
 
 jobs:
   prepare:
+    permissions: write-all
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.VERSION }}
@@ -18,6 +19,7 @@ jobs:
         run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
 
   build-macos:
+    permissions: write-all
     needs: prepare
     strategy:
       matrix:
@@ -91,6 +93,7 @@ jobs:
           mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz.sig src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz.sig
 
   build-windows:
+    permissions: write-all
     needs: prepare
     strategy:
       matrix:
@@ -139,6 +142,7 @@ jobs:
           mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
 
   build-linux:
+    permissions: write-all
     needs: prepare
     runs-on: ubuntu-latest
     env:
