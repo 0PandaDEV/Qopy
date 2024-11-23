@@ -6,7 +6,6 @@
 mod api;
 mod utils;
 
-use tauri::window::{Effect, EffectState, EffectsBuilder};
 use tauri::Manager;
 use tauri::WebviewUrl;
 use tauri::WebviewWindow;
@@ -46,9 +45,7 @@ fn main() {
                     .visible(false)
                     .decorations(false)
                     .transparent(true)
-                    .always_on_top(true)
-                    .content_protected(true)
-                    .visible_on_all_workspaces(true)
+                    .always_on_top(false)
                     .build()?
             };
 
@@ -70,13 +67,6 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 api::updater::check_for_updates(app_handle).await;
             });
-
-            main_window.set_effects(
-                EffectsBuilder::new()
-                    .effect(Effect::Popover)
-                    .state(EffectState::Active)
-                    .build(),
-            )?;
 
             Ok(())
         })

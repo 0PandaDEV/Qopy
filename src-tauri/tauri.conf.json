@@ -1,58 +1,60 @@
 {
-	"productName": "Qopy",
-	"version": "0.2.1",
-	"identifier": "net.pandadev.qopy",
-	"build": {
-		"frontendDist": "../dist",
-		"devUrl": "http://localhost:3000",
-		"beforeDevCommand": "pnpm nuxt dev",
-		"beforeBuildCommand": "pnpm nuxt generate"
-	},
-	"app": {
-		"windows": [
-			{
-				"title": "Qopy",
-				"titleBarStyle": "Overlay",
-				"fullscreen": false,
-				"resizable": false,
-				"height": 474,
-				"width": 750,
-				"minHeight": 474,
-				"maxHeight": 474,
-				"minWidth": 750,
-				"maxWidth": 750,
-				"decorations": false,
-				"center": true,
-				"shadow": false,
-				"transparent": true,
-				"skipTaskbar": true,
-				"alwaysOnTop": true
-			}
-		],
-		"security": {
-			"csp": null
-		},
-		"withGlobalTauri": true,
-		"macOSPrivateApi": true
-	},
-	"bundle": {
-		"createUpdaterArtifacts": true,
-		"active": true,
-		"targets": "all",
-		"icon": [
-			"icons/32x32.png",
-			"icons/128x128.png",
-			"icons/128x128@2x.png",
-			"icons/icon.icns",
-			"icons/icon.ico"
-		],
-		"category": "DeveloperTool"
-	},
-	"plugins": {
-		"updater": {
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDExNDIzNjA1QjE0NjU1OTkKUldTWlZVYXhCVFpDRWNvNmt0UE5lQmZkblEyZGZiZ2tHelJvT2YvNVpLU1RIM1RKZFQrb2tzWWwK",
-			"endpoints": ["https://qopy.pandadev.net/"]
-		}
-	},
-	"$schema": "../node_modules/@tauri-apps/cli/schema.json"
+  "productName": "Qopy",
+  "version": "0.2.0",
+  "identifier": "net.pandadev.qopy",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "pnpm nuxt dev",
+    "beforeBuildCommand": "pnpm nuxt generate"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Qopy",
+        "titleBarStyle": "Overlay",
+        "fullscreen": false,
+        "resizable": false,
+        "height": 474,
+        "width": 750,
+        "minHeight": 474,
+        "maxHeight": 474,
+        "minWidth": 750,
+        "maxWidth": 750,
+        "decorations": false,
+        "center": true,
+        "shadow": false,
+        "transparent": true,
+        "skipTaskbar": true,
+        "alwaysOnTop": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDExNDIzNjA1QjE0NjU1OTkKUldTWlZVYXhCVFpDRWNvNmt0UE5lQmZkblEyZGZiZ2tHelJvT2YvNVpLU1RIM1RKZFQrb2tzWWwK",
+      "endpoints": [
+        "https://qopy.pandadev.net/"
+      ]
+    }
+  },
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json"
 }

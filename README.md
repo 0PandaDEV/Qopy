@@ -60,7 +60,6 @@ The fixed and simple clipboard manager for both Windows and Linux.
 Qopy is a fixed clipboard manager designed as a simple alternative to the standard clipboard on Windows. It aims to provide a faster, more reliable experience while providing an extensive set of features compared to its Windows counterpart.
 
 ## 🚧 Roadmap
-
 - [ ] [Setup guide](https://github.com/0PandaDEV/Qopy/blob/main/GET_STARTED.md)
 - [ ] Settings https://github.com/0PandaDEV/Qopy/issues/2
 - [ ] Metadata for copied items https://github.com/0PandaDEV/Qopy/issues/5
@@ -73,7 +72,6 @@ Qopy is a fixed clipboard manager designed as a simple alternative to the standa
 <sup>If you have ideas for features to include, please write a feature request [here](https://github.com/0pandadev/Qopy/issues).</sup>
 
 ## 📦 Preview
-
 <img width="800px" src="https://github.com/user-attachments/assets/18e1f9e3-414c-46e2-9c51-61c6e63a06d2"/>
 <img width="800px" src="https://github.com/user-attachments/assets/46ec4672-f156-4426-a2cb-3a40d00dbcd6"/>
 
@@ -113,7 +111,7 @@ pnpm build
 > \[!NOTE]
 >
 > Don't worry, it will fail at the end because it can not detect a Private key, but the installer files will be generated regardless of that.
->
+> 
 > You can find them in `src-tauri/target/release/bundle`.
 
 ## 📝 License

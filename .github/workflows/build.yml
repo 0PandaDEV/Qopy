@@ -151,7 +151,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: updater-files-windows
-          path: |
+          path: | 
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
 

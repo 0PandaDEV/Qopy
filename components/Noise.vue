@@ -1,9 +1,9 @@
 <template>
-	<div class="noise"></div>
+  <div class="noise"></div>
 </template>
 
 <style scoped lang="scss">
-	.noise {
+.noise {
   position: absolute;
   overflow: hidden;
   top: 0;
@@ -13,7 +13,7 @@
   pointer-events: none;
   user-select: none;
   z-index: 0;
-  background-image: url("/noise.png");
+  background-image: url('/noise.png');
   background-repeat: repeat;
   image-rendering: pixelated;
   overflow: hidden;

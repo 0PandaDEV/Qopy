@@ -1,7 +1,7 @@
 name: "\U0001F41E Bug report"
 description: Create a report to help me improve Qopy
 labels: [Bug]
-assignees:
+assignees: 
   - 0PandaDEV
 body:
   #
@@ -17,7 +17,7 @@ body:
       description: A clear and concise description of what the bug is.
     validations:
       required: true
-
+  
   - type: textarea
     id: reproduce
     attributes:

@@ -1,31 +1,26 @@
 {
-	"name": "nuxt-app",
-	"dependencies": {
-		"@tauri-apps/api": "2.1.1",
-		"@tauri-apps/cli": "2.1.0",
-		"@tauri-apps/plugin-autostart": "2.0.0",
-		"@tauri-apps/plugin-fs": "2.0.2",
-		"@tauri-apps/plugin-os": "2.0.0",
-		"@tauri-apps/plugin-sql": "2.0.1",
-		"nuxt": "3.14.1592",
-		"nuxt-build-cache": "0.1.1",
-		"overlayscrollbars": "2.10.0",
-		"overlayscrollbars-vue": "0.5.9",
-		"prettier": "^3.3.3",
-		"sass": "1.81.0",
-		"vue": "3.5.13"
-	},
-	"private": true,
-	"scripts": {
-		"build": "tauri build",
-		"dev": "tauri dev",
-		"generate": "nuxt generate",
-		"preview": "nuxt preview",
-		"postinstall": "nuxt prepare",
-		"format": "prettier --write \"**/*.{js,ts,vue,scss,css,json,md}\""
-	},
-	"type": "module",
-	"devDependencies": {
-		"prettier-plugin-vue": "^1.1.6"
-	}
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tauri build",
+    "dev": "tauri dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.0.3",
+    "@tauri-apps/cli": "2.1.0",
+    "@tauri-apps/plugin-autostart": "2.0.0",
+    "@tauri-apps/plugin-fs": "2.0.2",
+    "@tauri-apps/plugin-os": "2.0.0",
+    "@tauri-apps/plugin-sql": "2.0.1",
+    "nuxt": "3.14.159",
+    "nuxt-build-cache": "0.1.1",
+    "overlayscrollbars": "2.10.0",
+    "overlayscrollbars-vue": "0.5.9",
+    "sass": "1.81.0",
+    "vue": "3.5.13"
+  }
 }
