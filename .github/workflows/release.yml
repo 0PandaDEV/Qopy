@@ -138,10 +138,10 @@ jobs:
         run: |
           $bundlePath = "src-tauri/target/release/bundle/msi"
           if (Test-Path $bundlePath) {
-            Write-Output "Contents of $bundlePath:"
+            Write-Output "Contents of ${bundlePath}:"
             Get-ChildItem -Path $bundlePath
           } else {
-            Write-Output "Path $bundlePath does not exist."
+            Write-Output "Path ${bundlePath} does not exist."
           }
       - name: Rename Windows Artifacts
         shell: pwsh
@@ -156,7 +156,7 @@ jobs:
               Rename-Item -Path $file.FullName -NewName $newName
             }
           } else {
-            Write-Error "Path $bundlePath does not exist."
+            Write-Error "Path ${bundlePath} does not exist."
             exit 1
           }
       - name: Upload artifacts
