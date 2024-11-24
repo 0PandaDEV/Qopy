@@ -133,10 +133,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
-          
-      - name: Rename Windows Artifacts
+      - name: List Bundle Directory
+        shell: pwsh
         run: |
-          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
+          $bundlePath = "src-tauri/target/release/bundle/msi"
+          if (Test-Path $bundlePath) {
+            Write-Output "Contents of $bundlePath:"
+            Get-ChildItem -Path $bundlePath
+          } else {
+            Write-Output "Path $bundlePath does not exist."
+          }
+      - name: Rename Windows Artifacts
+        shell: pwsh
+        run: |
+          $bundlePath = "src-tauri/target/release/bundle/msi"
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          if (Test-Path $bundlePath) {
+            $msiFiles = Get-ChildItem -Path "$bundlePath/*.msi"
+            foreach ($file in $msiFiles) {
+              $newName = "Qopy-$version`_$arch.msi"
+              Rename-Item -Path $file.FullName -NewName $newName
+            }
+          } else {
+            Write-Error "Path $bundlePath does not exist."
+            exit 1
+          }
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
