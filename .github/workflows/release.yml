@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get version
         id: get_version
-        run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p \"require('./src-tauri/tauri.conf.json').version\")" >> $GITHUB_OUTPUT
 
   build-macos:
     permissions: write-all
@@ -85,14 +85,12 @@ jobs:
       - name: Rename macOS Artifacts
         run: |
           mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
-          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}-binaries
           path: |
             src-tauri/target/**/release/bundle/dmg/*.dmg
-            src-tauri/target/**/release/bundle/macos/*.app.tar.gz
 
   build-windows:
     permissions: write-all
@@ -235,13 +233,35 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Generate Changelog
-        id: changelog
+      - name: Generate Release Body
+        id: release_body
         run: |
-          CHANGELOG=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          VERSION=${{ needs.prepare.outputs.version }}
+          CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+          
+          # Calculate SHA256 hashes for each artifact
+          WINDOWS_HASH=$(sha256sum artifacts/windows-x64-binaries/Qopy-$VERSION_x64.msi | awk '{ print $1 }')
+          MAC_SILICON_HASH=$(sha256sum artifacts/macos-silicon-binaries/Qopy-$VERSION_silicon.dmg | awk '{ print $1 }')
+          MAC_INTEL_HASH=$(sha256sum artifacts/macos-intel-binaries/Qopy-$VERSION_intel.dmg | awk '{ print $1 }')
+          DEBIAN_HASH=$(sha256sum artifacts/linux-binaries/Qopy-$VERSION_amd64.deb | awk '{ print $1 }')
+          APPIMAGE_HASH=$(sha256sum artifacts/linux-binaries/Qopy-$VERSION_amd64.AppImage | awk '{ print $1 }')
+          REDHAT_HASH=$(sha256sum artifacts/linux-binaries/Qopy-$VERSION_amd64.rpm | awk '{ print $1 }')
+          
+          ## ♻️ Changelog
+                  
+          $CHANGES
+                  
+          ⬇️ Downloads
+                  
+          - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_x64.msi) - $WINDOWS_HASH
+          - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_arm64.msi) - $WINDOWS_HASH
+          - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_silicon.dmg) - $MAC_SILICON_HASH
+          - [macOS (Intel)](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_intel.dmg) - $MAC_INTEL_HASH
+          - [Debian](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_amd64.deb) - $DEBIAN_HASH
+          - [AppImage](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_amd64.AppImage) - $APPIMAGE_HASH
+          - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v${{ needs.prepare.outputs.version }}/Qopy-${{ needs.prepare.outputs.version }}_amd64.rpm) - $REDHAT_HASH"
+
+          echo "RELEASE_BODY=$RELEASE_BODY" >> $GITHUB_ENV
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
@@ -252,13 +272,8 @@ jobs:
           name: v${{ needs.prepare.outputs.version }}
           files: |
             artifacts/**/*.dmg
-            artifacts/**/*.app.tar.gz
             artifacts/**/*.msi
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
-          body: |
-            ## Changelog
-            ${{ env.CHANGELOG }}
-
-            See the assets to download this version and install.
+          body: ${{ env.RELEASE_BODY }}
