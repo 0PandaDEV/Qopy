@@ -81,11 +81,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           args: ${{ matrix.args }}
-          tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: v${{ needs.prepare.outputs.version }}
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
+          
       - name: Rename macOS Artifacts
         run: |
           mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
@@ -131,11 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
-          tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: v${{ needs.prepare.outputs.version }}
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
+          
       - name: Rename Windows Artifacts
         run: |
           mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
@@ -185,30 +177,46 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --target x86_64-unknown-linux-gnu
-          tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: v${{ needs.prepare.outputs.version }}
-          releaseBody: |
-            ## Changelog
-            ${{ env.CHANGELOG }}
-
-            See the assets to download this version and install.
-          releaseDraft: true
-          prerelease: false
       - name: Rename Linux Artifacts
         run: |
-          mv src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_amd64.deb
-          mv src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_amd64.AppImage
-          mv src-tauri/target/release/bundle/appimage/*.AppImage.sig src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_amd64.AppImage.sig
-          mv src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_amd64.rpm
-      - name: Create Draft Release
+          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_amd64.deb
+          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_amd64.AppImage
+          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage.sig src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_amd64.AppImage.sig
+          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_amd64.rpm
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: |
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+
+  create-release:
+    permissions: write-all
+    needs: [prepare, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          CHANGELOG=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Create Release
         uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           draft: true
-          files: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/appimage/*.AppImage.sig
-            src-tauri/target/release/bundle/rpm/*.rpm
+          files: artifacts/**/*
           body: |
             ## Changelog
             ${{ env.CHANGELOG }}
