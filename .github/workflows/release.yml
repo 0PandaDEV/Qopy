@@ -130,8 +130,14 @@ jobs:
           
       - name: Rename Windows Artifacts
         run: |
-          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
-          mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
+          mv src-tauri/target/${{ matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
+          mv src-tauri/target/${{ matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: src-tauri/target/${{ matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}/release/bundle/msi/*
 
   build-linux:
     permissions: write-all
