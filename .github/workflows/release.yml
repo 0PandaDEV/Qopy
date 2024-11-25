@@ -269,6 +269,7 @@ jobs:
           - [AppImage](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_amd64.AppImage) - $APPIMAGE_HASH
           - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_amd64.rpm) - $REDHAT_HASH
           EOF
+          )
 
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_BODY" >> $GITHUB_ENV
