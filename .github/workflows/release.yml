@@ -254,13 +254,13 @@ jobs:
           APPIMAGE_HASH=$(sha256sum artifacts/linux-binaries/Qopy-$VERSION_amd64.AppImage | awk '{ print $1 }')
           REDHAT_HASH=$(sha256sum artifacts/linux-binaries/Qopy-$VERSION_amd64.rpm | awk '{ print $1 }')
 
-          RELEASE_BODY=$(cat <<EOF
+          RELEASE_BODY=$(cat <<-EOF
           ## ♻️ Changelog
-                  
+          
           $CHANGES
-                  
+          
           ⬇️ Downloads
-                  
+          
           - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_x64.msi) - $WINDOWS_64_HASH
           - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_arm64.msi) - $WINDOWS_ARM_HASH
           - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_silicon.dmg) - $MAC_SILICON_HASH
@@ -269,9 +269,10 @@ jobs:
           - [AppImage](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_amd64.AppImage) - $APPIMAGE_HASH
           - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v$VERSION/Qopy-$VERSION_amd64.rpm) - $REDHAT_HASH
           EOF
-          )
 
-          echo "RELEASE_BODY=$RELEASE_BODY" >> $GITHUB_ENV
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_BODY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
