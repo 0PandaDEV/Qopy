@@ -66,6 +66,8 @@ Qopy is a fixed clipboard manager designed as a simple alternative to the standa
 - [ ] Metadata for copied items https://github.com/0PandaDEV/Qopy/issues/5
 - [ ] Code highlighting https://github.com/0PandaDEV/Qopy/issues/7
 - [ ] Streamshare integration https://github.com/0PandaDEV/Qopy/issues/4
+- [ ] Content type filter https://github.com/0PandaDEV/Qopy/issues/16
+- [ ] Preview for copied files https://github.com/0PandaDEV/Qopy/issues/15
 - [x] Option for custom keybind https://github.com/0PandaDEV/Qopy/issues/3
 - [x] macOS Support https://github.com/0PandaDEV/Qopy/issues/13
 
