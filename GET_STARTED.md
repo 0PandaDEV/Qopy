@@ -4,9 +4,10 @@ The hotkey for Qopy is Windows+V which is also the hotkey for the default clipbo
 
 All the data of Qopy is stored inside of a SQLite database. The location for the file differs for windows and linux.
 
-| Operating System | Path                                                  |
-|------------------|-------------------------------------------------------|
-| Windows          | `C:\Users\USERNAME\AppData\Roaming\net.pandadev.qopy` |
+| Operating System | Path                                                            |
+|------------------|-----------------------------------------------------------------|
+| Windows          | `C:\Users\USERNAME\AppData\Roaming\net.pandadev.qopy`           |
+| macOS            | `/Users/USERNAME/Library/Application Support/net.pandadev.qopy` |
 | Linux            | `` |
 
 ## Disable Windows+V for default clipboard manager
