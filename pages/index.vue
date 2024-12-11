@@ -1,8 +1,21 @@
 <template>
-  <div class="bg" @keydown.down.prevent="selectNext" @keydown.up.prevent="selectPrevious"
-    @keydown.enter.prevent="pasteSelectedItem" @keydown.esc="hideApp" tabindex="0">
-    <input ref="searchInput" v-model="searchQuery" @input="searchHistory" autocorrect="off" autocapitalize="off"
-      spellcheck="false" class="search" type="text" placeholder="Type to filter entries..." />
+  <div
+    class="bg"
+    @keydown.down.prevent="selectNext"
+    @keydown.up.prevent="selectPrevious"
+    @keydown.enter.prevent="pasteSelectedItem"
+    @keydown.esc="hideApp"
+    tabindex="0">
+    <input
+      ref="searchInput"
+      v-model="searchQuery"
+      @input="searchHistory"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      class="search"
+      type="text"
+      placeholder="Type to filter entries..." />
     <div class="bottom-bar">
       <div class="left">
         <img class="logo" width="18px" src="../public/logo.png" alt="" />
@@ -17,36 +30,68 @@
         <div class="actions">
           <p>Actions</p>
           <div>
-            <img v-if="os === 'windows' || os === 'linux'" src="../public/ctrl.svg" alt="" />
+            <img
+              v-if="os === 'windows' || os === 'linux'"
+              src="../public/ctrl.svg"
+              alt="" />
             <img v-if="os === 'macos'" src="../public/cmd.svg" alt="" />
             <img src="../public/k.svg" alt="" />
           </div>
         </div>
       </div>
     </div>
-    <OverlayScrollbarsComponent class="results" ref="resultsContainer"
+    <OverlayScrollbarsComponent
+      class="results"
+      ref="resultsContainer"
       :options="{ scrollbars: { autoHide: 'scroll' } }">
       <template v-for="(group, groupIndex) in groupedHistory" :key="groupIndex">
         <div class="time-separator">{{ group.label }}</div>
-        <div v-for="(item, index) in group.items" :key="item.id" :class="[
-          'result clothoid-corner',
-          { selected: isSelected(groupIndex, index) },
-        ]" @click="selectItem(groupIndex, index)" :ref="(el) => {
-          if (isSelected(groupIndex, index))
-            selectedElement = el as HTMLElement;
-        }
+        <div
+          v-for="(item, index) in group.items"
+          :key="item.id"
+          :class="[
+            'result clothoid-corner',
+            { selected: isSelected(groupIndex, index) },
+          ]"
+          @click="selectItem(groupIndex, index)"
+          :ref="
+            (el) => {
+              if (isSelected(groupIndex, index))
+                selectedElement = el as HTMLElement;
+            }
           ">
           <template v-if="item.content_type === 'image'">
-            <img v-if="!imageLoading && !imageLoadError" :src="getComputedImageUrl(item)" alt="Image" class="image"
+            <img
+              v-if="imageUrls[item.id]"
+              :src="imageUrls[item.id]"
+              alt="Image"
+              class="image"
               @error="onImageError" />
-            <img v-if="imageLoading || imageLoadError" src="../public/icons/Image.svg" class="icon" />
+            <img
+              v-else
+              src="../public/icons/Image.svg"
+              class="icon" />
           </template>
-          <img v-else-if="hasFavicon(item.favicon ?? '')" :src="getFaviconFromDb(item.favicon ?? '')" alt="Favicon"
+          <img
+            v-else-if="hasFavicon(item.favicon ?? '')"
+            :src="getFaviconFromDb(item.favicon ?? '')"
+            alt="Favicon"
             class="favicon" />
-          <img src="../public/icons/File.svg" class="icon" v-else-if="item.content_type === 'files'" />
-          <img src="../public/icons/Text.svg" class="icon" v-else-if="item.content_type === 'text'" />
-          <img src="../public/icons/Code.svg" class="icon" v-else-if="item.content_type === 'code'" />
-          <span v-if="item.content_type === 'image'">Image ({{ item.dimensions || "Loading..." }})</span>
+          <img
+            src="../public/icons/File.svg"
+            class="icon"
+            v-else-if="item.content_type === ContentType.File" />
+          <img
+            src="../public/icons/Text.svg"
+            class="icon"
+            v-else-if="item.content_type === ContentType.Text" />
+          <img
+            src="../public/icons/Code.svg"
+            class="icon"
+            v-else-if="item.content_type === ContentType.Code" />
+          <span v-if="item.content_type === ContentType.Image">
+            Image ({{ imageDimensions[item.id] || 'Loading...' }})
+          </span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
       </template>
@@ -55,8 +100,11 @@
       <img :src="getComputedImageUrl(selectedItem)" alt="Image" class="image" />
     </div>
     <OverlayScrollbarsComponent v-else class="content">
-      <img v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)"
-        :src="getYoutubeThumbnail(selectedItem.content)" alt="YouTube Thumbnail" class="full-image" />
+      <img
+        v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)"
+        :src="getYoutubeThumbnail(selectedItem.content)"
+        alt="YouTube Thumbnail"
+        class="full-image" />
       <span v-else>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
     <Noise />
@@ -65,107 +113,173 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick, shallowRef } from "vue";
-import Database from "@tauri-apps/plugin-sql";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { app, window } from "@tauri-apps/api";
 import { platform } from "@tauri-apps/plugin-os";
-import { invoke } from "@tauri-apps/api/core";
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from "@tauri-apps/api/event";
-import { readFile } from "@tauri-apps/plugin-fs";
-
-interface HistoryItem {
-  id: number;
-  content: string;
-  content_type: string;
-  timestamp: string;
-  favicon?: string;
-  dimensions?: string;
-}
+import { useNuxtApp } from "#app";
+import { HistoryItem, ContentType } from "~/types/types";
 
 interface GroupedHistory {
   label: string;
   items: HistoryItem[];
 }
 
-const db: Ref<Database | null> = ref(null);
-const history: Ref<HistoryItem[]> = ref([]);
-const chunkSize: number = 50;
-let offset: number = 0;
-let isLoading: boolean = false;
-const resultsContainer: Ref<InstanceType<
-  typeof OverlayScrollbarsComponent
-> | null> = ref(null);
-const searchQuery: Ref<string> = ref("");
-const selectedGroupIndex: Ref<number> = ref(0);
-const selectedItemIndex: Ref<number> = ref(0);
-const selectedElement: Ref<HTMLElement | null> = ref(null);
-const searchInput: Ref<HTMLInputElement | null> = ref(null);
-const os: Ref<string> = ref("");
-const imageLoadError = ref(false);
-const imageLoading = ref(true);
-const imageUrls: Ref<Record<number, string>> = shallowRef({});
+const { $history, $settings } = useNuxtApp();
+const CHUNK_SIZE = 50;
+const SCROLL_THRESHOLD = 100;
+const IMAGE_LOAD_DEBOUNCE = 300;
 
-const groupedHistory: ComputedRef<GroupedHistory[]> = computed(() => {
+const history = shallowRef<HistoryItem[]>([]);
+let offset = 0;
+let isLoading = false;
+
+const resultsContainer = shallowRef<InstanceType<typeof OverlayScrollbarsComponent> | null>(null);
+const searchQuery = ref("");
+const selectedGroupIndex = ref(0);
+const selectedItemIndex = ref(0);
+const selectedElement = shallowRef<HTMLElement | null>(null);
+const searchInput = ref<HTMLInputElement | null>(null);
+const os = ref<string>("");
+const imageUrls = shallowRef<Record<string, string>>({});
+const imageDimensions = shallowRef<Record<string, string>>({});
+const lastUpdateTime = ref<number>(Date.now());
+const imageLoadError = ref<boolean>(false);
+const imageLoading = ref<boolean>(false);
+
+const isSameDay = (date1: Date, date2: Date): boolean => {
+  return date1.getFullYear() === date2.getFullYear() 
+    && date1.getMonth() === date2.getMonth() 
+    && date1.getDate() === date2.getDate();
+};
+
+const getWeekNumber = (date: Date): number => {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+  return Math.ceil(((date.getTime() - firstDayOfYear.getTime()) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
+};
+
+const groupedHistory = computed<GroupedHistory[]>(() => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const getWeekNumber = (d: Date): number => {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((Number(d) - Number(yearStart)) / 86400000 + 1) / 7);
-  };
-
   const thisWeek = getWeekNumber(now);
   const thisYear = now.getFullYear();
 
-  const groups: GroupedHistory[] = [
-    { label: "Today", items: [] },
-    { label: "Yesterday", items: [] },
-    { label: "This Week", items: [] },
-    { label: "Last Week", items: [] },
-    { label: "This Year", items: [] },
-    { label: "Last Year", items: [] },
-  ];
+  const groups: Record<string, HistoryItem[]> = {
+    Today: [],
+    Yesterday: [],
+    'This Week': [],
+    'Last Week': [],
+    'This Year': [],
+    'Last Year': []
+  };
 
   const filteredItems = searchQuery.value
-    ? history.value.filter((item) =>
-      item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+    ? history.value.filter(item => 
+        item.content.toLowerCase().includes(searchQuery.value.toLowerCase()))
     : history.value;
 
-  filteredItems.forEach((item) => {
+  const yesterday = new Date(today.getTime() - 86400000);
+
+  filteredItems.forEach(item => {
     const itemDate = new Date(item.timestamp);
     const itemWeek = getWeekNumber(itemDate);
     const itemYear = itemDate.getFullYear();
 
-    if (itemDate.toDateString() === today.toDateString()) {
-      groups[0].items.push(item);
-    } else if (
-      itemDate.toDateString() ===
-      new Date(today.getTime() - 86400000).toDateString()
-    ) {
-      groups[1].items.push(item);
-    } else if (itemYear === thisYear && itemWeek === thisWeek) {
-      groups[2].items.push(item);
-    } else if (itemYear === thisYear && itemWeek === thisWeek - 1) {
-      groups[3].items.push(item);
-    } else if (itemYear === thisYear) {
-      groups[4].items.push(item);
-    } else {
-      groups[5].items.push(item);
-    }
+    if (isSameDay(itemDate, today)) groups.Today.push(item);
+    else if (isSameDay(itemDate, yesterday)) groups.Yesterday.push(item);
+    else if (itemYear === thisYear && itemWeek === thisWeek) groups['This Week'].push(item);
+    else if (itemYear === thisYear && itemWeek === thisWeek - 1) groups['Last Week'].push(item);
+    else if (itemYear === thisYear) groups['This Year'].push(item);
+    else groups['Last Year'].push(item);
   });
 
-  return groups.filter((group) => group.items.length > 0);
+  return Object.entries(groups)
+    .filter(([_, items]) => items.length > 0)
+    .map(([label, items]) => ({ label, items }));
 });
 
-const selectedItem: ComputedRef<HistoryItem | null> = computed(() => {
+const selectedItem = computed<HistoryItem | null>(() => {
   const group = groupedHistory.value[selectedGroupIndex.value];
-  return group ? group.items[selectedItemIndex.value] : null;
+  return group?.items[selectedItemIndex.value] ?? null;
 });
+
+const loadHistoryChunk = async (): Promise<void> => {
+  if (isLoading) return;
+  isLoading = true;
+
+  try {
+    const results = await $history.loadHistoryChunk(offset, CHUNK_SIZE);
+    if (!results.length) {
+      isLoading = false;
+      return;
+    }
+
+    const processedItems = await Promise.all(
+      results.map(async item => {
+        const historyItem = new HistoryItem(
+          item.content_type as ContentType,
+          item.content,
+          item.favicon
+        );
+        Object.assign(historyItem, {
+          id: item.id,
+          timestamp: new Date(item.timestamp)
+        });
+
+        if (historyItem.content_type === ContentType.Image) {
+          await Promise.all([
+            getItemDimensions(historyItem),
+            loadImageUrl(historyItem)
+          ]);
+        }
+        return historyItem;
+      })
+    );
+
+    history.value = [...history.value, ...processedItems];
+    offset += CHUNK_SIZE;
+  } catch (error) {
+    console.error("Failed to load history:", error);
+  } finally {
+    isLoading = false;
+  }
+};
+
+const handleScroll = (): void => {
+  const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
+  if (!viewport) return;
+
+  const { scrollTop, scrollHeight, clientHeight } = viewport;
+  if (scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD) {
+    loadHistoryChunk();
+  }
+};
+
+const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
+  nextTick(() => {
+    const osInstance = resultsContainer.value?.osInstance();
+    const viewport = osInstance?.elements().viewport;
+    if (!selectedElement.value || !viewport) return;
+
+    if (!forceScrollTop) {
+      const viewportRect = viewport.getBoundingClientRect();
+      const elementRect = selectedElement.value.getBoundingClientRect();
+      
+      const isAbove = elementRect.top < viewportRect.top;
+      const isBelow = elementRect.bottom > viewportRect.bottom - 8;
+
+      if (isAbove || isBelow) {
+        const scrollOffset = isAbove
+          ? elementRect.top - viewportRect.top - 8
+          : elementRect.bottom - viewportRect.bottom + 9;
+
+        viewport.scrollBy({ top: scrollOffset, behavior: "smooth" });
+      }
+    }
+  });
+};
 
 const isSelected = (groupIndex: number, itemIndex: number): boolean => {
   return (
@@ -175,26 +289,11 @@ const isSelected = (groupIndex: number, itemIndex: number): boolean => {
 };
 
 const searchHistory = async (): Promise<void> => {
-  if (!db.value) return;
-
-  history.value = [];
-  offset = 0;
-
-  const query = `%${searchQuery.value}%`;
-  const results = await db.value.select<HistoryItem[]>(
-    "SELECT * FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT ?",
-    [query, chunkSize]
-  );
-
-  history.value = await Promise.all(
-    results.map(async (item) => {
-      if (item.content_type === "image") {
-        const dimensions = await getImageDimensions(item.content);
-        return { ...item, dimensions };
-      }
-      return item;
-    })
-  );
+  const results = await $history.searchHistory(searchQuery.value);
+  history.value = results.map(item => Object.assign(
+    new HistoryItem(item.content_type as ContentType, item.content, item.favicon),
+    { id: item.id, timestamp: new Date(item.timestamp) }
+  ));
 };
 
 const selectNext = (): void => {
@@ -229,20 +328,17 @@ const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
 
   let content = selectedItem.value.content;
-  let contentType: String = selectedItem.value.content_type;
+  let contentType: string = selectedItem.value.content_type;
   if (contentType === "image") {
     try {
-      content = readFile(content).toString();
+      content = await $history.getImagePath(content);
     } catch (error) {
       console.error("Error reading image file:", error);
       return;
     }
   }
   await hideApp();
-  await invoke("write_and_paste", {
-    content,
-    contentType,
-  });
+  await $history.writeAndPaste({ content, contentType });
 };
 
 const truncateContent = (content: string): string => {
@@ -273,132 +369,128 @@ const getYoutubeThumbnail = (url: string): string => {
   } else {
     videoId = url.match(/[?&]v=([^&]+)/)?.[1];
   }
-  return `https://img.youtube.com/vi/${videoId}/0.jpg`;
+  return videoId
+    ? `https://img.youtube.com/vi/${videoId}/0.jpg`
+    : "https://via.placeholder.com/150";
 };
 
 const getFaviconFromDb = (favicon: string): string => {
   return `data:image/png;base64,${favicon}`;
 };
 
-const getImageDimensions = (path: string): Promise<string> => {
-  return new Promise(async (resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      imageLoadError.value = false;
-      imageLoading.value = false;
-      resolve(`${img.width}x${img.height}`);
-    };
-    img.onerror = (e) => {
-      console.error("Error loading image:", e);
-      imageLoadError.value = true;
-      imageLoading.value = false;
-      resolve("0x0");
-    };
-
-    try {
-      imageLoading.value = true;
-      const dataUrl = await getImageUrl(path);
-      img.src = dataUrl;
-    } catch (error) {
-      console.error("Error getting image URL:", error);
-      imageLoadError.value = true;
-      imageLoading.value = false;
-      resolve("0x0");
-    }
-  });
-};
-
-const getImageUrl = async (path: string): Promise<string> => {
-  const isWindows = path.includes("\\");
-  const separator = isWindows ? "\\" : "/";
-  const filename = path.split(separator).pop();
-
+const getImageData = async (item: HistoryItem): Promise<{ url: string; dimensions: string }> => {
   try {
-    imageLoading.value = true;
-    const base64 = await invoke<string>("read_image", { filename });
-    if (!base64 || base64.length === 0) {
-      throw new Error("Received empty image data");
-    }
-
+    const base64 = await $history.readImage({ filename: item.content });
     const dataUrl = `data:image/png;base64,${base64}`;
+    const img = new Image();
+    img.src = dataUrl;
+    
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+    });
 
-    imageLoadError.value = false;
-    imageLoading.value = false;
-    return dataUrl;
+    return {
+      url: dataUrl,
+      dimensions: `${img.width}x${img.height}`
+    };
   } catch (error) {
-    console.error("Error reading image file:", error);
-    imageLoadError.value = true;
-    imageLoading.value = false;
-    return "";
+    console.error("Error processing image:", error);
+    return { url: "", dimensions: "Error" };
   }
 };
 
-const getComputedImageUrl = (item: HistoryItem): string => {
-  if (!imageUrls.value[item.id]) {
-    imageUrls.value[item.id] = "";
-    getImageUrl(item.content)
-      .then((url) => {
-        imageUrls.value = { ...imageUrls.value, [item.id]: url };
-      })
-      .catch((error) => {
-        console.error("Failed to get image URL:", error);
-        imageUrls.value = { ...imageUrls.value, [item.id]: "" };
-      });
-  }
-  return imageUrls.value[item.id] || "";
-};
-
-const loadHistoryChunk = async (): Promise<void> => {
-  if (!db.value || isLoading) return;
-
-  isLoading = true;
-  let results: HistoryItem[];
-
-  if (searchQuery.value) {
-    const query = `%${searchQuery.value}%`;
-    results = await db.value.select(
-      "SELECT * FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-      [query, chunkSize, offset]
-    );
-  } else {
-    results = await db.value.select(
-      "SELECT * FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-      [chunkSize, offset]
-    );
-  }
-
-  if (results.length === 0) {
-    isLoading = false;
-    return;
-  }
-
-  const processedChunk = await Promise.all(
-    results.map(async (item) => {
-      if (item.content_type === "image") {
-        const dimensions = await getImageDimensions(item.content);
-        getComputedImageUrl(item);
-        return { ...item, dimensions };
-      }
-      return item;
-    })
+const processHistoryItem = async (item: any): Promise<HistoryItem> => {
+  const historyItem = new HistoryItem(
+    item.content_type as ContentType,
+    item.content,
+    item.favicon
   );
+  
+  Object.assign(historyItem, {
+    id: item.id,
+    timestamp: new Date(item.timestamp)
+  });
 
-  history.value = [...history.value, ...processedChunk];
-  offset += chunkSize;
-  isLoading = false;
+  if (historyItem.content_type === ContentType.Image) {
+    const { url, dimensions } = await getImageData(historyItem);
+    imageUrls.value[historyItem.id] = url;
+    imageDimensions.value[historyItem.id] = dimensions;
+  }
+
+  return historyItem;
 };
 
-const handleScroll = (): void => {
-  if (!resultsContainer.value) return;
-
-  const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
-  const scrollTop = viewport?.scrollTop ?? 0;
-  const scrollHeight = viewport?.scrollHeight ?? 0;
-  const clientHeight = viewport?.clientHeight ?? 0;
-
-  if (scrollHeight - scrollTop - clientHeight < 100) {
-    loadHistoryChunk();
+const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
+  history.value = [];
+  offset = 0;
+  await loadHistoryChunk();
+  
+  if (resetScroll && resultsContainer.value?.osInstance()?.elements().viewport) {
+    resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
   }
+};
+
+const handleSelection = (groupIndex: number, itemIndex: number, shouldScroll: boolean = true): void => {
+  selectedGroupIndex.value = groupIndex;
+  selectedItemIndex.value = itemIndex;
+  if (shouldScroll) scrollToSelectedItem();
+};
+
+const handleMediaContent = async (content: string, type: string): Promise<string> => {
+  if (type === "image") {
+    return await $history.getImagePath(content);
+  }
+  
+  if (isYoutubeWatchUrl(content)) {
+    const videoId = content.includes("youtu.be")
+      ? content.split("youtu.be/")[1]
+      : content.match(/[?&]v=([^&]+)/)?.[1];
+    return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : "";
+  }
+  
+  return content;
+};
+
+const setupEventListeners = async (): Promise<void> => {
+  await listen("clipboard-content-updated", async () => {
+    lastUpdateTime.value = Date.now();
+    handleSelection(0, 0, false);
+    await updateHistory(true);
+  });
+
+  await listen("tauri://focus", async () => {
+    const currentTime = Date.now();
+    if (currentTime - lastUpdateTime.value > 0) {
+      const previousState = {
+        groupIndex: selectedGroupIndex.value,
+        itemIndex: selectedItemIndex.value,
+        scroll: resultsContainer.value?.osInstance()?.elements().viewport?.scrollTop || 0
+      };
+      
+      await updateHistory();
+      lastUpdateTime.value = currentTime;
+      handleSelection(previousState.groupIndex, previousState.itemIndex, false);
+      
+      nextTick(() => {
+        const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
+        if (viewport) {
+          viewport.scrollTo({
+            top: previousState.scroll,
+            behavior: "instant"
+          });
+        }
+      });
+    }
+    focusSearchInput();
+  });
+
+  await listen("tauri://blur", () => {
+    searchInput.value?.blur();
+  });
 };
 
 const hideApp = async (): Promise<void> => {
@@ -409,36 +501,6 @@ const hideApp = async (): Promise<void> => {
 const focusSearchInput = (): void => {
   nextTick(() => {
     searchInput.value?.focus();
-  });
-};
-
-const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
-  nextTick(() => {
-    if (selectedElement.value && resultsContainer.value) {
-      const osInstance = resultsContainer.value.osInstance();
-      const viewport = osInstance?.elements().viewport;
-      if (!viewport) return;
-
-      if (!forceScrollTop) {
-        const viewportRect = viewport.getBoundingClientRect();
-        const elementRect = selectedElement.value.getBoundingClientRect();
-        const isAbove = elementRect.top < viewportRect.top;
-        const isBelow = elementRect.bottom > viewportRect.bottom - 8;
-
-        if (isAbove || isBelow) {
-          let scrollOffset;
-          if (isAbove) {
-            scrollOffset = elementRect.top - viewportRect.top - 8;
-          } else {
-            scrollOffset = elementRect.bottom - viewportRect.bottom + 9;
-          }
-          viewport.scrollBy({
-            top: scrollOffset,
-            behavior: "smooth",
-          });
-        }
-      }
-    }
   });
 };
 
@@ -455,77 +517,64 @@ watch(searchQuery, () => {
   searchHistory();
 });
 
-const lastUpdateTime = ref<number>(Date.now());
-
 onMounted(async () => {
-  db.value = await Database.load("sqlite:data.db");
-  await loadHistoryChunk();
-
-  resultsContainer.value
-    ?.osInstance()
-    ?.elements()
-    ?.viewport?.addEventListener("scroll", handleScroll);
-
-  await listen("clipboard-content-updated", async () => {
-    lastUpdateTime.value = Date.now();
-    selectedGroupIndex.value = 0;
-    selectedItemIndex.value = 0;
-    history.value = [];
-    offset = 0;
+  try {
+    os.value = await platform();
     await loadHistoryChunk();
-    if (resultsContainer.value?.osInstance()?.elements().viewport) {
-      resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+
+    resultsContainer.value
+      ?.osInstance()
+      ?.elements()
+      ?.viewport?.addEventListener("scroll", handleScroll);
+
+    await setupEventListeners();
+
+    if (!(await isEnabled())) {
+      await enable();
     }
-  });
-
-  await listen("tauri://focus", async () => {
-    const currentTime = Date.now();
-    if (currentTime - lastUpdateTime.value > 0) {
-      const previousGroupIndex = selectedGroupIndex.value;
-      const previousItemIndex = selectedItemIndex.value;
-      const previousScroll =
-        resultsContainer.value?.osInstance()?.elements().viewport?.scrollTop ||
-        0;
-
-      history.value = [];
-      offset = 0;
-      await loadHistoryChunk();
-      lastUpdateTime.value = currentTime;
-
-      selectedGroupIndex.value = previousGroupIndex;
-      selectedItemIndex.value = previousItemIndex;
-
-      nextTick(() => {
-        if (resultsContainer.value?.osInstance()?.elements().viewport) {
-          resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-            top: previousScroll,
-            behavior: "instant",
-          });
-        }
-      });
-    }
-    focusSearchInput();
-  });
-
-  await listen("tauri://blur", () => {
-    if (searchInput.value) {
-      searchInput.value.blur();
-    }
-  });
-
-  if (!(await isEnabled())) {
-    await enable();
+  } catch (error) {
+    console.error("Error during onMounted:", error);
   }
-
-  os.value = platform();
 });
 
 watch([selectedGroupIndex, selectedItemIndex], () =>
   scrollToSelectedItem(false)
 );
+
+const getItemDimensions = async (item: HistoryItem) => {
+  if (!imageDimensions.value[item.id]) {
+    try {
+      const base64 = await $history.readImage({ filename: item.content });
+      const img = new Image();
+      img.src = `data:image/png;base64,${base64}`;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject();
+      });
+      imageDimensions.value[item.id] = `${img.width}x${img.height}`;
+    } catch (error) {
+      console.error("Error loading image dimensions:", error);
+      imageDimensions.value[item.id] = "Error";
+    }
+  }
+  return imageDimensions.value[item.id] || 'Loading...';
+};
+
+const loadImageUrl = async (item: HistoryItem) => {
+  if (!imageUrls.value[item.id]) {
+    try {
+      const base64 = await $history.readImage({ filename: item.content });
+      imageUrls.value[item.id] = `data:image/png;base64,${base64}`;
+    } catch (error) {
+      console.error("Error loading image:", error);
+    }
+  }
+};
+
+const getComputedImageUrl = (item: HistoryItem | null): string => {
+  if (!item) return '';
+  return imageUrls.value[item.id] || '';
+};
 </script>
 
 <style scoped lang="scss">
