@@ -74,7 +74,9 @@ Qopy is a fixed clipboard manager designed as a simple alternative to the standa
 
 <sup>If you have ideas for features to include, please write a feature request [here](https://github.com/0pandadev/Qopy/issues).</sup>
 
-## 📦 Preview
+## 📦 Concepts
+
+Here you can see a few concepts these might not be implemented:
 
 ![Clipboard](https://github.com/user-attachments/assets/edd8e1be-3237-46c2-b81a-04f83e3ff13f)
 ![Change Keybind](https://github.com/user-attachments/assets/fac86127-9711-4577-97bf-6a4bb0a60312)
