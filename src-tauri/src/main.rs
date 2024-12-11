@@ -4,8 +4,11 @@
 )]
 
 mod api;
+mod db;
 mod utils;
 
+use sqlx::sqlite::SqlitePoolOptions;
+use std::fs;
 use tauri::Manager;
 use tauri::WebviewUrl;
 use tauri::WebviewWindow;
@@ -30,7 +33,29 @@ fn main() {
                 .build(),
         )
         .setup(|app| {
+            let app_data_dir = app.path().app_data_dir().unwrap();
+            fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
+
+            let db_path = app_data_dir.join("data.db");
+            let is_new_db = !db_path.exists();
+            if is_new_db {
+                fs::File::create(&db_path).expect("Failed to create database file");
+            }
+
+            let db_url = format!("sqlite:{}", db_path.to_str().unwrap());
+
             let app_handle = app.handle().clone();
+
+            let app_handle_clone = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let pool = SqlitePoolOptions::new()
+                    .max_connections(5)
+                    .connect(&db_url)
+                    .await
+                    .expect("Failed to create pool");
+
+                app_handle_clone.manage(pool);
+            });
 
             let main_window = if let Some(window) = app.get_webview_window("main") {
                 window
@@ -49,7 +74,7 @@ fn main() {
                     .build()?
             };
 
-            let _ = api::database::setup(app);
+            let _ = db::database::setup(app);
             api::hotkeys::setup(app_handle.clone());
             api::tray::setup(app)?;
             api::clipboard::setup(app.handle());
@@ -57,12 +82,6 @@ fn main() {
 
             utils::commands::center_window_on_current_monitor(&main_window);
             main_window.hide()?;
-
-            let app_data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("Failed to get app data directory");
-            api::clipboard::set_app_data_dir(app_data_dir);
 
             tauri::async_runtime::spawn(async move {
                 api::updater::check_for_updates(app_handle).await;
@@ -79,11 +98,18 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            api::clipboard::get_image_path,
             api::clipboard::write_and_paste,
-            api::clipboard::read_image,
-            api::database::save_keybind,
-            api::database::get_keybind
+            db::history::get_history,
+            db::history::add_history_item,
+            db::history::search_history,
+            db::history::load_history_chunk,
+            db::history::delete_history_item,
+            db::history::clear_history,
+            db::history::read_image,
+            db::settings::get_setting,
+            db::settings::save_setting,
+            db::settings::save_keybind,
+            db::settings::get_keybind,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

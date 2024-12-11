@@ -18,7 +18,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
     HOTKEY_MANAGER.with(|m| *m.borrow_mut() = Some(manager));
 
     let rt = app_handle.state::<tokio::runtime::Runtime>();
-    let initial_keybind = rt.block_on(crate::api::database::get_keybind(app_handle_clone.clone()))
+    let initial_keybind = rt.block_on(crate::db::settings::get_keybind(app_handle_clone.clone()))
         .expect("Failed to get initial keybind");
     let initial_shortcut = initial_keybind.join("+");
     

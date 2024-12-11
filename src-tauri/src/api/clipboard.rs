@@ -1,35 +1,23 @@
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
-use image::ImageFormat;
 use lazy_static::lazy_static;
-use rand::Rng;
 use rdev::{simulate, EventType, Key};
-use regex::Regex;
-use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
+use uuid::Uuid;
+use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{fs, sync::Mutex, thread, time::Duration};
+use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter, Listener, Manager, Runtime};
 use tauri_plugin_clipboard::Clipboard;
 use tokio::runtime::Runtime as TokioRuntime;
+use regex::Regex;
+use url::Url;
+use base64::{Engine, engine::general_purpose::STANDARD};
+
+use crate::utils::favicon::fetch_favicon_as_base64;
+use crate::db;
+use crate::utils::types::{ContentType, HistoryItem};
 
 lazy_static! {
-    static ref APP_DATA_DIR: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
     static ref IS_PROGRAMMATIC_PASTE: AtomicBool = AtomicBool::new(false);
-}
-
-pub fn set_app_data_dir(path: std::path::PathBuf) {
-    let mut dir = APP_DATA_DIR.lock().unwrap();
-    *dir = Some(path);
-}
-
-#[tauri::command]
-pub fn read_image(filename: String) -> Result<String, String> {
-    let app_data_dir = APP_DATA_DIR.lock().unwrap();
-    let app_data_dir = app_data_dir.as_ref().expect("App data directory not set");
-    let image_path = app_data_dir.join("images").join(filename);
-    let image_data = fs::read(image_path).map_err(|e| e.to_string())?;
-    Ok(STANDARD.encode(image_data))
 }
 
 #[tauri::command]
@@ -93,16 +81,6 @@ pub async fn write_and_paste<R: Runtime>(
     Ok(())
 }
 
-#[tauri::command]
-pub fn get_image_path(app_handle: tauri::AppHandle, filename: String) -> String {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .expect("Failed to get app data directory");
-    let image_path = app_data_dir.join("images").join(filename);
-    image_path.to_str().unwrap_or("").to_string()
-}
-
 pub fn setup<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
     let runtime = TokioRuntime::new().expect("Failed to create Tokio runtime");
@@ -124,38 +102,49 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                         if available_types.image {
                             println!("Handling image change");
                             if let Ok(image_data) = clipboard.read_image_base64() {
-                                insert_content_if_not_exists(
-                                    app.clone(),
-                                    pool.clone(),
-                                    "image",
-                                    image_data,
-                                )
-                                .await;
+                                let file_path = save_image_to_file(&app, &image_data)
+                                    .await
+                                    .map_err(|e| e.to_string())
+                                    .unwrap_or_else(|e| e);
+                                let _ = db::history::add_history_item(
+                                    pool,
+                                    HistoryItem::new(ContentType::Image, file_path, None),
+                                ).await;
                             }
                             let _ = app.emit("plugin:clipboard://image-changed", ());
                         } else if available_types.files {
                             println!("Handling files change");
                             if let Ok(files) = clipboard.read_files() {
                                 let files_str = files.join(", ");
-                                insert_content_if_not_exists(
-                                    app.clone(),
-                                    pool.clone(),
-                                    "files",
-                                    files_str,
-                                )
-                                .await;
+                                let _ = db::history::add_history_item(
+                                    pool,
+                                    HistoryItem::new(ContentType::File, files_str, None),
+                                ).await;
                             }
                             let _ = app.emit("plugin:clipboard://files-changed", ());
                         } else if available_types.text {
                             println!("Handling text change");
                             if let Ok(text) = clipboard.read_text() {
-                                insert_content_if_not_exists(
-                                    app.clone(),
-                                    pool.clone(),
-                                    "text",
-                                    text,
-                                )
-                                .await;
+                                let url_regex = Regex::new(r"^https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$").unwrap();
+                                
+                                if url_regex.is_match(&text) {
+                                    if let Ok(url) = Url::parse(&text) {
+                                        let favicon = match fetch_favicon_as_base64(url).await {
+                                            Ok(Some(f)) => Some(f),
+                                            _ => None,
+                                        };
+                                        
+                                        let _ = db::history::add_history_item(
+                                            pool,
+                                            HistoryItem::new(ContentType::Link, text, favicon)
+                                        ).await;
+                                    }
+                                } else {
+                                    let _ = db::history::add_history_item(
+                                        pool,
+                                        HistoryItem::new(ContentType::Text, text, None)
+                                    ).await;
+                                }
                             }
                             let _ = app.emit("plugin:clipboard://text-changed", ());
                         } else {
@@ -173,130 +162,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
 
 async fn get_pool<R: Runtime>(
     app_handle: &AppHandle<R>,
-) -> Result<SqlitePool, Box<dyn std::error::Error + Send + Sync>> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .expect("Failed to get app data directory");
-    let db_path = app_data_dir.join("data.db");
-    let database_url = format!("sqlite:{}", db_path.to_str().unwrap());
-    SqlitePool::connect(&database_url)
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
-}
-
-async fn insert_content_if_not_exists<R: Runtime>(
-    app_handle: AppHandle<R>,
-    pool: SqlitePool,
-    content_type: &str,
-    content: String,
-) {
-    let last_content: Option<String> = sqlx::query_scalar(
-        "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
-    )
-    .bind(content_type)
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(None);
-
-    let content = if content_type == "image" {
-        match save_image(&app_handle, &content).await {
-            Ok(path) => path,
-            Err(e) => {
-                println!("Failed to save image: {}", e);
-                content
-            }
-        }
-    } else {
-        content
-    };
-
-    if last_content.as_deref() != Some(&content) {
-        let id: String = rand::thread_rng()
-            .sample_iter(&rand::distributions::Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
-
-        let favicon_base64 = if content_type == "text" {
-            let url_regex = Regex::new(r"^https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$").unwrap();
-            if url_regex.is_match(&content) {
-                match url::Url::parse(&content) {
-                    Ok(url) => match fetch_favicon_as_base64(url).await {
-                        Ok(Some(favicon)) => Some(favicon),
-                        Ok(None) => None,
-                        Err(e) => {
-                            println!("Failed to fetch favicon: {}", e);
-                            None
-                        }
-                    },
-                    Err(e) => {
-                        println!("Failed to parse URL: {}", e);
-                        None
-                    }
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        let _ = sqlx::query(
-            "INSERT INTO history (id, content_type, content, favicon) VALUES (?, ?, ?, ?)",
-        )
-        .bind(id)
-        .bind(content_type)
-        .bind(&content)
-        .bind(favicon_base64)
-        .execute(&pool)
-        .await;
-
-        let _ = app_handle.emit("clipboard-content-updated", ());
-    }
-}
-
-async fn save_image<R: Runtime>(
-    app_handle: &AppHandle<R>,
-    base64_image: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let image_data = STANDARD.decode(base64_image)?;
-    let mut hasher = Sha256::new();
-    hasher.update(&image_data);
-    let hash = hasher.finalize();
-    let filename = format!("{:x}.png", hash);
-
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .expect("Failed to get app data directory");
-    let images_dir = app_data_dir.join("images");
-    let path = images_dir.join(&filename);
-
-    if !path.exists() {
-        fs::create_dir_all(&images_dir)?;
-        fs::write(&path, &image_data)?;
-    }
-
-    Ok(path.to_str().unwrap().to_string())
-}
-
-async fn fetch_favicon_as_base64(
-    url: url::Url,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let client = reqwest::Client::new();
-    let favicon_url = format!("https://favicone.com/{}", url.host_str().unwrap());
-    let response = client.get(&favicon_url).send().await?;
-
-    if response.status().is_success() {
-        let bytes = response.bytes().await?;
-        let img = image::load_from_memory(&bytes)?;
-        let mut png_bytes: Vec<u8> = Vec::new();
-        img.write_to(&mut std::io::Cursor::new(&mut png_bytes), ImageFormat::Png)?;
-        Ok(Some(STANDARD.encode(&png_bytes)))
-    } else {
-        Ok(None)
-    }
+) -> Result<tauri::State<'_, SqlitePool>, Box<dyn std::error::Error + Send + Sync>> {
+    Ok(app_handle.state::<SqlitePool>())
 }
 
 #[tauri::command]
@@ -309,4 +176,18 @@ pub fn start_monitor(app_handle: AppHandle) -> Result<(), String> {
         .emit("plugin:clipboard://clipboard-monitor/status", true)
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+async fn save_image_to_file<R: Runtime>(app_handle: &AppHandle<R>, base64_data: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let app_data_dir = app_handle.path().app_data_dir().unwrap();
+    let images_dir = app_data_dir.join("images");
+    fs::create_dir_all(&images_dir)?;
+    
+    let file_name = format!("{}.png", Uuid::new_v4());
+    let file_path = images_dir.join(&file_name);
+    
+    let bytes = STANDARD.decode(base64_data)?;
+    fs::write(&file_path, bytes)?;
+    
+    Ok(file_path.to_string_lossy().into_owned())
 }
