@@ -10,35 +10,37 @@ rust-version = "1.70"
 tauri-build = { version = "2.0.3", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.1", features = [
+tauri = { version = "2.1.1", features = [
   "macos-private-api",
   "tray-icon",
   "image-png",
 ] }
-tauri-plugin-sql = { version = "2.0.2", features = ["sqlite"] }
-tauri-plugin-autostart = "2.0.1"
-tauri-plugin-os = "2.0.1"
-tauri-plugin-updater = "2.0.2"
-tauri-plugin-dialog = "2.0.3"
-tauri-plugin-fs = "2.0.3"
+tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+tauri-plugin-autostart = "2.2.0"
+tauri-plugin-os = "2.2.0"
+tauri-plugin-updater = "2.3.0"
+tauri-plugin-dialog = "2.2.0"
+tauri-plugin-fs = "2.2.0"
 tauri-plugin-clipboard = "2.1.11"
-tauri-plugin-prevent-default = "0.7.5"
-tauri-plugin-global-shortcut = "2.0.1"
-sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "sqlite"] }
-serde = { version = "1.0.215", features = ["derive"] }
-tokio = { version = "1.41.1", features = ["full"] }
-serde_json = "1.0.132"
+tauri-plugin-prevent-default = "0.8.0"
+tauri-plugin-global-shortcut = "2.2.0"
+sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
+serde = { version = "1.0.216", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["full"] }
+serde_json = "1.0.133"
 rdev = "0.5.3"
-rand = "0.8"
+rand = "0.8.5"
 base64 = "0.22.1"
 image = "0.25.5"
 reqwest = { version = "0.12.9", features = ["blocking"] }
-url = "2.5.3"
+url = "2.5.4"
 regex = "1.11.1"
-sha2 = "0.10.6"
-lazy_static = "1.4.0"
-time = "0.3"
+sha2 = "0.10.8"
+lazy_static = "1.5.0"
+time = "0.3.37"
 global-hotkey = "0.6.3"
+chrono = { version = "0.4.39", features = ["serde"] }
+uuid = "1.11.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

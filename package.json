@@ -12,15 +12,17 @@
   "dependencies": {
     "@tauri-apps/api": "2.1.1",
     "@tauri-apps/cli": "2.1.0",
-    "@tauri-apps/plugin-autostart": "2.0.0",
-    "@tauri-apps/plugin-fs": "2.0.2",
-    "@tauri-apps/plugin-os": "2.0.0",
-    "@tauri-apps/plugin-sql": "2.0.1",
+    "@tauri-apps/plugin-autostart": "2.2.0",
+    "@tauri-apps/plugin-fs": "2.2.0",
+    "@tauri-apps/plugin-os": "2.2.0",
+    "@tauri-apps/plugin-sql": "2.2.0",
     "nuxt": "3.14.1592",
     "nuxt-build-cache": "0.1.1",
-    "overlayscrollbars": "2.10.0",
+    "overlayscrollbars": "2.10.1",
     "overlayscrollbars-vue": "0.5.9",
-    "sass": "1.81.0",
-    "vue": "3.5.13"
+    "sass": "1.82.0",
+    "uuid": "11.0.3",
+    "vue": "3.5.13",
+    "wrdu-keyboard": "1.1.1"
   }
 }
