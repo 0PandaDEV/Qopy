@@ -140,6 +140,9 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                         ).await;
                                     }
                                 } else {
+                                    if text.is_empty() {
+                                        return;
+                                    }
                                     let _ = db::history::add_history_item(
                                         pool,
                                         HistoryItem::new(ContentType::Text, text, None)
