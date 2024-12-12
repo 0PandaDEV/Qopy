@@ -1,9 +1,9 @@
-use sqlx::{Row, SqlitePool};
+use crate::utils::types::{ContentType, HistoryItem};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use crate::utils::types::{HistoryItem, ContentType};
+use sqlx::{Row, SqlitePool};
 use std::fs;
-use base64::{Engine, engine::general_purpose::STANDARD};
 
 pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
     let id: String = thread_rng()
@@ -27,19 +27,22 @@ pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::er
 #[tauri::command]
 pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
-        "SELECT id, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC"
+        "SELECT id, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC",
     )
     .fetch_all(&*pool)
     .await
     .map_err(|e| e.to_string())?;
 
-    let items = rows.iter().map(|row| HistoryItem {
-        id: row.get("id"),
-        content_type: ContentType::from(row.get::<String, _>("content_type")),
-        content: row.get("content"),
-        favicon: row.get("favicon"),
-        timestamp: row.get("timestamp"),
-    }).collect();
+    let items = rows
+        .iter()
+        .map(|row| HistoryItem {
+            id: row.get("id"),
+            content_type: ContentType::from(row.get::<String, _>("content_type")),
+            content: row.get("content"),
+            favicon: row.get("favicon"),
+            timestamp: row.get("timestamp"),
+        })
+        .collect();
 
     Ok(items)
 }
@@ -50,7 +53,19 @@ pub async fn add_history_item(
     item: HistoryItem,
 ) -> Result<(), String> {
     let (id, content_type, content, favicon, timestamp) = item.to_row();
-    
+
+    let last_content: Option<String> = sqlx::query_scalar(
+        "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
+    )
+    .bind(content_type.clone())
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(None);
+
+    if last_content.as_deref() == Some(&content) {
+        return Ok(());
+    }
+
     sqlx::query(
         "INSERT INTO history (id, content_type, content, favicon, timestamp) VALUES (?, ?, ?, ?, ?)"
     )
@@ -69,7 +84,7 @@ pub async fn add_history_item(
 #[tauri::command]
 pub async fn search_history(
     pool: tauri::State<'_, SqlitePool>,
-    query: String
+    query: String,
 ) -> Result<Vec<HistoryItem>, String> {
     let query = format!("%{}%", query);
     let rows = sqlx::query(
@@ -80,13 +95,16 @@ pub async fn search_history(
     .await
     .map_err(|e| e.to_string())?;
 
-    let items = rows.iter().map(|row| HistoryItem {
-        id: row.get("id"),
-        content_type: ContentType::from(row.get::<String, _>("content_type")),
-        content: row.get("content"),
-        favicon: row.get("favicon"),
-        timestamp: row.get("timestamp"),
-    }).collect();
+    let items = rows
+        .iter()
+        .map(|row| HistoryItem {
+            id: row.get("id"),
+            content_type: ContentType::from(row.get::<String, _>("content_type")),
+            content: row.get("content"),
+            favicon: row.get("favicon"),
+            timestamp: row.get("timestamp"),
+        })
+        .collect();
 
     Ok(items)
 }
@@ -95,7 +113,7 @@ pub async fn search_history(
 pub async fn load_history_chunk(
     pool: tauri::State<'_, SqlitePool>,
     offset: i64,
-    limit: i64
+    limit: i64,
 ) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
         "SELECT id, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
@@ -106,13 +124,16 @@ pub async fn load_history_chunk(
     .await
     .map_err(|e| e.to_string())?;
 
-    let items = rows.iter().map(|row| HistoryItem {
-        id: row.get("id"),
-        content_type: ContentType::from(row.get::<String, _>("content_type")),
-        content: row.get("content"),
-        favicon: row.get("favicon"),
-        timestamp: row.get("timestamp"),
-    }).collect();
+    let items = rows
+        .iter()
+        .map(|row| HistoryItem {
+            id: row.get("id"),
+            content_type: ContentType::from(row.get::<String, _>("content_type")),
+            content: row.get("content"),
+            favicon: row.get("favicon"),
+            timestamp: row.get("timestamp"),
+        })
+        .collect();
 
     Ok(items)
 }
@@ -120,7 +141,7 @@ pub async fn load_history_chunk(
 #[tauri::command]
 pub async fn delete_history_item(
     pool: tauri::State<'_, SqlitePool>,
-    id: String
+    id: String,
 ) -> Result<(), String> {
     sqlx::query("DELETE FROM history WHERE id = ?")
         .bind(id)
