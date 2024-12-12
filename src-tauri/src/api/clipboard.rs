@@ -111,7 +111,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     HistoryItem::new(ContentType::Image, file_path, None),
                                 ).await;
                             }
-                            let _ = app.emit("plugin:clipboard://image-changed", ());
                         } else if available_types.files {
                             println!("Handling files change");
                             if let Ok(files) = clipboard.read_files() {
@@ -121,7 +120,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     HistoryItem::new(ContentType::File, files_str, None),
                                 ).await;
                             }
-                            let _ = app.emit("plugin:clipboard://files-changed", ());
                         } else if available_types.text {
                             println!("Handling text change");
                             if let Ok(text) = clipboard.read_text() {
@@ -149,7 +147,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     ).await;
                                 }
                             }
-                            let _ = app.emit("plugin:clipboard://text-changed", ());
                         } else {
                             println!("Unknown clipboard content type");
                         }
@@ -158,6 +155,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                         println!("Failed to get database pool: {}", e);
                     }
                 }
+
+                let _ = app.emit("clipboard-content-updated", ());
             });
         },
     );
