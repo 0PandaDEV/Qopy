@@ -22,7 +22,7 @@ tauri-plugin-updater = "2.3.0"
 tauri-plugin-dialog = "2.2.0"
 tauri-plugin-fs = "2.2.0"
 tauri-plugin-clipboard = "2.1.11"
-tauri-plugin-prevent-default = "0.8.0"
+tauri-plugin-prevent-default = "1.0.0"
 tauri-plugin-global-shortcut = "2.2.0"
 sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
 serde = { version = "1.0.216", features = ["derive"] }
@@ -41,6 +41,8 @@ time = "0.3.37"
 global-hotkey = "0.6.3"
 chrono = { version = "0.4.39", features = ["serde"] }
 uuid = "1.11.0"
+active-win-pos-rs = "0.8.3"
+include_dir = "0.7.4"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
