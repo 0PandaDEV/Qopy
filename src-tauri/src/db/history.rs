@@ -13,9 +13,10 @@ pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::er
         .collect();
 
     sqlx::query(
-        "INSERT INTO history (id, content_type, content, timestamp) VALUES (?, ?, ?, CURRENT_TIMESTAMP)"
+        "INSERT INTO history (id, source, content_type, content, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
     )
     .bind(id)
+    .bind("System")
     .bind("text")
     .bind("Welcome to your clipboard history!")
     .execute(pool)
@@ -27,7 +28,7 @@ pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::er
 #[tauri::command]
 pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
-        "SELECT id, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC",
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC",
     )
     .fetch_all(&*pool)
     .await
@@ -37,6 +38,8 @@ pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Histo
         .iter()
         .map(|row| HistoryItem {
             id: row.get("id"),
+            source: row.get("source"),
+            source_icon: row.get("source_icon"),
             content_type: ContentType::from(row.get::<String, _>("content_type")),
             content: row.get("content"),
             favicon: row.get("favicon"),
@@ -52,7 +55,7 @@ pub async fn add_history_item(
     pool: tauri::State<'_, SqlitePool>,
     item: HistoryItem,
 ) -> Result<(), String> {
-    let (id, content_type, content, favicon, timestamp) = item.to_row();
+    let (id, source, source_icon, content_type, content, favicon, timestamp) = item.to_row();
 
     let last_content: Option<String> = sqlx::query_scalar(
         "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
@@ -67,9 +70,11 @@ pub async fn add_history_item(
     }
 
     sqlx::query(
-        "INSERT INTO history (id, content_type, content, favicon, timestamp) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(id)
+    .bind(source)
+    .bind(source_icon)
     .bind(content_type)
     .bind(content)
     .bind(favicon)
@@ -88,7 +93,7 @@ pub async fn search_history(
 ) -> Result<Vec<HistoryItem>, String> {
     let query = format!("%{}%", query);
     let rows = sqlx::query(
-        "SELECT id, content_type, content, favicon, timestamp FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
     )
     .bind(query)
     .fetch_all(&*pool)
@@ -99,6 +104,8 @@ pub async fn search_history(
         .iter()
         .map(|row| HistoryItem {
             id: row.get("id"),
+            source: row.get("source"),
+            source_icon: row.get("source_icon"),
             content_type: ContentType::from(row.get::<String, _>("content_type")),
             content: row.get("content"),
             favicon: row.get("favicon"),
@@ -116,7 +123,7 @@ pub async fn load_history_chunk(
     limit: i64,
 ) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
-        "SELECT id, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
     )
     .bind(limit)
     .bind(offset)
@@ -128,6 +135,8 @@ pub async fn load_history_chunk(
         .iter()
         .map(|row| HistoryItem {
             id: row.get("id"),
+            source: row.get("source"),
+            source_icon: row.get("source_icon"),
             content_type: ContentType::from(row.get::<String, _>("content_type")),
             content: row.get("content"),
             favicon: row.get("favicon"),

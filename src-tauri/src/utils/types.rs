@@ -6,9 +6,10 @@ use uuid::Uuid;
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct HistoryItem {
     pub id: String,
+    pub source: String,
+    pub source_icon: Option<String>,
     pub content_type: ContentType,
     pub content: String,
-    #[serde(default)]
     pub favicon: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
@@ -22,6 +23,61 @@ pub enum ContentType {
     Link,
     Color,
     Code,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Text {
+    pub source: String,
+    pub content_type: ContentType,
+    pub characters: i32,
+    pub words: i32,
+    pub copied: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Image {
+    pub source: String,
+    pub content_type: ContentType,
+    pub dimensions: String,
+    pub size: i64,
+    pub copied: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct File {
+    pub source: String,
+    pub content_type: ContentType,
+    pub path: String,
+    pub filesize: i64,
+    pub copied: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Link {
+    pub source: String,
+    pub content_type: ContentType,
+    pub title: String,
+    pub link: String,
+    pub characters: i32,
+    pub copied: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Color {
+    pub source: String,
+    pub content_type: ContentType,
+    pub hexcode: String,
+    pub rgba: String,
+    pub copied: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Code {
+    pub source: String,
+    pub content_type: ContentType,
+    pub language: String,
+    pub lines: i32,
+    pub copied: DateTime<Utc>,
 }
 
 impl fmt::Display for ContentType {
@@ -52,9 +108,11 @@ impl From<String> for ContentType {
 }
 
 impl HistoryItem {
-    pub fn new(content_type: ContentType, content: String, favicon: Option<String>) -> Self {
+    pub fn new(source: String, content_type: ContentType, content: String, favicon: Option<String>, source_icon: Option<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
+            source,
+            source_icon,
             content_type,
             content,
             favicon,
@@ -62,9 +120,11 @@ impl HistoryItem {
         }
     }
 
-    pub fn to_row(&self) -> (String, String, String, Option<String>, DateTime<Utc>) {
+    pub fn to_row(&self) -> (String, String, Option<String>, String, String, Option<String>, DateTime<Utc>) {
         (
             self.id.clone(),
+            self.source.clone(),
+            self.source_icon.clone(),
             self.content_type.to_string(),
             self.content.clone(),
             self.favicon.clone(),

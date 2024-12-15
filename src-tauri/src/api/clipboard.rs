@@ -12,6 +12,7 @@ use regex::Regex;
 use url::Url;
 use base64::{Engine, engine::general_purpose::STANDARD};
 
+use crate::utils::commands::get_app_info;
 use crate::utils::favicon::fetch_favicon_as_base64;
 use crate::db;
 use crate::utils::types::{ContentType, HistoryItem};
@@ -97,6 +98,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                 let clipboard = app.state::<Clipboard>();
                 let available_types = clipboard.available_types().unwrap();
 
+                let (app_name, app_icon) = get_app_info();
+
                 match get_pool(&app).await {
                     Ok(pool) => {
                         if available_types.image {
@@ -108,7 +111,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     .unwrap_or_else(|e| e);
                                 let _ = db::history::add_history_item(
                                     pool,
-                                    HistoryItem::new(ContentType::Image, file_path, None),
+                                    HistoryItem::new(app_name, ContentType::Image, file_path, None, app_icon),
                                 ).await;
                             }
                         } else if available_types.files {
@@ -117,7 +120,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                 let files_str = files.join(", ");
                                 let _ = db::history::add_history_item(
                                     pool,
-                                    HistoryItem::new(ContentType::File, files_str, None),
+                                    HistoryItem::new(app_name, ContentType::File, files_str, None, app_icon),
                                 ).await;
                             }
                         } else if available_types.text {
@@ -134,7 +137,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                         
                                         let _ = db::history::add_history_item(
                                             pool,
-                                            HistoryItem::new(ContentType::Link, text, favicon)
+                                            HistoryItem::new(app_name, ContentType::Link, text, favicon, app_icon)
                                         ).await;
                                     }
                                 } else {
@@ -143,7 +146,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     }
                                     let _ = db::history::add_history_item(
                                         pool,
-                                        HistoryItem::new(ContentType::Text, text, None)
+                                        HistoryItem::new(app_name, ContentType::Text, text, None, app_icon)
                                     ).await;
                                 }
                             }
