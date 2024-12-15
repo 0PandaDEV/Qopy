@@ -59,7 +59,6 @@ const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
 const os = ref('');
 const router = useRouter();
-
 const keyboard = useKeyboard();
 
 const keyToDisplayMap: Record<string, string> = {
