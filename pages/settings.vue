@@ -60,6 +60,8 @@ const lastBlurTime = ref(0);
 const os = ref('');
 const router = useRouter();
 
+const keyboard = useKeyboard();
+
 const keyToDisplayMap: Record<string, string> = {
   ' ': 'Space',
   Alt: 'Alt',
@@ -141,36 +143,34 @@ const saveKeybind = async () => {
   await invoke('save_keybind', { keybind: keybind.value });
 };
 
-const handleGlobalKeyDown = (event: KeyboardEvent) => {
-  const now = Date.now();
-  if (
-    (os.value === 'macos'
-      ? (event.code === 'MetaLeft' || event.code === 'MetaRight') && event.key === 'Enter'
-      : (event.code === 'ControlLeft' || event.code === 'ControlRight') && event.key === 'Enter') &&
-    !isKeybindInputFocused.value
-  ) {
-    event.preventDefault();
-    saveKeybind();
-  } else if (
-    event.key === 'Escape' &&
-    !isKeybindInputFocused.value &&
-    now - lastBlurTime.value > 100
-  ) {
-    event.preventDefault();
-    router.push('/');
-  }
-};
-
 onMounted(() => {
   os.value = platform();
-  window.addEventListener('keydown', handleGlobalKeyDown);
-});
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleGlobalKeyDown);
+  keyboard.down('all', (event) => {
+    const isMacSaveCombo = os.value === 'macos' && 
+      (event.code === 'MetaLeft' || event.code === 'MetaRight') && 
+      event.key === 'Enter';
+    
+    const isOtherOsSaveCombo = os.value !== 'macos' && 
+      (event.code === 'ControlLeft' || event.code === 'ControlRight') && 
+      event.key === 'Enter';
+
+    if ((isMacSaveCombo || isOtherOsSaveCombo) && !isKeybindInputFocused.value) {
+      event.preventDefault();
+      saveKeybind();
+    }
+  });
+
+  keyboard.down('Escape', (event) => {
+    const now = Date.now();
+    if (!isKeybindInputFocused.value && now - lastBlurTime.value > 100) {
+      event.preventDefault();
+      router.push('/');
+    }
+  });
 });
 </script>
 
 <style scoped lang="scss">
-@use '~/assets/css/keybind.scss';
+@use '~/assets/css/settings.scss';
 </style>

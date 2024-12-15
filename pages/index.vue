@@ -1,11 +1,5 @@
 <template>
-  <div
-    class="bg"
-    @keydown.down.prevent="selectNext"
-    @keydown.up.prevent="selectPrevious"
-    @keydown.enter.prevent="pasteSelectedItem"
-    @keydown.esc="hideApp"
-    tabindex="0">
+  <div class="bg" tabindex="0">
     <input
       ref="searchInput"
       v-model="searchQuery"
@@ -55,7 +49,7 @@
           ]"
           @click="selectItem(groupIndex, index)"
           :ref="
-            (el) => {
+            (el: any) => {
               if (isSelected(groupIndex, index))
                 selectedElement = el as HTMLElement;
             }
@@ -67,10 +61,7 @@
               alt="Image"
               class="image"
               @error="onImageError" />
-            <img
-              v-else
-              src="../public/icons/Image.svg"
-              class="icon" />
+            <img v-else src="../public/icons/Image.svg" class="icon" />
           </template>
           <img
             v-else-if="hasFavicon(item.favicon ?? '')"
@@ -90,7 +81,7 @@
             class="icon"
             v-else-if="item.content_type === ContentType.Code" />
           <span v-if="item.content_type === ContentType.Image">
-            Image ({{ imageDimensions[item.id] || 'Loading...' }})
+            Image ({{ imageDimensions[item.id] || "Loading..." }})
           </span>
           <span v-else>{{ truncateContent(item.content) }}</span>
         </div>
@@ -107,6 +98,9 @@
         class="full-image" />
       <span v-else>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
+    <div class="information">
+      <div class="title">Information</div>
+    </div>
     <Noise />
   </div>
 </template>
@@ -136,7 +130,9 @@ const history = shallowRef<HistoryItem[]>([]);
 let offset = 0;
 let isLoading = false;
 
-const resultsContainer = shallowRef<InstanceType<typeof OverlayScrollbarsComponent> | null>(null);
+const resultsContainer = shallowRef<InstanceType<
+  typeof OverlayScrollbarsComponent
+> | null>(null);
 const searchQuery = ref("");
 const selectedGroupIndex = ref(0);
 const selectedItemIndex = ref(0);
@@ -149,15 +145,24 @@ const lastUpdateTime = ref<number>(Date.now());
 const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 
+const keyboard = useKeyboard();
+
 const isSameDay = (date1: Date, date2: Date): boolean => {
-  return date1.getFullYear() === date2.getFullYear() 
-    && date1.getMonth() === date2.getMonth() 
-    && date1.getDate() === date2.getDate();
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
 };
 
 const getWeekNumber = (date: Date): number => {
   const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  return Math.ceil(((date.getTime() - firstDayOfYear.getTime()) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
+  return Math.ceil(
+    ((date.getTime() - firstDayOfYear.getTime()) / 86400000 +
+      firstDayOfYear.getDay() +
+      1) /
+      7
+  );
 };
 
 const groupedHistory = computed<GroupedHistory[]>(() => {
@@ -169,30 +174,33 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
   const groups: Record<string, HistoryItem[]> = {
     Today: [],
     Yesterday: [],
-    'This Week': [],
-    'Last Week': [],
-    'This Year': [],
-    'Last Year': []
+    "This Week": [],
+    "Last Week": [],
+    "This Year": [],
+    "Last Year": [],
   };
 
   const filteredItems = searchQuery.value
-    ? history.value.filter(item => 
-        item.content.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    ? history.value.filter((item) =>
+        item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
     : history.value;
 
   const yesterday = new Date(today.getTime() - 86400000);
 
-  filteredItems.forEach(item => {
+  filteredItems.forEach((item) => {
     const itemDate = new Date(item.timestamp);
     const itemWeek = getWeekNumber(itemDate);
     const itemYear = itemDate.getFullYear();
 
     if (isSameDay(itemDate, today)) groups.Today.push(item);
     else if (isSameDay(itemDate, yesterday)) groups.Yesterday.push(item);
-    else if (itemYear === thisYear && itemWeek === thisWeek) groups['This Week'].push(item);
-    else if (itemYear === thisYear && itemWeek === thisWeek - 1) groups['Last Week'].push(item);
-    else if (itemYear === thisYear) groups['This Year'].push(item);
-    else groups['Last Year'].push(item);
+    else if (itemYear === thisYear && itemWeek === thisWeek)
+      groups["This Week"].push(item);
+    else if (itemYear === thisYear && itemWeek === thisWeek - 1)
+      groups["Last Week"].push(item);
+    else if (itemYear === thisYear) groups["This Year"].push(item);
+    else groups["Last Year"].push(item);
   });
 
   return Object.entries(groups)
@@ -217,21 +225,22 @@ const loadHistoryChunk = async (): Promise<void> => {
     }
 
     const processedItems = await Promise.all(
-      results.map(async item => {
+      results.map(async (item) => {
         const historyItem = new HistoryItem(
-          item.content_type as ContentType,
+          item.source,
+          item.content_type,
           item.content,
           item.favicon
         );
         Object.assign(historyItem, {
           id: item.id,
-          timestamp: new Date(item.timestamp)
+          timestamp: new Date(item.timestamp),
         });
 
         if (historyItem.content_type === ContentType.Image) {
           await Promise.all([
             getItemDimensions(historyItem),
-            loadImageUrl(historyItem)
+            loadImageUrl(historyItem),
           ]);
         }
         return historyItem;
@@ -266,7 +275,7 @@ const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
     if (!forceScrollTop) {
       const viewportRect = viewport.getBoundingClientRect();
       const elementRect = selectedElement.value.getBoundingClientRect();
-      
+
       const isAbove = elementRect.top < viewportRect.top;
       const isBelow = elementRect.bottom > viewportRect.bottom - 8;
 
@@ -290,10 +299,17 @@ const isSelected = (groupIndex: number, itemIndex: number): boolean => {
 
 const searchHistory = async (): Promise<void> => {
   const results = await $history.searchHistory(searchQuery.value);
-  history.value = results.map(item => Object.assign(
-    new HistoryItem(item.content_type as ContentType, item.content, item.favicon),
-    { id: item.id, timestamp: new Date(item.timestamp) }
-  ));
+  history.value = results.map((item) =>
+    Object.assign(
+      new HistoryItem(
+        item.source,
+        item.content_type,
+        item.content,
+        item.favicon
+      ),
+      { id: item.id, timestamp: new Date(item.timestamp) }
+    )
+  );
 };
 
 const selectNext = (): void => {
@@ -378,13 +394,15 @@ const getFaviconFromDb = (favicon: string): string => {
   return `data:image/png;base64,${favicon}`;
 };
 
-const getImageData = async (item: HistoryItem): Promise<{ url: string; dimensions: string }> => {
+const getImageData = async (
+  item: HistoryItem
+): Promise<{ url: string; dimensions: string }> => {
   try {
     const base64 = await $history.readImage({ filename: item.content });
     const dataUrl = `data:image/png;base64,${base64}`;
     const img = new Image();
     img.src = dataUrl;
-    
+
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = reject;
@@ -392,7 +410,7 @@ const getImageData = async (item: HistoryItem): Promise<{ url: string; dimension
 
     return {
       url: dataUrl,
-      dimensions: `${img.width}x${img.height}`
+      dimensions: `${img.width}x${img.height}`,
     };
   } catch (error) {
     console.error("Error processing image:", error);
@@ -402,14 +420,15 @@ const getImageData = async (item: HistoryItem): Promise<{ url: string; dimension
 
 const processHistoryItem = async (item: any): Promise<HistoryItem> => {
   const historyItem = new HistoryItem(
-    item.content_type as ContentType,
+    item.content_type as string,
+    ContentType[item.content_type as keyof typeof ContentType],
     item.content,
     item.favicon
   );
-  
+
   Object.assign(historyItem, {
     id: item.id,
-    timestamp: new Date(item.timestamp)
+    timestamp: new Date(item.timestamp),
   });
 
   if (historyItem.content_type === ContentType.Image) {
@@ -425,33 +444,43 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
   history.value = [];
   offset = 0;
   await loadHistoryChunk();
-  
-  if (resetScroll && resultsContainer.value?.osInstance()?.elements().viewport) {
+
+  if (
+    resetScroll &&
+    resultsContainer.value?.osInstance()?.elements().viewport
+  ) {
     resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   }
 };
 
-const handleSelection = (groupIndex: number, itemIndex: number, shouldScroll: boolean = true): void => {
+const handleSelection = (
+  groupIndex: number,
+  itemIndex: number,
+  shouldScroll: boolean = true
+): void => {
   selectedGroupIndex.value = groupIndex;
   selectedItemIndex.value = itemIndex;
   if (shouldScroll) scrollToSelectedItem();
 };
 
-const handleMediaContent = async (content: string, type: string): Promise<string> => {
+const handleMediaContent = async (
+  content: string,
+  type: string
+): Promise<string> => {
   if (type === "image") {
     return await $history.getImagePath(content);
   }
-  
+
   if (isYoutubeWatchUrl(content)) {
     const videoId = content.includes("youtu.be")
       ? content.split("youtu.be/")[1]
       : content.match(/[?&]v=([^&]+)/)?.[1];
     return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : "";
   }
-  
+
   return content;
 };
 
@@ -468,19 +497,23 @@ const setupEventListeners = async (): Promise<void> => {
       const previousState = {
         groupIndex: selectedGroupIndex.value,
         itemIndex: selectedItemIndex.value,
-        scroll: resultsContainer.value?.osInstance()?.elements().viewport?.scrollTop || 0
+        scroll:
+          resultsContainer.value?.osInstance()?.elements().viewport
+            ?.scrollTop || 0,
       };
-      
+
       await updateHistory();
       lastUpdateTime.value = currentTime;
       handleSelection(previousState.groupIndex, previousState.itemIndex, false);
-      
+
       nextTick(() => {
-        const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
+        const viewport = resultsContainer.value
+          ?.osInstance()
+          ?.elements().viewport;
         if (viewport) {
           viewport.scrollTo({
             top: previousState.scroll,
-            behavior: "instant"
+            behavior: "instant",
           });
         }
       });
@@ -490,6 +523,43 @@ const setupEventListeners = async (): Promise<void> => {
 
   await listen("tauri://blur", () => {
     searchInput.value?.blur();
+  });
+
+  keyboard.down("ArrowDown", (event) => {
+    event.preventDefault();
+    selectNext();
+  });
+
+  keyboard.down("ArrowUp", (event) => {
+    event.preventDefault();
+    selectPrevious();
+  });
+
+  keyboard.down("Enter", (event) => {
+    event.preventDefault();
+    pasteSelectedItem();
+  });
+
+  keyboard.down("Escape", (event) => {
+    event.preventDefault();
+    hideApp();
+  });
+
+  keyboard.down("all", (event) => {
+    const isMacActionCombo =
+      os.value === "macos" &&
+      (event.code === "MetaLeft" || event.code === "MetaRight") &&
+      event.key === "k";
+
+    const isOtherOsActionCombo =
+      os.value !== "macos" &&
+      (event.code === "ControlLeft" || event.code === "ControlRight") &&
+      event.key === "k";
+
+    if (isMacActionCombo || isOtherOsActionCombo) {
+      event.preventDefault();
+      console.log("Actions shortcut triggered");
+    }
   });
 };
 
@@ -557,7 +627,7 @@ const getItemDimensions = async (item: HistoryItem) => {
       imageDimensions.value[item.id] = "Error";
     }
   }
-  return imageDimensions.value[item.id] || 'Loading...';
+  return imageDimensions.value[item.id] || "Loading...";
 };
 
 const loadImageUrl = async (item: HistoryItem) => {
@@ -572,8 +642,8 @@ const loadImageUrl = async (item: HistoryItem) => {
 };
 
 const getComputedImageUrl = (item: HistoryItem | null): string => {
-  if (!item) return '';
-  return imageUrls.value[item.id] || '';
+  if (!item) return "";
+  return imageUrls.value[item.id] || "";
 };
 </script>
 

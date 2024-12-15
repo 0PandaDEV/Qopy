@@ -99,7 +99,7 @@ $mutedtext: #78756f;
   top: 53px;
   left: 284px;
   padding: 8px;
-  height: calc(100vh - 96px);
+  height: calc(100vh - 256px);
   font-family: CommitMono Nerd Font !important;
   font-size: 14px;
   letter-spacing: 1;
@@ -207,6 +207,23 @@ $mutedtext: #78756f;
     &:hover .actions:hover ~ .divider {
       opacity: 0;
     }
+  }
+}
+
+.information {
+  position: absolute;
+  bottom: 40px;
+  left: 284px;
+  height: 160px;
+  width: calc(100vw - 286px);
+  border-top: 1px solid $divider;
+  background-color: $primary;
+  padding: 14px;
+
+  .title {
+    font-family: SFRoundedSemiBold;
+    font-size: 12px;
+    letter-spacing: 0.6px;
   }
 }
 
