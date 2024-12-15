@@ -2,9 +2,15 @@ use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::fs;
 use tauri::Manager;
 use tokio::runtime::Runtime as TokioRuntime;
+use include_dir::{include_dir, Dir};
+
+static MIGRATIONS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/db/migrations");
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let rt = TokioRuntime::new().expect("Failed to create Tokio runtime");
+    app.manage(rt);
+
+    let rt = app.state::<TokioRuntime>();
 
     let app_data_dir = app.path().app_data_dir().unwrap();
     fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
@@ -24,8 +30,10 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to create pool")
     });
 
+    app.manage(pool.clone());
+
     rt.block_on(async {
-        apply_schema(&pool).await?;
+        apply_migrations(&pool).await?;
         if is_new_db {
             if let Err(e) = super::history::initialize_history(&pool).await {
                 eprintln!("Failed to initialize history: {}", e);
@@ -37,26 +45,75 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         Ok::<(), Box<dyn std::error::Error>>(())
     })?;
 
-    app.manage(pool);
-    app.manage(rt);
-
     Ok(())
 }
 
-async fn apply_schema(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
-    let schema = include_str!("scheme.sql");
+async fn apply_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting migration process");
     
-    let statements: Vec<&str> = schema
-        .split(';')
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
+    // Create schema_version table
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER PRIMARY KEY,
+            applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );"
+    )
+    .execute(pool)
+    .await?;
+
+    let current_version: Option<i64> = sqlx::query_scalar(
+        "SELECT MAX(version) FROM schema_version"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let current_version = current_version.unwrap_or(0);
+    println!("Current database version: {}", current_version);
+
+    let mut migration_files: Vec<(i64, &str)> = MIGRATIONS_DIR
+        .files()
+        .filter_map(|file| {
+            let file_name = file.path().file_name()?.to_str()?;
+            println!("Processing file: {}", file_name);
+            if file_name.ends_with(".sql") && file_name.starts_with("migration") {
+                let version: i64 = file_name
+                    .trim_start_matches("migration")
+                    .trim_end_matches(".sql")
+                    .parse()
+                    .ok()?;
+                println!("Found migration version: {}", version);
+                Some((version, file.contents_utf8()?))
+            } else {
+                None
+            }
+        })
         .collect();
 
-    for statement in statements {
-        sqlx::query(statement)
-            .execute(pool)
-            .await
-            .map_err(|e| format!("Failed to execute schema statement: {}", e))?;
+    migration_files.sort_by_key(|(version, _)| *version);
+
+    for (version, content) in migration_files {
+        if version > current_version {
+            println!("Applying migration {}", version);
+            
+            let statements: Vec<&str> = content
+                .split(';')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect();
+
+            for statement in statements {
+                println!("Executing statement: {}", statement);
+                sqlx::query(statement)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| format!("Failed to execute migration {}: {}", version, e))?;
+            }
+
+            sqlx::query("INSERT INTO schema_version (version) VALUES (?)")
+                .bind(version)
+                .execute(pool)
+                .await?;
+        }
     }
 
     Ok(())
