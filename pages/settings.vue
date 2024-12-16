@@ -14,7 +14,10 @@
           <p>Save</p>
           <div>
             <img alt="" src="../public/cmd.svg" v-if="os === 'macos'" />
-            <img alt="" src="../public/ctrl.svg" v-if="os === 'linux' || os === 'windows'" />
+            <img
+              alt=""
+              src="../public/ctrl.svg"
+              v-if="os === 'linux' || os === 'windows'" />
             <img alt="" src="../public/enter.svg" />
           </div>
         </div>
@@ -28,16 +31,14 @@
         @keydown="onKeyDown"
         class="keybind-input"
         ref="keybindInput"
-        tabindex="0"
-      >
+        tabindex="0">
         <span class="key" v-if="keybind.length === 0">Click here</span>
         <template v-else>
           <span
             :key="index"
             class="key"
             :class="{ modifier: isModifier(key) }"
-            v-for="(key, index) in keybind"
-          >
+            v-for="(key, index) in keybind">
             {{ keyToDisplay(key) }}
           </span>
         </template>
@@ -47,46 +48,54 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core';
-import { onMounted, onUnmounted, reactive, ref } from 'vue';
-import { platform } from '@tauri-apps/plugin-os';
-import { useRouter } from 'vue-router';
+import { invoke } from "@tauri-apps/api/core";
+import { onMounted, onUnmounted, reactive, ref } from "vue";
+import { platform } from "@tauri-apps/plugin-os";
+import { useRouter } from "vue-router";
 
 const activeModifiers = reactive<Set<string>>(new Set());
 const isKeybindInputFocused = ref(false);
 const keybind = ref<string[]>([]);
 const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
-const os = ref('');
+const os = ref("");
 const router = useRouter();
 const keyboard = useKeyboard();
 
 const keyToDisplayMap: Record<string, string> = {
-  ' ': 'Space',
-  Alt: 'Alt',
-  AltLeft: 'Alt L',
-  AltRight: 'Alt R',
-  ArrowDown: '↓',
-  ArrowLeft: '←',
-  ArrowRight: '→',
-  ArrowUp: '↑',
-  Control: 'Ctrl',
-  ControlLeft: 'Ctrl L',
-  ControlRight: 'Ctrl R',
-  Enter: '↵',
-  Meta: 'Meta',
-  MetaLeft: 'Meta L',
-  MetaRight: 'Meta R',
-  Shift: '⇧',
-  ShiftLeft: '⇧ L',
-  ShiftRight: '⇧ R',
+  " ": "Space",
+  Alt: "Alt",
+  AltLeft: "Alt L",
+  AltRight: "Alt R",
+  ArrowDown: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  Control: "Ctrl",
+  ControlLeft: "Ctrl L",
+  ControlRight: "Ctrl R",
+  Enter: "↵",
+  Meta: "Meta",
+  MetaLeft: "Meta L",
+  MetaRight: "Meta R",
+  Shift: "⇧",
+  ShiftLeft: "⇧ L",
+  ShiftRight: "⇧ R",
 };
 
 const modifierKeySet = new Set([
-  'Alt', 'AltLeft', 'AltRight',
-  'Control', 'ControlLeft', 'ControlRight',
-  'Meta', 'MetaLeft', 'MetaRight',
-  'Shift', 'ShiftLeft', 'ShiftRight'
+  "Alt",
+  "AltLeft",
+  "AltRight",
+  "Control",
+  "ControlLeft",
+  "ControlRight",
+  "Meta",
+  "MetaLeft",
+  "MetaRight",
+  "Shift",
+  "ShiftLeft",
+  "ShiftRight",
 ]);
 
 const isModifier = (key: string): boolean => {
@@ -99,7 +108,7 @@ const keyToDisplay = (key: string): string => {
 
 const updateKeybind = () => {
   const modifiers = Array.from(activeModifiers).sort();
-  const nonModifiers = keybind.value.filter(key => !isModifier(key));
+  const nonModifiers = keybind.value.filter((key) => !isModifier(key));
   keybind.value = [...modifiers, ...nonModifiers];
 };
 
@@ -118,7 +127,7 @@ const onKeyDown = (event: KeyboardEvent) => {
   event.preventDefault();
   const key = event.code;
 
-  if (key === 'Escape') {
+  if (key === "Escape") {
     if (keybindInput.value) {
       keybindInput.value.blur();
     }
@@ -128,48 +137,53 @@ const onKeyDown = (event: KeyboardEvent) => {
   if (isModifier(key)) {
     activeModifiers.add(key);
   } else if (!keybind.value.includes(key)) {
-    keybind.value = keybind.value.filter(k => isModifier(k));
+    keybind.value = keybind.value.filter((k) => isModifier(k));
     keybind.value.push(key);
   }
-  
+
   updateKeybind();
 };
 
 const saveKeybind = async () => {
-  console.log('New:', keybind.value);
-  const oldKeybind = await invoke<string[]>('get_keybind');
-  console.log('Old:', oldKeybind);
-  await invoke('save_keybind', { keybind: keybind.value });
+  console.log("New:", keybind.value);
+  const oldKeybind = await invoke<string[]>("get_keybind");
+  console.log("Old:", oldKeybind);
+  await invoke("save_keybind", { keybind: keybind.value });
 };
 
 onMounted(() => {
   os.value = platform();
 
-  keyboard.down('all', (event) => {
-    const isMacSaveCombo = os.value === 'macos' && 
-      (event.code === 'MetaLeft' || event.code === 'MetaRight') && 
-      event.key === 'Enter';
-    
-    const isOtherOsSaveCombo = os.value !== 'macos' && 
-      (event.code === 'ControlLeft' || event.code === 'ControlRight') && 
-      event.key === 'Enter';
+  keyboard.down("all", (event) => {
+    const isMacSaveCombo =
+      os.value === "macos" &&
+      (event.code === "MetaLeft" || event.code === "MetaRight") &&
+      event.key === "Enter";
 
-    if ((isMacSaveCombo || isOtherOsSaveCombo) && !isKeybindInputFocused.value) {
+    const isOtherOsSaveCombo =
+      os.value !== "macos" &&
+      (event.code === "ControlLeft" || event.code === "ControlRight") &&
+      event.key === "Enter";
+
+    if (
+      (isMacSaveCombo || isOtherOsSaveCombo) &&
+      !isKeybindInputFocused.value
+    ) {
       event.preventDefault();
       saveKeybind();
     }
   });
 
-  keyboard.down('Escape', (event) => {
+  keyboard.down("Escape", (event) => {
     const now = Date.now();
     if (!isKeybindInputFocused.value && now - lastBlurTime.value > 100) {
       event.preventDefault();
-      router.push('/');
+      router.push("/");
     }
   });
 });
 </script>
 
 <style scoped lang="scss">
-@use '~/assets/css/settings.scss';
+@use "~/assets/css/settings.scss";
 </style>

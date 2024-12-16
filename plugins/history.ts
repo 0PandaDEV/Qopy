@@ -27,8 +27,12 @@ export default defineNuxtPlugin(() => {
           });
         },
 
-        async getImagePath(path: string): Promise<string> {
-          return await invoke<string>("get_image_path", { path });
+        async deleteHistoryItem(id: string): Promise<void> {
+          await invoke<void>("delete_history_item", { id });
+        },
+
+        async clearHistory(): Promise<void> {
+          await invoke<void>("clear_history");
         },
 
         async writeAndPaste(data: {
