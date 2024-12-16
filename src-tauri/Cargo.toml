@@ -40,6 +40,7 @@ lazy_static = "1.5.0"
 time = "0.3.37"
 global-hotkey = "0.6.3"
 chrono = { version = "0.4.39", features = ["serde"] }
+log = { version = "0.4.22", features = ["std"] }
 uuid = "1.11.0"
 active-win-pos-rs = "0.8.3"
 include_dir = "0.7.4"

@@ -4187,6 +4187,7 @@ dependencies = [
  "image",
  "include_dir",
  "lazy_static",
+ "log",
  "rand 0.8.5",
  "rdev",
  "regex",

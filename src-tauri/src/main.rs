@@ -34,6 +34,8 @@ fn main() {
         )
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();
+            utils::logger::init_logger(&app_data_dir).expect("Failed to initialize logger");
+            
             fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
 
             let db_path = app_data_dir.join("data.db");
