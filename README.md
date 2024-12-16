@@ -78,8 +78,9 @@ Qopy is a fixed clipboard manager designed as a simple alternative to the standa
 
 Here you can see a few concepts these might not be implemented:
 
-![Clipboard](https://github.com/user-attachments/assets/edd8e1be-3237-46c2-b81a-04f83e3ff13f)
-![Change Keybind](https://github.com/user-attachments/assets/fac86127-9711-4577-97bf-6a4bb0a60312)
+![Clipboard](https://github.com/user-attachments/assets/45a44a13-6ebd-4f2d-84d2-55178e303a54)
+![Settings](https://github.com/user-attachments/assets/bff5456a-f413-4e62-a43d-22c8e453aa87)
+
 
 ## ❤️ Donations & Support
 
