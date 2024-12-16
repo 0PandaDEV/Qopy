@@ -87,20 +87,114 @@
         </div>
       </template>
     </OverlayScrollbarsComponent>
-    <div class="content" v-if="selectedItem?.content_type === 'image'">
-      <img :src="getComputedImageUrl(selectedItem)" alt="Image" class="image" />
+    <div
+      class="content"
+      v-if="selectedItem?.content_type === ContentType.Image">
+      <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
     </div>
     <OverlayScrollbarsComponent v-else class="content">
-      <img
-        v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)"
-        :src="getYoutubeThumbnail(selectedItem.content)"
-        alt="YouTube Thumbnail"
-        class="full-image" />
+      <div v-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)" class="full-image">
+        <img
+          :src="getYoutubeThumbnail(selectedItem.content)"
+          alt="YouTube Thumbnail" />
+      </div>
       <span v-else>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
-    <div class="information">
+    <OverlayScrollbarsComponent
+      class="information"
+      :options="{ scrollbars: { autoHide: 'scroll' } }">
       <div class="title">Information</div>
-    </div>
+      <div class="info-content" v-if="selectedItem">
+        <!-- Common Information -->
+        <div class="info-row">
+          <p class="label">Source</p>
+          <span>{{ selectedItem.source }}</span>
+        </div>
+        <div class="info-row">
+          <p class="label">Content Type</p>
+          <span>{{
+            selectedItem.content_type.charAt(0).toUpperCase() +
+            selectedItem.content_type.slice(1)
+          }}</span>
+        </div>
+
+        <!-- Text Information -->
+        <template v-if="selectedItem.content_type === ContentType.Text">
+          <div class="info-row">
+            <p class="label">Characters</p>
+            <span>{{ getCharacterCount }}</span>
+          </div>
+          <div class="info-row">
+            <p class="label">Words</p>
+            <span>{{ getWordCount }}</span>
+          </div>
+        </template>
+
+        <!-- Image Information -->
+        <template v-if="selectedItem.content_type === ContentType.Image">
+          <div class="info-row">
+            <p class="label">Dimensions</p>
+            <span>{{ imageDimensions[selectedItem.id] || "Loading..." }}</span>
+          </div>
+          <div class="info-row">
+            <p class="label">Image size</p>
+            <span>{{ imageSizes[selectedItem.id] || "Loading..." }}</span>
+          </div>
+        </template>
+
+        <!-- File Information -->
+        <template v-if="selectedItem.content_type === ContentType.File">
+          <div class="info-row">
+            <p class="label">Path</p>
+            <span>{{ selectedItem.content }}</span>
+          </div>
+        </template>
+
+        <!-- Link Information -->
+        <template v-if="selectedItem.content_type === ContentType.Link">
+          <div class="info-row">
+            <p class="label">URL</p>
+            <span>{{ selectedItem.content }}</span>
+          </div>
+          <div class="info-row">
+            <p class="label">Characters</p>
+            <span>{{ getCharacterCount }}</span>
+          </div>
+        </template>
+
+        <!-- Color Information -->
+        <template v-if="selectedItem.content_type === ContentType.Color">
+          <div class="info-row">
+            <p class="label">Color</p>
+            <div
+              class="color-preview"
+              :style="{ backgroundColor: selectedItem.content }"></div>
+          </div>
+          <div class="info-row">
+            <p class="label">Value</p>
+            <span>{{ selectedItem.content }}</span>
+          </div>
+        </template>
+
+        <!-- Code Information -->
+        <template v-if="selectedItem.content_type === ContentType.Code">
+          <div class="info-row">
+            <p class="label">Language</p>
+            <span>{{ selectedItem.language }}</span>
+          </div>
+          <div class="info-row">
+            <p class="label">Lines</p>
+            <span>{{ getLineCount }}</span>
+          </div>
+        </template>
+
+        <!-- Common Information -->
+        <div class="info-row">
+          <p class="label">Copied</p>
+          <span>{{ getFormattedDate }}</span>
+        </div>
+      </div>
+    </OverlayScrollbarsComponent>
     <Noise />
   </div>
 </template>
@@ -121,10 +215,9 @@ interface GroupedHistory {
   items: HistoryItem[];
 }
 
-const { $history, $settings } = useNuxtApp();
+const { $history } = useNuxtApp();
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
-const IMAGE_LOAD_DEBOUNCE = 300;
 
 const history = shallowRef<HistoryItem[]>([]);
 let offset = 0;
@@ -141,6 +234,7 @@ const searchInput = ref<HTMLInputElement | null>(null);
 const os = ref<string>("");
 const imageUrls = shallowRef<Record<string, string>>({});
 const imageDimensions = shallowRef<Record<string, string>>({});
+const imageSizes = shallowRef<Record<string, string>>({});
 const lastUpdateTime = ref<number>(Date.now());
 const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
@@ -238,10 +332,34 @@ const loadHistoryChunk = async (): Promise<void> => {
         });
 
         if (historyItem.content_type === ContentType.Image) {
-          await Promise.all([
-            getItemDimensions(historyItem),
-            loadImageUrl(historyItem),
-          ]);
+          try {
+            const base64 = await $history.readImage({
+              filename: historyItem.content,
+            });
+            const size = Math.ceil((base64.length * 3) / 4);
+            imageSizes.value[historyItem.id] = formatFileSize(size);
+
+            const img = new Image();
+            img.src = `data:image/png;base64,${base64}`;
+            imageUrls.value[historyItem.id] = img.src;
+
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                imageDimensions.value[
+                  historyItem.id
+                ] = `${img.width}x${img.height}`;
+                resolve();
+              };
+              img.onerror = () => {
+                imageDimensions.value[historyItem.id] = "Error";
+                resolve();
+              };
+            });
+          } catch (error) {
+            console.error("Error processing image:", error);
+            imageDimensions.value[historyItem.id] = "Error";
+            imageSizes.value[historyItem.id] = "Error";
+          }
         }
         return historyItem;
       })
@@ -281,7 +399,7 @@ const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
 
       if (isAbove || isBelow) {
         const scrollOffset = isAbove
-          ? elementRect.top - viewportRect.top - 8
+          ? elementRect.top - viewportRect.top - (selectedItemIndex.value === 0 ? 36 : 8)
           : elementRect.bottom - viewportRect.bottom + 9;
 
         viewport.scrollBy({ top: scrollOffset, behavior: "smooth" });
@@ -347,7 +465,7 @@ const pasteSelectedItem = async (): Promise<void> => {
   let contentType: string = selectedItem.value.content_type;
   if (contentType === "image") {
     try {
-      content = await $history.getImagePath(content);
+      content = await $history.readImage({ filename: content });
     } catch (error) {
       console.error("Error reading image file:", error);
       return;
@@ -394,65 +512,67 @@ const getFaviconFromDb = (favicon: string): string => {
   return `data:image/png;base64,${favicon}`;
 };
 
-const getImageData = async (
-  item: HistoryItem
-): Promise<{ url: string; dimensions: string }> => {
-  try {
-    const base64 = await $history.readImage({ filename: item.content });
-    const dataUrl = `data:image/png;base64,${base64}`;
-    const img = new Image();
-    img.src = dataUrl;
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = reject;
-    });
-
-    return {
-      url: dataUrl,
-      dimensions: `${img.width}x${img.height}`,
-    };
-  } catch (error) {
-    console.error("Error processing image:", error);
-    return { url: "", dimensions: "Error" };
-  }
-};
-
-const processHistoryItem = async (item: any): Promise<HistoryItem> => {
-  const historyItem = new HistoryItem(
-    item.content_type as string,
-    ContentType[item.content_type as keyof typeof ContentType],
-    item.content,
-    item.favicon
-  );
-
-  Object.assign(historyItem, {
-    id: item.id,
-    timestamp: new Date(item.timestamp),
-  });
-
-  if (historyItem.content_type === ContentType.Image) {
-    const { url, dimensions } = await getImageData(historyItem);
-    imageUrls.value[historyItem.id] = url;
-    imageDimensions.value[historyItem.id] = dimensions;
-  }
-
-  return historyItem;
-};
-
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
-  history.value = [];
-  offset = 0;
-  await loadHistoryChunk();
+  const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
+  if (results.length > 0) {
+    const existingIds = new Set(history.value.map(item => item.id));
+    const uniqueNewItems = results.filter(item => !existingIds.has(item.id));
+    
+    const processedNewItems = await Promise.all(
+      uniqueNewItems.map(async (item) => {
+        const historyItem = new HistoryItem(
+          item.source,
+          item.content_type,
+          item.content,
+          item.favicon
+        );
+        Object.assign(historyItem, {
+          id: item.id,
+          timestamp: new Date(item.timestamp),
+        });
 
-  if (
-    resetScroll &&
-    resultsContainer.value?.osInstance()?.elements().viewport
-  ) {
-    resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+        if (historyItem.content_type === ContentType.Image) {
+          try {
+            const base64 = await $history.readImage({
+              filename: historyItem.content,
+            });
+            const size = Math.ceil((base64.length * 3) / 4);
+            imageSizes.value[historyItem.id] = formatFileSize(size);
+
+            const img = new Image();
+            img.src = `data:image/png;base64,${base64}`;
+            imageUrls.value[historyItem.id] = img.src;
+
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                imageDimensions.value[
+                  historyItem.id
+                ] = `${img.width}x${img.height}`;
+                resolve();
+              };
+              img.onerror = () => {
+                imageDimensions.value[historyItem.id] = "Error";
+                resolve();
+              };
+            });
+          } catch (error) {
+            console.error("Error processing image:", error);
+            imageDimensions.value[historyItem.id] = "Error";
+            imageSizes.value[historyItem.id] = "Error";
+          }
+        }
+        return historyItem;
+      })
+    );
+
+    history.value = [...processedNewItems, ...history.value];
+
+    if (resetScroll && resultsContainer.value?.osInstance()?.elements().viewport) {
+      resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
   }
 };
 
@@ -466,29 +586,16 @@ const handleSelection = (
   if (shouldScroll) scrollToSelectedItem();
 };
 
-const handleMediaContent = async (
-  content: string,
-  type: string
-): Promise<string> => {
-  if (type === "image") {
-    return await $history.getImagePath(content);
-  }
-
-  if (isYoutubeWatchUrl(content)) {
-    const videoId = content.includes("youtu.be")
-      ? content.split("youtu.be/")[1]
-      : content.match(/[?&]v=([^&]+)/)?.[1];
-    return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : "";
-  }
-
-  return content;
-};
-
 const setupEventListeners = async (): Promise<void> => {
   await listen("clipboard-content-updated", async () => {
     lastUpdateTime.value = Date.now();
-    handleSelection(0, 0, false);
     await updateHistory(true);
+    if (
+      groupedHistory.value.length > 0 &&
+      groupedHistory.value[0].items.length > 0
+    ) {
+      handleSelection(0, 0, false);
+    }
   });
 
   await listen("tauri://focus", async () => {
@@ -497,9 +604,7 @@ const setupEventListeners = async (): Promise<void> => {
       const previousState = {
         groupIndex: selectedGroupIndex.value,
         itemIndex: selectedItemIndex.value,
-        scroll:
-          resultsContainer.value?.osInstance()?.elements().viewport
-            ?.scrollTop || 0,
+        scroll: resultsContainer.value?.osInstance()?.elements().viewport?.scrollTop || 0,
       };
 
       await updateHistory();
@@ -507,9 +612,7 @@ const setupEventListeners = async (): Promise<void> => {
       handleSelection(previousState.groupIndex, previousState.itemIndex, false);
 
       nextTick(() => {
-        const viewport = resultsContainer.value
-          ?.osInstance()
-          ?.elements().viewport;
+        const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
         if (viewport) {
           viewport.scrollTo({
             top: previousState.scroll,
@@ -611,39 +714,37 @@ watch([selectedGroupIndex, selectedItemIndex], () =>
   scrollToSelectedItem(false)
 );
 
-const getItemDimensions = async (item: HistoryItem) => {
-  if (!imageDimensions.value[item.id]) {
-    try {
-      const base64 = await $history.readImage({ filename: item.content });
-      const img = new Image();
-      img.src = `data:image/png;base64,${base64}`;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject();
-      });
-      imageDimensions.value[item.id] = `${img.width}x${img.height}`;
-    } catch (error) {
-      console.error("Error loading image dimensions:", error);
-      imageDimensions.value[item.id] = "Error";
-    }
-  }
-  return imageDimensions.value[item.id] || "Loading...";
-};
-
-const loadImageUrl = async (item: HistoryItem) => {
-  if (!imageUrls.value[item.id]) {
-    try {
-      const base64 = await $history.readImage({ filename: item.content });
-      imageUrls.value[item.id] = `data:image/png;base64,${base64}`;
-    } catch (error) {
-      console.error("Error loading image:", error);
-    }
-  }
-};
-
 const getComputedImageUrl = (item: HistoryItem | null): string => {
   if (!item) return "";
   return imageUrls.value[item.id] || "";
+};
+
+const getCharacterCount = computed(() => {
+  return selectedItem.value?.content.length ?? 0;
+});
+
+const getWordCount = computed(() => {
+  return selectedItem.value?.content.trim().split(/\s+/).length ?? 0;
+});
+
+const getLineCount = computed(() => {
+  return selectedItem.value?.content.split("\n").length ?? 0;
+});
+
+const getFormattedDate = computed(() => {
+  if (!selectedItem.value?.timestamp) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(selectedItem.value.timestamp);
+});
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 </script>
 

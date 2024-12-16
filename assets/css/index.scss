@@ -98,15 +98,22 @@ $mutedtext: #78756f;
   position: absolute;
   top: 53px;
   left: 284px;
-  padding: 8px;
-  height: calc(100vh - 256px);
+  height: calc(100vh - 254px);
   font-family: CommitMono Nerd Font !important;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: 1;
   border-radius: 10px;
   width: calc(100vw - 286px);
   white-space: pre-wrap;
   word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+
+  &:not(:has(.full-image, .image)) {
+    padding: 8px;
+  }
 
   span {
     font-family: CommitMono Nerd Font !important;
@@ -114,16 +121,26 @@ $mutedtext: #78756f;
 
   .full-image {
     width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    object-position: center;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+    }
   }
 
   .image {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
-    object-position: top left;
+    object-position: center;
   }
 }
 
@@ -212,6 +229,9 @@ $mutedtext: #78756f;
 
 .information {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   bottom: 40px;
   left: 284px;
   height: 160px;
@@ -224,6 +244,41 @@ $mutedtext: #78756f;
     font-family: SFRoundedSemiBold;
     font-size: 12px;
     letter-spacing: 0.6px;
+  }
+
+  .info-content {
+    display: flex;
+    gap: 0;
+    flex-direction: column;
+  }
+
+  .info-row {
+    display: flex;
+    width: 100%;
+    font-size: 12px;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid $divider;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    &:first-child {
+      padding-top: 22px;
+    }
+
+    p {
+      font-family: SFRoundedMedium;
+      color: $text2;
+      font-weight: 500;
+    }
+
+    span {
+      font-family: CommitMono;
+      color: $text;
+    }
   }
 }
 

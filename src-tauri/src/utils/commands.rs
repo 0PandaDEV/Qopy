@@ -1,3 +1,6 @@
+use active_win_pos_rs::get_active_window;
+use base64::{engine::general_purpose::STANDARD, Engine};
+use image::codecs::png::PngEncoder;
 use tauri::PhysicalPosition;
 
 pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
@@ -27,4 +30,22 @@ pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
             ))
             .unwrap();
     }
+}
+
+pub fn get_app_info() -> (String, Option<String>) {
+    match get_active_window() {
+        Ok(window) => {
+            let app_name = window.app_name;
+            (app_name, None)
+        }
+        Err(_) => ("System".to_string(), None),
+    }
+}
+
+fn _process_icon_to_base64(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let img = image::open(path)?;
+    let resized = img.resize(128, 128, image::imageops::FilterType::Lanczos3);
+    let mut png_buffer = Vec::new();
+    resized.write_with_encoder(PngEncoder::new(&mut png_buffer))?;
+    Ok(STANDARD.encode(png_buffer))
 }

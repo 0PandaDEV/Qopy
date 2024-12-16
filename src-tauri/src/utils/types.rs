@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -12,6 +12,7 @@ pub struct HistoryItem {
     pub content: String,
     pub favicon: Option<String>,
     pub timestamp: DateTime<Utc>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -108,7 +109,14 @@ impl From<String> for ContentType {
 }
 
 impl HistoryItem {
-    pub fn new(source: String, content_type: ContentType, content: String, favicon: Option<String>, source_icon: Option<String>) -> Self {
+    pub fn new(
+        source: String,
+        content_type: ContentType,
+        content: String,
+        favicon: Option<String>,
+        source_icon: Option<String>,
+        language: Option<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             source,
@@ -117,10 +125,22 @@ impl HistoryItem {
             content,
             favicon,
             timestamp: Utc::now(),
+            language,
         }
     }
 
-    pub fn to_row(&self) -> (String, String, Option<String>, String, String, Option<String>, DateTime<Utc>) {
+    pub fn to_row(
+        &self,
+    ) -> (
+        String,
+        String,
+        Option<String>,
+        String,
+        String,
+        Option<String>,
+        DateTime<Utc>,
+        Option<String>,
+    ) {
         (
             self.id.clone(),
             self.source.clone(),
@@ -129,6 +149,7 @@ impl HistoryItem {
             self.content.clone(),
             self.favicon.clone(),
             self.timestamp,
+            self.language.clone(),
         )
     }
 }
