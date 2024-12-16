@@ -111,29 +111,12 @@ $mutedtext: #78756f;
   align-items: center;
   overflow: hidden;
 
-  &:not(:has(.full-image, .image)) {
+  &:not(:has(.image)) {
     padding: 8px;
   }
 
   span {
     font-family: CommitMono Nerd Font !important;
-  }
-
-  .full-image {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      object-position: center;
-    }
   }
 
   .image {

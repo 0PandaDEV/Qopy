@@ -87,19 +87,24 @@
         </div>
       </template>
     </OverlayScrollbarsComponent>
+
     <div
       class="content"
       v-if="selectedItem?.content_type === ContentType.Image">
       <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
     </div>
+    <div
+      v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
+      class="content">
+      <img
+        class="image"
+        :src="getYoutubeThumbnail(selectedItem.content)"
+        alt="YouTube Thumbnail" />
+    </div>
     <OverlayScrollbarsComponent v-else class="content">
-      <div v-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)" class="full-image">
-        <img
-          :src="getYoutubeThumbnail(selectedItem.content)"
-          alt="YouTube Thumbnail" />
-      </div>
-      <span v-else>{{ selectedItem?.content || "" }}</span>
+      <span>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
+
     <OverlayScrollbarsComponent
       class="information"
       :options="{ scrollbars: { autoHide: 'scroll' } }">
@@ -399,7 +404,9 @@ const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
 
       if (isAbove || isBelow) {
         const scrollOffset = isAbove
-          ? elementRect.top - viewportRect.top - (selectedItemIndex.value === 0 ? 36 : 8)
+          ? elementRect.top -
+            viewportRect.top -
+            (selectedItemIndex.value === 0 ? 36 : 8)
           : elementRect.bottom - viewportRect.bottom + 9;
 
         viewport.scrollBy({ top: scrollOffset, behavior: "smooth" });
@@ -504,8 +511,8 @@ const getYoutubeThumbnail = (url: string): string => {
     videoId = url.match(/[?&]v=([^&]+)/)?.[1];
   }
   return videoId
-    ? `https://img.youtube.com/vi/${videoId}/0.jpg`
-    : "https://via.placeholder.com/150";
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : "https://via.placeholder.com/1280x720";
 };
 
 const getFaviconFromDb = (favicon: string): string => {
@@ -515,9 +522,9 @@ const getFaviconFromDb = (favicon: string): string => {
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
   const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
   if (results.length > 0) {
-    const existingIds = new Set(history.value.map(item => item.id));
-    const uniqueNewItems = results.filter(item => !existingIds.has(item.id));
-    
+    const existingIds = new Set(history.value.map((item) => item.id));
+    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
+
     const processedNewItems = await Promise.all(
       uniqueNewItems.map(async (item) => {
         const historyItem = new HistoryItem(
@@ -567,7 +574,10 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
 
     history.value = [...processedNewItems, ...history.value];
 
-    if (resetScroll && resultsContainer.value?.osInstance()?.elements().viewport) {
+    if (
+      resetScroll &&
+      resultsContainer.value?.osInstance()?.elements().viewport
+    ) {
       resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
         top: 0,
         behavior: "smooth",
@@ -604,7 +614,9 @@ const setupEventListeners = async (): Promise<void> => {
       const previousState = {
         groupIndex: selectedGroupIndex.value,
         itemIndex: selectedItemIndex.value,
-        scroll: resultsContainer.value?.osInstance()?.elements().viewport?.scrollTop || 0,
+        scroll:
+          resultsContainer.value?.osInstance()?.elements().viewport
+            ?.scrollTop || 0,
       };
 
       await updateHistory();
@@ -612,7 +624,9 @@ const setupEventListeners = async (): Promise<void> => {
       handleSelection(previousState.groupIndex, previousState.itemIndex, false);
 
       nextTick(() => {
-        const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
+        const viewport = resultsContainer.value
+          ?.osInstance()
+          ?.elements().viewport;
         if (viewport) {
           viewport.scrollTo({
             top: previousState.scroll,
