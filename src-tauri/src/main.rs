@@ -112,6 +112,7 @@ fn main() {
             db::settings::save_setting,
             db::settings::save_keybind,
             db::settings::get_keybind,
+            utils::commands::fetch_page_meta,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

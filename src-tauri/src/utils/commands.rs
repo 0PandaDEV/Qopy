@@ -2,6 +2,7 @@ use active_win_pos_rs::get_active_window;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::codecs::png::PngEncoder;
 use tauri::PhysicalPosition;
+use meta_fetcher;
 
 pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
     if let Some(monitor) = window.available_monitors().unwrap().iter().find(|m| {
@@ -94,4 +95,15 @@ pub fn detect_color(color: &str) -> bool {
     }
     
     false
+}
+
+#[tauri::command]
+pub async fn fetch_page_meta(url: String) -> Result<(String, Option<String>), String> {
+    let metadata = meta_fetcher::fetch_metadata(&url)
+        .map_err(|e| format!("Failed to fetch metadata: {}", e))?;
+    
+    Ok((
+        metadata.title.unwrap_or_else(|| "No title found".to_string()),
+        metadata.image
+    ))
 }
