@@ -121,6 +121,9 @@
         :src="getYoutubeThumbnail(selectedItem.content)"
         alt="YouTube Thumbnail" />
     </div>
+    <div class="content" v-else-if="selectedItem?.content_type === ContentType.Link && pageOgImage">
+      <img :src="pageOgImage" alt="Image" class="image">
+    </div>
     <OverlayScrollbarsComponent v-else class="content">
       <span>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
@@ -132,7 +135,11 @@
       <div class="info-content" v-if="selectedItem && getInfo">
         <div class="info-row" v-for="(row, index) in infoRows" :key="index">
           <p class="label">{{ row.label }}</p>
-          <span>{{ row.value }}</span>
+          <span
+            :class="{ 'url-truncate': row.isUrl }"
+            :data-text="row.value">
+            {{ row.value }}
+          </span>
         </div>
       </div>
     </OverlayScrollbarsComponent>
@@ -609,7 +616,6 @@ const setupEventListeners = async (): Promise<void> => {
 
     if (isMacActionCombo || isOtherOsActionCombo) {
       event.preventDefault();
-      console.log("Actions shortcut triggered");
     }
   });
 };
@@ -662,18 +668,6 @@ watch([selectedGroupIndex, selectedItemIndex], () =>
   scrollToSelectedItem(false)
 );
 
-const getCharacterCount = computed(() => {
-  return selectedItem.value?.content.length ?? 0;
-});
-
-const getWordCount = computed(() => {
-  return selectedItem.value?.content.trim().split(/\s+/).length ?? 0;
-});
-
-const getLineCount = computed(() => {
-  return selectedItem.value?.content.split("\n").length ?? 0;
-});
-
 const getFormattedDate = computed(() => {
   if (!selectedItem.value?.timestamp) return "";
   return new Intl.DateTimeFormat("en-US", {
@@ -692,9 +686,7 @@ const formatFileSize = (bytes: number): string => {
 
 const fetchPageMeta = async (url: string) => {
   try {
-    console.log('Fetching metadata for:', url);
     const [title, ogImage] = await invoke('fetch_page_meta', { url }) as [string, string | null];
-    console.log('Received title:', title);
     pageTitle.value = title;
     if (ogImage) {
       pageOgImage.value = ogImage;
@@ -806,11 +798,11 @@ const infoRows = computed(() => {
   if (!getInfo.value) return [];
 
   const commonRows = [
-    { label: "Source", value: getInfo.value.source },
-    { label: "Content Type", value: getInfo.value.content_type.charAt(0).toUpperCase() + getInfo.value.content_type.slice(1) },
+    { label: "Source", value: getInfo.value.source, isUrl: false },
+    { label: "Content Type", value: getInfo.value.content_type.charAt(0).toUpperCase() + getInfo.value.content_type.slice(1), isUrl: false },
   ];
 
-  const typeSpecificRows: Record<ContentType, Array<{ label: string; value: string | number }>> = {
+  const typeSpecificRows: Record<ContentType, Array<{ label: string; value: string | number; isUrl?: boolean }>> = {
     [ContentType.Text]: [
       { label: "Characters", value: (getInfo.value as InfoText).characters },
       { label: "Words", value: (getInfo.value as InfoText).words },
@@ -824,11 +816,11 @@ const infoRows = computed(() => {
     ],
     [ContentType.Link]: [
       { label: "Title", value: (getInfo.value as InfoLink).title || "No Title Found" },
-      { label: "URL", value: (getInfo.value as InfoLink).url },
+      { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },
       { label: "Characters", value: (getInfo.value as InfoLink).characters },
     ],
     [ContentType.Color]: [
-      { label: "Hex Code", value: (getInfo.value as InfoColor).hex },
+      { label: "Hex", value: (getInfo.value as InfoColor).hex },
       { label: "RGB", value: (getInfo.value as InfoColor).rgb },
       { label: "HSL", value: (getInfo.value as InfoColor).hsl },
     ],
