@@ -164,6 +164,11 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                             pool,
                                             HistoryItem::new(app_name, ContentType::Code, text, None, app_icon, Some(language))
                                         ).await;
+                                    } else if crate::utils::commands::detect_color(&text) {
+                                        let _ = db::history::add_history_item(
+                                            pool,
+                                            HistoryItem::new(app_name, ContentType::Color, text, None, app_icon, None)
+                                        ).await;
                                     } else {
                                         let _ = db::history::add_history_item(
                                             pool,

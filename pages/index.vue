@@ -63,11 +63,13 @@
               @error="onImageError" />
             <img v-else src="../public/icons/Image.svg" class="icon" />
           </template>
-          <img
-            v-else-if="hasFavicon(item.favicon ?? '')"
-            :src="getFaviconFromDb(item.favicon ?? '')"
-            alt="Favicon"
-            class="favicon" />
+          <template v-else-if="hasFavicon(item.favicon ?? '')">
+            <img
+              :src="item.favicon ? getFaviconFromDb(item.favicon) : '../public/icons/Link.svg'"
+              alt="Favicon"
+              class="favicon"
+              @error="($event.target as HTMLImageElement).src = '../public/icons/Link.svg'" />
+          </template>
           <img
             src="../public/icons/File.svg"
             class="icon"
@@ -76,6 +78,24 @@
             src="../public/icons/Text.svg"
             class="icon"
             v-else-if="item.content_type === ContentType.Text" />
+          <div v-else-if="item.content_type === ContentType.Color">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg">
+              <g>
+                <rect width="18" height="18" />
+                <path
+                  d="M9 18C12.2154 18 15.1865 16.2846 16.7942 13.5C18.4019 10.7154 18.4019 7.28461 16.7942 4.5C15.1865 1.71539 12.2154 -1.22615e-06 9 0C5.78461 0 2.81347 1.71539 1.20577 4.5C-0.401925 7.28461 -0.401923 10.7154 1.20577 13.5C2.81347 16.2846 5.78461 18 9 18Z"
+                  fill="#E5DFD5" />
+                <path
+                  d="M9 16C7.14348 16 5.36301 15.2625 4.05025 13.9497C2.7375 12.637 2 10.8565 2 9C2 7.14348 2.7375 5.36301 4.05025 4.05025C5.36301 2.7375 7.14348 2 9 2C10.8565 2 12.637 2.7375 13.9497 4.05025C15.2625 5.36301 16 7.14348 16 9C16 10.8565 15.2625 12.637 13.9497 13.9497C12.637 15.2625 10.8565 16 9 16Z"
+                  :fill="item.content" />
+              </g>
+            </svg>
+          </div>
           <img
             src="../public/icons/Code.svg"
             class="icon"
@@ -170,14 +190,50 @@
         <!-- Color Information -->
         <template v-if="selectedItem.content_type === ContentType.Color">
           <div class="info-row">
-            <p class="label">Color</p>
-            <div
-              class="color-preview"
-              :style="{ backgroundColor: selectedItem.content }"></div>
+            <p class="label">Hex Code</p>
+            <span>{{ selectedItem.content }}</span>
           </div>
           <div class="info-row">
-            <p class="label">Value</p>
-            <span>{{ selectedItem.content }}</span>
+            <p class="label">RGB</p>
+            <span>{{
+              selectedItem.content.startsWith("#")
+                ? `rgb(${parseInt(
+                    selectedItem.content.slice(1, 3),
+                    16
+                  )}, ${parseInt(
+                    selectedItem.content.slice(3, 5),
+                    16
+                  )}, ${parseInt(selectedItem.content.slice(5, 7), 16)})`
+                : selectedItem.content
+            }}</span>
+          </div>
+          <div class="info-row">
+            <p class="label">HSL</p>
+            <span>{{
+              selectedItem.content.startsWith("#")
+                ? (() => {
+                    const r =
+                      parseInt(selectedItem.content.slice(1, 3), 16) / 255;
+                    const g =
+                      parseInt(selectedItem.content.slice(3, 5), 16) / 255;
+                    const b =
+                      parseInt(selectedItem.content.slice(5, 7), 16) / 255;
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    const l = (max + min) / 2;
+                    const d = max - min;
+                    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    let h = 0;
+                    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                    if (max === g) h = (b - r) / d + 2;
+                    if (max === b) h = (r - g) / d + 4;
+                    h = Math.round(h * 60);
+                    return `hsl(${h}, ${Math.round(s * 100)}%, ${Math.round(
+                      l * 100
+                    )}%)`;
+                  })()
+                : selectedItem.content
+            }}</span>
           </div>
         </template>
 
@@ -600,10 +656,7 @@ const setupEventListeners = async (): Promise<void> => {
   await listen("clipboard-content-updated", async () => {
     lastUpdateTime.value = Date.now();
     await updateHistory(true);
-    if (
-      groupedHistory.value.length > 0 &&
-      groupedHistory.value[0].items.length > 0
-    ) {
+    if (groupedHistory.value[0]?.items.length > 0) {
       handleSelection(0, 0, false);
     }
   });
@@ -623,17 +676,12 @@ const setupEventListeners = async (): Promise<void> => {
       lastUpdateTime.value = currentTime;
       handleSelection(previousState.groupIndex, previousState.itemIndex, false);
 
-      nextTick(() => {
-        const viewport = resultsContainer.value
-          ?.osInstance()
-          ?.elements().viewport;
-        if (viewport) {
-          viewport.scrollTo({
-            top: previousState.scroll,
-            behavior: "instant",
-          });
-        }
-      });
+      if (resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo) {
+        resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+          top: previousState.scroll,
+          behavior: "instant",
+        });
+      }
     }
     focusSearchInput();
   });
@@ -749,7 +797,7 @@ const getFormattedDate = computed(() => {
   if (!selectedItem.value?.timestamp) return "";
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
-    timeStyle: "short",
+    timeStyle: "medium",
   }).format(selectedItem.value.timestamp);
 });
 

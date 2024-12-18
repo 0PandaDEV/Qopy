@@ -49,3 +49,49 @@ fn _process_icon_to_base64(path: &str) -> Result<String, Box<dyn std::error::Err
     resized.write_with_encoder(PngEncoder::new(&mut png_buffer))?;
     Ok(STANDARD.encode(png_buffer))
 }
+
+
+pub fn detect_color(color: &str) -> bool {
+    let color = color.trim().to_lowercase();
+    
+    // hex
+    if color.starts_with('#') && color.len() == color.trim_end_matches(char::is_whitespace).len() {
+        let hex = &color[1..];
+        return match hex.len() {
+            3 | 6 | 8 => hex.chars().all(|c| c.is_ascii_hexdigit()),
+            _ => false
+        };
+    }
+    
+    // rgb/rgba
+    if (color.starts_with("rgb(") || color.starts_with("rgba(")) && color.ends_with(")") && !color[..color.len()-1].contains(")") {
+        let values = color
+            .trim_start_matches("rgba(")
+            .trim_start_matches("rgb(")
+            .trim_end_matches(')')
+            .split(',')
+            .collect::<Vec<&str>>();
+            
+        return match values.len() {
+            3 | 4 => values.iter().all(|v| v.trim().parse::<f32>().is_ok()),
+            _ => false
+        };
+    }
+    
+    // hsl/hsla  
+    if (color.starts_with("hsl(") || color.starts_with("hsla(")) && color.ends_with(")") && !color[..color.len()-1].contains(")") {
+        let values = color
+            .trim_start_matches("hsla(")
+            .trim_start_matches("hsl(")
+            .trim_end_matches(')')
+            .split(',')
+            .collect::<Vec<&str>>();
+            
+        return match values.len() {
+            3 | 4 => values.iter().all(|v| v.trim().parse::<f32>().is_ok()),
+            _ => false
+        };
+    }
+    
+    false
+}
