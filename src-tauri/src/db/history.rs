@@ -59,32 +59,41 @@ pub async fn add_history_item(
     let (id, source, source_icon, content_type, content, favicon, timestamp, language) =
         item.to_row();
 
-    let last_content: Option<String> = sqlx::query_scalar(
-        "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
-    )
-    .bind(content_type.clone())
-    .fetch_one(&*pool)
-    .await
-    .unwrap_or(None);
+    let existing = sqlx::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
+        .bind(&content)
+        .bind(&content_type)
+        .fetch_optional(&*pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    if last_content.as_deref() == Some(&content) {
-        return Ok(());
+    match existing {
+        Some(_) => {
+            sqlx::query(
+                "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
+            )
+            .bind(&content)
+            .bind(&content_type)
+            .execute(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+        None => {
+            sqlx::query(
+                "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            .bind(id)
+            .bind(source)
+            .bind(source_icon)
+            .bind(content_type)
+            .bind(content)
+            .bind(favicon)
+            .bind(timestamp)
+            .bind(language)
+            .execute(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
     }
-
-    sqlx::query(
-        "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(id)
-    .bind(source)
-    .bind(source_icon)
-    .bind(content_type)
-    .bind(content)
-    .bind(favicon)
-    .bind(timestamp)
-    .bind(language)
-    .execute(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
