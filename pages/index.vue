@@ -129,130 +129,10 @@
       class="information"
       :options="{ scrollbars: { autoHide: 'scroll' } }">
       <div class="title">Information</div>
-      <div class="info-content" v-if="selectedItem">
-        <!-- Common Information -->
-        <div class="info-row">
-          <p class="label">Source</p>
-          <span>{{ selectedItem.source }}</span>
-        </div>
-        <div class="info-row">
-          <p class="label">Content Type</p>
-          <span>{{
-            selectedItem.content_type.charAt(0).toUpperCase() +
-            selectedItem.content_type.slice(1)
-          }}</span>
-        </div>
-
-        <!-- Text Information -->
-        <template v-if="selectedItem.content_type === ContentType.Text">
-          <div class="info-row">
-            <p class="label">Characters</p>
-            <span>{{ getCharacterCount }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">Words</p>
-            <span>{{ getWordCount }}</span>
-          </div>
-        </template>
-
-        <!-- Image Information -->
-        <template v-if="selectedItem.content_type === ContentType.Image">
-          <div class="info-row">
-            <p class="label">Dimensions</p>
-            <span>{{ imageDimensions[selectedItem.id] || "Loading..." }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">Image size</p>
-            <span>{{ imageSizes[selectedItem.id] || "Loading..." }}</span>
-          </div>
-        </template>
-
-        <!-- File Information -->
-        <template v-if="selectedItem.content_type === ContentType.File">
-          <div class="info-row">
-            <p class="label">Path</p>
-            <span>{{ selectedItem.content }}</span>
-          </div>
-        </template>
-
-        <!-- Link Information -->
-        <template v-if="selectedItem.content_type === ContentType.Link">
-          <div class="info-row">
-            <p class="label">URL</p>
-            <span>{{ selectedItem.content }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">Characters</p>
-            <span>{{ getCharacterCount }}</span>
-          </div>
-        </template>
-
-        <!-- Color Information -->
-        <template v-if="selectedItem.content_type === ContentType.Color">
-          <div class="info-row">
-            <p class="label">Hex Code</p>
-            <span>{{ selectedItem.content }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">RGB</p>
-            <span>{{
-              selectedItem.content.startsWith("#")
-                ? `rgb(${parseInt(
-                    selectedItem.content.slice(1, 3),
-                    16
-                  )}, ${parseInt(
-                    selectedItem.content.slice(3, 5),
-                    16
-                  )}, ${parseInt(selectedItem.content.slice(5, 7), 16)})`
-                : selectedItem.content
-            }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">HSL</p>
-            <span>{{
-              selectedItem.content.startsWith("#")
-                ? (() => {
-                    const r =
-                      parseInt(selectedItem.content.slice(1, 3), 16) / 255;
-                    const g =
-                      parseInt(selectedItem.content.slice(3, 5), 16) / 255;
-                    const b =
-                      parseInt(selectedItem.content.slice(5, 7), 16) / 255;
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    const l = (max + min) / 2;
-                    const d = max - min;
-                    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                    let h = 0;
-                    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-                    if (max === g) h = (b - r) / d + 2;
-                    if (max === b) h = (r - g) / d + 4;
-                    h = Math.round(h * 60);
-                    return `hsl(${h}, ${Math.round(s * 100)}%, ${Math.round(
-                      l * 100
-                    )}%)`;
-                  })()
-                : selectedItem.content
-            }}</span>
-          </div>
-        </template>
-
-        <!-- Code Information -->
-        <template v-if="selectedItem.content_type === ContentType.Code">
-          <div class="info-row">
-            <p class="label">Language</p>
-            <span>{{ selectedItem.language }}</span>
-          </div>
-          <div class="info-row">
-            <p class="label">Lines</p>
-            <span>{{ getLineCount }}</span>
-          </div>
-        </template>
-
-        <!-- Common Information -->
-        <div class="info-row">
-          <p class="label">Copied</p>
-          <span>{{ getFormattedDate }}</span>
+      <div class="info-content" v-if="selectedItem && getInfo">
+        <div class="info-row" v-for="(row, index) in infoRows" :key="index">
+          <p class="label">{{ row.label }}</p>
+          <span>{{ row.value }}</span>
         </div>
       </div>
     </OverlayScrollbarsComponent>
@@ -269,7 +149,9 @@ import { platform } from "@tauri-apps/plugin-os";
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
+import { invoke } from "@tauri-apps/api/core";
 import { HistoryItem, ContentType } from "~/types/types";
+import type { InfoText, InfoImage, InfoFile, InfoLink, InfoColor, InfoCode } from "~/types/types";
 
 interface GroupedHistory {
   label: string;
@@ -299,6 +181,8 @@ const imageSizes = shallowRef<Record<string, string>>({});
 const lastUpdateTime = ref<number>(Date.now());
 const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
+const pageTitle = ref<string>('');
+const pageOgImage = ref<string>('');
 
 const keyboard = useKeyboard();
 
@@ -385,7 +269,9 @@ const loadHistoryChunk = async (): Promise<void> => {
           item.source,
           item.content_type,
           item.content,
-          item.favicon
+          item.favicon,
+          item.source_icon,
+          item.language
         );
         Object.assign(historyItem, {
           id: item.id,
@@ -776,11 +662,6 @@ watch([selectedGroupIndex, selectedItemIndex], () =>
   scrollToSelectedItem(false)
 );
 
-const getComputedImageUrl = (item: HistoryItem | null): string => {
-  if (!item) return "";
-  return imageUrls.value[item.id] || "";
-};
-
 const getCharacterCount = computed(() => {
   return selectedItem.value?.content.length ?? 0;
 });
@@ -808,6 +689,164 @@ const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
+
+const fetchPageMeta = async (url: string) => {
+  try {
+    console.log('Fetching metadata for:', url);
+    const [title, ogImage] = await invoke('fetch_page_meta', { url }) as [string, string | null];
+    console.log('Received title:', title);
+    pageTitle.value = title;
+    if (ogImage) {
+      pageOgImage.value = ogImage;
+    }
+  } catch (error) {
+    console.error('Error fetching page meta:', error);
+    pageTitle.value = 'Error loading title';
+  }
+};
+
+watch(() => selectedItem.value, (newItem) => {
+  if (newItem?.content_type === ContentType.Link) {
+    pageTitle.value = 'Loading...';
+    pageOgImage.value = '';
+    fetchPageMeta(newItem.content);
+  } else {
+    pageTitle.value = '';
+    pageOgImage.value = '';
+  }
+});
+
+const getInfo = computed(() => {
+  if (!selectedItem.value) return null;
+
+  const baseInfo = {
+    source: selectedItem.value.source,
+    copied: selectedItem.value.timestamp,
+  };
+
+  const infoMap: Record<ContentType, () => InfoText | InfoImage | InfoFile | InfoLink | InfoColor | InfoCode> = {
+    [ContentType.Text]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Text,
+      characters: selectedItem.value!.content.length,
+      words: selectedItem.value!.content.trim().split(/\s+/).length,
+    }),
+    [ContentType.Image]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Image,
+      dimensions: imageDimensions.value[selectedItem.value!.id] || "Loading...",
+      size: parseInt(imageSizes.value[selectedItem.value!.id] || "0"),
+    }),
+    [ContentType.File]: () => ({
+      ...baseInfo,
+      content_type: ContentType.File,
+      path: selectedItem.value!.content,
+      filesize: 0,
+    }),
+    [ContentType.Link]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Link,
+      title: pageTitle.value,
+      url: selectedItem.value!.content,
+      characters: selectedItem.value!.content.length,
+    }),
+    [ContentType.Color]: () => {
+      const hex = selectedItem.value!.content;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      
+      const rNorm = r / 255;
+      const gNorm = g / 255;
+      const bNorm = b / 255;
+      
+      const max = Math.max(rNorm, gNorm, bNorm);
+      const min = Math.min(rNorm, gNorm, bNorm);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case rNorm:
+            h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0);
+            break;
+          case gNorm:
+            h = (bNorm - rNorm) / d + 2;
+            break;
+          case bNorm:
+            h = (rNorm - gNorm) / d + 4;
+            break;
+        }
+        h /= 6;
+      }
+
+      return {
+        ...baseInfo,
+        content_type: ContentType.Color,
+        hex: hex,
+        rgb: `rgb(${r}, ${g}, ${b})`,
+        hsl: `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`,
+      };
+    },
+    [ContentType.Code]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Code,
+      language: selectedItem.value!.language ?? "Unknown",
+      lines: selectedItem.value!.content.split('\n').length,
+    }),
+  };
+
+  return infoMap[selectedItem.value.content_type]();
+});
+
+const infoRows = computed(() => {
+  if (!getInfo.value) return [];
+
+  const commonRows = [
+    { label: "Source", value: getInfo.value.source },
+    { label: "Content Type", value: getInfo.value.content_type.charAt(0).toUpperCase() + getInfo.value.content_type.slice(1) },
+  ];
+
+  const typeSpecificRows: Record<ContentType, Array<{ label: string; value: string | number }>> = {
+    [ContentType.Text]: [
+      { label: "Characters", value: (getInfo.value as InfoText).characters },
+      { label: "Words", value: (getInfo.value as InfoText).words },
+    ],
+    [ContentType.Image]: [
+      { label: "Dimensions", value: (getInfo.value as InfoImage).dimensions },
+      { label: "Image size", value: formatFileSize((getInfo.value as InfoImage).size) },
+    ],
+    [ContentType.File]: [
+      { label: "Path", value: (getInfo.value as InfoFile).path },
+    ],
+    [ContentType.Link]: [
+      { label: "Title", value: (getInfo.value as InfoLink).title || "No Title Found" },
+      { label: "URL", value: (getInfo.value as InfoLink).url },
+      { label: "Characters", value: (getInfo.value as InfoLink).characters },
+    ],
+    [ContentType.Color]: [
+      { label: "Hex Code", value: (getInfo.value as InfoColor).hex },
+      { label: "RGB", value: (getInfo.value as InfoColor).rgb },
+      { label: "HSL", value: (getInfo.value as InfoColor).hsl },
+    ],
+    [ContentType.Code]: [
+      { label: "Language", value: (getInfo.value as InfoCode).language },
+      { label: "Lines", value: (getInfo.value as InfoCode).lines },
+    ],
+  };
+
+  const specificRows = typeSpecificRows[getInfo.value.content_type]
+    .filter(row => row.value !== "");
+
+  return [
+    ...commonRows,
+    ...specificRows,
+    { label: "Copied", value: getFormattedDate.value },
+  ];
+});
 </script>
 
 <style scoped lang="scss">

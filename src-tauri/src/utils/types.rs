@@ -27,7 +27,7 @@ pub enum ContentType {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Text {
+pub struct InfoText {
     pub source: String,
     pub content_type: ContentType,
     pub characters: i32,
@@ -36,7 +36,7 @@ pub struct Text {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Image {
+pub struct InfoImage {
     pub source: String,
     pub content_type: ContentType,
     pub dimensions: String,
@@ -45,7 +45,7 @@ pub struct Image {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct File {
+pub struct InfoFile {
     pub source: String,
     pub content_type: ContentType,
     pub path: String,
@@ -54,26 +54,26 @@ pub struct File {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Link {
+pub struct InfoLink {
     pub source: String,
     pub content_type: ContentType,
-    pub title: String,
-    pub link: String,
+    pub title: Option<String>,
+    pub url: String,
     pub characters: i32,
     pub copied: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Color {
+pub struct InfoColor {
     pub source: String,
     pub content_type: ContentType,
-    pub hexcode: String,
-    pub rgba: String,
+    pub hex: String,
+    pub rgb: String,
     pub copied: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Code {
+pub struct InfoCode {
     pub source: String,
     pub content_type: ContentType,
     pub language: String,

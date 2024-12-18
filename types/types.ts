@@ -65,7 +65,7 @@ export interface Settings {
   value: string;
 }
 
-export interface Text {
+export interface InfoText {
   source: string;
   content_type: ContentType.Text;
   characters: number;
@@ -73,7 +73,7 @@ export interface Text {
   copied: Date;
 }
 
-export interface Image {
+export interface InfoImage {
   source: string;
   content_type: ContentType.Image;
   dimensions: string;
@@ -81,7 +81,7 @@ export interface Image {
   copied: Date;
 }
 
-export interface File {
+export interface InfoFile {
   source: string;
   content_type: ContentType.File;
   path: string;
@@ -89,24 +89,25 @@ export interface File {
   copied: Date;
 }
 
-export interface Link {
+export interface InfoLink {
   source: string;
   content_type: ContentType.Link;
-  title: string;
-  link: string;
+  title?: string;
+  url: string;
   characters: number;
   copied: Date;
 }
 
-export interface Color {
+export interface InfoColor {
   source: string;
   content_type: ContentType.Color;
-  hexcode: string;
-  rgba: string;
+  hex: string;
+  rgb: string;
+  hsl: string;
   copied: Date;
 }
 
-export interface Code {
+export interface InfoCode {
   source: string;
   content_type: ContentType.Code;
   language: string;
