@@ -233,34 +233,39 @@ $mutedtext: #78756f;
     display: flex;
     gap: 0;
     flex-direction: column;
-  }
 
-  .info-row {
-    display: flex;
-    width: 100%;
-    font-size: 12px;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid $divider;
+    .info-row {
+      display: flex;
+      width: 100%;
+      font-size: 12px;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid $divider;
 
-    &:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
+      &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
 
-    &:first-child {
-      padding-top: 22px;
-    }
+      &:first-child {
+        padding-top: 22px;
+      }
 
-    p {
-      font-family: SFRoundedMedium;
-      color: $text2;
-      font-weight: 500;
-    }
+      p {
+        font-family: SFRoundedMedium;
+        color: $text2;
+        font-weight: 500;
+        flex-shrink: 0;
+      }
 
-    span {
-      font-family: CommitMono;
-      color: $text;
+      span {
+        font-family: CommitMono;
+        color: $text;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        margin-left: 16px;
+      }
     }
   }
 }
