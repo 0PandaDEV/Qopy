@@ -241,6 +241,7 @@ $mutedtext: #78756f;
       justify-content: space-between;
       padding: 8px 0;
       border-bottom: 1px solid $divider;
+      line-height: 1;
 
       &:last-child {
         border-bottom: none;
@@ -264,7 +265,7 @@ $mutedtext: #78756f;
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
-        margin-left: 16px;
+        margin-left: 32px;
       }
     }
   }
