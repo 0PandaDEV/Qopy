@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -12,6 +12,7 @@ pub struct HistoryItem {
     pub content: String,
     pub favicon: Option<String>,
     pub timestamp: DateTime<Utc>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -26,7 +27,7 @@ pub enum ContentType {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Text {
+pub struct InfoText {
     pub source: String,
     pub content_type: ContentType,
     pub characters: i32,
@@ -35,7 +36,7 @@ pub struct Text {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Image {
+pub struct InfoImage {
     pub source: String,
     pub content_type: ContentType,
     pub dimensions: String,
@@ -44,7 +45,7 @@ pub struct Image {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct File {
+pub struct InfoFile {
     pub source: String,
     pub content_type: ContentType,
     pub path: String,
@@ -53,26 +54,26 @@ pub struct File {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Link {
+pub struct InfoLink {
     pub source: String,
     pub content_type: ContentType,
-    pub title: String,
-    pub link: String,
+    pub title: Option<String>,
+    pub url: String,
     pub characters: i32,
     pub copied: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Color {
+pub struct InfoColor {
     pub source: String,
     pub content_type: ContentType,
-    pub hexcode: String,
-    pub rgba: String,
+    pub hex: String,
+    pub rgb: String,
     pub copied: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Code {
+pub struct InfoCode {
     pub source: String,
     pub content_type: ContentType,
     pub language: String,
@@ -108,7 +109,14 @@ impl From<String> for ContentType {
 }
 
 impl HistoryItem {
-    pub fn new(source: String, content_type: ContentType, content: String, favicon: Option<String>, source_icon: Option<String>) -> Self {
+    pub fn new(
+        source: String,
+        content_type: ContentType,
+        content: String,
+        favicon: Option<String>,
+        source_icon: Option<String>,
+        language: Option<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             source,
@@ -117,10 +125,22 @@ impl HistoryItem {
             content,
             favicon,
             timestamp: Utc::now(),
+            language,
         }
     }
 
-    pub fn to_row(&self) -> (String, String, Option<String>, String, String, Option<String>, DateTime<Utc>) {
+    pub fn to_row(
+        &self,
+    ) -> (
+        String,
+        String,
+        Option<String>,
+        String,
+        String,
+        Option<String>,
+        DateTime<Utc>,
+        Option<String>,
+    ) {
         (
             self.id.clone(),
             self.source.clone(),
@@ -129,6 +149,7 @@ impl HistoryItem {
             self.content.clone(),
             self.favicon.clone(),
             self.timestamp,
+            self.language.clone(),
         )
     }
 }

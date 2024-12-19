@@ -63,11 +63,13 @@
               @error="onImageError" />
             <img v-else src="../public/icons/Image.svg" class="icon" />
           </template>
-          <img
-            v-else-if="hasFavicon(item.favicon ?? '')"
-            :src="getFaviconFromDb(item.favicon ?? '')"
-            alt="Favicon"
-            class="favicon" />
+          <template v-else-if="hasFavicon(item.favicon ?? '')">
+            <img
+              :src="item.favicon ? getFaviconFromDb(item.favicon) : '../public/icons/Link.svg'"
+              alt="Favicon"
+              class="favicon"
+              @error="($event.target as HTMLImageElement).src = '../public/icons/Link.svg'" />
+          </template>
           <img
             src="../public/icons/File.svg"
             class="icon"
@@ -76,6 +78,24 @@
             src="../public/icons/Text.svg"
             class="icon"
             v-else-if="item.content_type === ContentType.Text" />
+          <div v-else-if="item.content_type === ContentType.Color">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg">
+              <g>
+                <rect width="18" height="18" />
+                <path
+                  d="M9 18C12.2154 18 15.1865 16.2846 16.7942 13.5C18.4019 10.7154 18.4019 7.28461 16.7942 4.5C15.1865 1.71539 12.2154 -1.22615e-06 9 0C5.78461 0 2.81347 1.71539 1.20577 4.5C-0.401925 7.28461 -0.401923 10.7154 1.20577 13.5C2.81347 16.2846 5.78461 18 9 18Z"
+                  fill="#E5DFD5" />
+                <path
+                  d="M9 16C7.14348 16 5.36301 15.2625 4.05025 13.9497C2.7375 12.637 2 10.8565 2 9C2 7.14348 2.7375 5.36301 4.05025 4.05025C5.36301 2.7375 7.14348 2 9 2C10.8565 2 12.637 2.7375 13.9497 4.05025C15.2625 5.36301 16 7.14348 16 9C16 10.8565 15.2625 12.637 13.9497 13.9497C12.637 15.2625 10.8565 16 9 16Z"
+                  :fill="item.content" />
+              </g>
+            </svg>
+          </div>
           <img
             src="../public/icons/Code.svg"
             class="icon"
@@ -87,20 +107,42 @@
         </div>
       </template>
     </OverlayScrollbarsComponent>
-    <div class="content" v-if="selectedItem?.content_type === 'image'">
-      <img :src="getComputedImageUrl(selectedItem)" alt="Image" class="image" />
+
+    <div
+      class="content"
+      v-if="selectedItem?.content_type === ContentType.Image">
+      <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
+    </div>
+    <div
+      v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
+      class="content">
+      <img
+        class="image"
+        :src="getYoutubeThumbnail(selectedItem.content)"
+        alt="YouTube Thumbnail" />
+    </div>
+    <div class="content" v-else-if="selectedItem?.content_type === ContentType.Link && pageOgImage">
+      <img :src="pageOgImage" alt="Image" class="image">
     </div>
     <OverlayScrollbarsComponent v-else class="content">
-      <img
-        v-if="selectedItem?.content && isYoutubeWatchUrl(selectedItem.content)"
-        :src="getYoutubeThumbnail(selectedItem.content)"
-        alt="YouTube Thumbnail"
-        class="full-image" />
-      <span v-else>{{ selectedItem?.content || "" }}</span>
+      <span>{{ selectedItem?.content || "" }}</span>
     </OverlayScrollbarsComponent>
-    <div class="information">
+
+    <OverlayScrollbarsComponent
+      class="information"
+      :options="{ scrollbars: { autoHide: 'scroll' } }">
       <div class="title">Information</div>
-    </div>
+      <div class="info-content" v-if="selectedItem && getInfo">
+        <div class="info-row" v-for="(row, index) in infoRows" :key="index">
+          <p class="label">{{ row.label }}</p>
+          <span
+            :class="{ 'url-truncate': row.isUrl }"
+            :data-text="row.value">
+            {{ row.value }}
+          </span>
+        </div>
+      </div>
+    </OverlayScrollbarsComponent>
     <Noise />
   </div>
 </template>
@@ -114,17 +156,18 @@ import { platform } from "@tauri-apps/plugin-os";
 import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
+import { invoke } from "@tauri-apps/api/core";
 import { HistoryItem, ContentType } from "~/types/types";
+import type { InfoText, InfoImage, InfoFile, InfoLink, InfoColor, InfoCode } from "~/types/types";
 
 interface GroupedHistory {
   label: string;
   items: HistoryItem[];
 }
 
-const { $history, $settings } = useNuxtApp();
+const { $history } = useNuxtApp();
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
-const IMAGE_LOAD_DEBOUNCE = 300;
 
 const history = shallowRef<HistoryItem[]>([]);
 let offset = 0;
@@ -141,9 +184,12 @@ const searchInput = ref<HTMLInputElement | null>(null);
 const os = ref<string>("");
 const imageUrls = shallowRef<Record<string, string>>({});
 const imageDimensions = shallowRef<Record<string, string>>({});
+const imageSizes = shallowRef<Record<string, string>>({});
 const lastUpdateTime = ref<number>(Date.now());
 const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
+const pageTitle = ref<string>('');
+const pageOgImage = ref<string>('');
 
 const keyboard = useKeyboard();
 
@@ -230,7 +276,9 @@ const loadHistoryChunk = async (): Promise<void> => {
           item.source,
           item.content_type,
           item.content,
-          item.favicon
+          item.favicon,
+          item.source_icon,
+          item.language
         );
         Object.assign(historyItem, {
           id: item.id,
@@ -238,10 +286,34 @@ const loadHistoryChunk = async (): Promise<void> => {
         });
 
         if (historyItem.content_type === ContentType.Image) {
-          await Promise.all([
-            getItemDimensions(historyItem),
-            loadImageUrl(historyItem),
-          ]);
+          try {
+            const base64 = await $history.readImage({
+              filename: historyItem.content,
+            });
+            const size = Math.ceil((base64.length * 3) / 4);
+            imageSizes.value[historyItem.id] = formatFileSize(size);
+
+            const img = new Image();
+            img.src = `data:image/png;base64,${base64}`;
+            imageUrls.value[historyItem.id] = img.src;
+
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                imageDimensions.value[
+                  historyItem.id
+                ] = `${img.width}x${img.height}`;
+                resolve();
+              };
+              img.onerror = () => {
+                imageDimensions.value[historyItem.id] = "Error";
+                resolve();
+              };
+            });
+          } catch (error) {
+            console.error("Error processing image:", error);
+            imageDimensions.value[historyItem.id] = "Error";
+            imageSizes.value[historyItem.id] = "Error";
+          }
         }
         return historyItem;
       })
@@ -281,7 +353,9 @@ const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
 
       if (isAbove || isBelow) {
         const scrollOffset = isAbove
-          ? elementRect.top - viewportRect.top - 8
+          ? elementRect.top -
+            viewportRect.top -
+            (selectedItemIndex.value === 0 ? 36 : 8)
           : elementRect.bottom - viewportRect.bottom + 9;
 
         viewport.scrollBy({ top: scrollOffset, behavior: "smooth" });
@@ -347,7 +421,7 @@ const pasteSelectedItem = async (): Promise<void> => {
   let contentType: string = selectedItem.value.content_type;
   if (contentType === "image") {
     try {
-      content = await $history.getImagePath(content);
+      content = await $history.readImage({ filename: content });
     } catch (error) {
       console.error("Error reading image file:", error);
       return;
@@ -386,73 +460,78 @@ const getYoutubeThumbnail = (url: string): string => {
     videoId = url.match(/[?&]v=([^&]+)/)?.[1];
   }
   return videoId
-    ? `https://img.youtube.com/vi/${videoId}/0.jpg`
-    : "https://via.placeholder.com/150";
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : "https://via.placeholder.com/1280x720";
 };
 
 const getFaviconFromDb = (favicon: string): string => {
   return `data:image/png;base64,${favicon}`;
 };
 
-const getImageData = async (
-  item: HistoryItem
-): Promise<{ url: string; dimensions: string }> => {
-  try {
-    const base64 = await $history.readImage({ filename: item.content });
-    const dataUrl = `data:image/png;base64,${base64}`;
-    const img = new Image();
-    img.src = dataUrl;
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = reject;
-    });
-
-    return {
-      url: dataUrl,
-      dimensions: `${img.width}x${img.height}`,
-    };
-  } catch (error) {
-    console.error("Error processing image:", error);
-    return { url: "", dimensions: "Error" };
-  }
-};
-
-const processHistoryItem = async (item: any): Promise<HistoryItem> => {
-  const historyItem = new HistoryItem(
-    item.content_type as string,
-    ContentType[item.content_type as keyof typeof ContentType],
-    item.content,
-    item.favicon
-  );
-
-  Object.assign(historyItem, {
-    id: item.id,
-    timestamp: new Date(item.timestamp),
-  });
-
-  if (historyItem.content_type === ContentType.Image) {
-    const { url, dimensions } = await getImageData(historyItem);
-    imageUrls.value[historyItem.id] = url;
-    imageDimensions.value[historyItem.id] = dimensions;
-  }
-
-  return historyItem;
-};
-
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
-  history.value = [];
-  offset = 0;
-  await loadHistoryChunk();
+  const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
+  if (results.length > 0) {
+    const existingIds = new Set(history.value.map((item) => item.id));
+    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
 
-  if (
-    resetScroll &&
-    resultsContainer.value?.osInstance()?.elements().viewport
-  ) {
-    resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    const processedNewItems = await Promise.all(
+      uniqueNewItems.map(async (item) => {
+        const historyItem = new HistoryItem(
+          item.source,
+          item.content_type,
+          item.content,
+          item.favicon
+        );
+        Object.assign(historyItem, {
+          id: item.id,
+          timestamp: new Date(item.timestamp),
+        });
+
+        if (historyItem.content_type === ContentType.Image) {
+          try {
+            const base64 = await $history.readImage({
+              filename: historyItem.content,
+            });
+            const size = Math.ceil((base64.length * 3) / 4);
+            imageSizes.value[historyItem.id] = formatFileSize(size);
+
+            const img = new Image();
+            img.src = `data:image/png;base64,${base64}`;
+            imageUrls.value[historyItem.id] = img.src;
+
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                imageDimensions.value[
+                  historyItem.id
+                ] = `${img.width}x${img.height}`;
+                resolve();
+              };
+              img.onerror = () => {
+                imageDimensions.value[historyItem.id] = "Error";
+                resolve();
+              };
+            });
+          } catch (error) {
+            console.error("Error processing image:", error);
+            imageDimensions.value[historyItem.id] = "Error";
+            imageSizes.value[historyItem.id] = "Error";
+          }
+        }
+        return historyItem;
+      })
+    );
+
+    history.value = [...processedNewItems, ...history.value];
+
+    if (
+      resetScroll &&
+      resultsContainer.value?.osInstance()?.elements().viewport
+    ) {
+      resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
   }
 };
 
@@ -466,29 +545,13 @@ const handleSelection = (
   if (shouldScroll) scrollToSelectedItem();
 };
 
-const handleMediaContent = async (
-  content: string,
-  type: string
-): Promise<string> => {
-  if (type === "image") {
-    return await $history.getImagePath(content);
-  }
-
-  if (isYoutubeWatchUrl(content)) {
-    const videoId = content.includes("youtu.be")
-      ? content.split("youtu.be/")[1]
-      : content.match(/[?&]v=([^&]+)/)?.[1];
-    return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : "";
-  }
-
-  return content;
-};
-
 const setupEventListeners = async (): Promise<void> => {
   await listen("clipboard-content-updated", async () => {
     lastUpdateTime.value = Date.now();
-    handleSelection(0, 0, false);
     await updateHistory(true);
+    if (groupedHistory.value[0]?.items.length > 0) {
+      handleSelection(0, 0, false);
+    }
   });
 
   await listen("tauri://focus", async () => {
@@ -506,17 +569,12 @@ const setupEventListeners = async (): Promise<void> => {
       lastUpdateTime.value = currentTime;
       handleSelection(previousState.groupIndex, previousState.itemIndex, false);
 
-      nextTick(() => {
-        const viewport = resultsContainer.value
-          ?.osInstance()
-          ?.elements().viewport;
-        if (viewport) {
-          viewport.scrollTo({
-            top: previousState.scroll,
-            behavior: "instant",
-          });
-        }
-      });
+      if (resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo) {
+        resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+          top: previousState.scroll,
+          behavior: "instant",
+        });
+      }
     }
     focusSearchInput();
   });
@@ -558,7 +616,6 @@ const setupEventListeners = async (): Promise<void> => {
 
     if (isMacActionCombo || isOtherOsActionCombo) {
       event.preventDefault();
-      console.log("Actions shortcut triggered");
     }
   });
 };
@@ -611,40 +668,179 @@ watch([selectedGroupIndex, selectedItemIndex], () =>
   scrollToSelectedItem(false)
 );
 
-const getItemDimensions = async (item: HistoryItem) => {
-  if (!imageDimensions.value[item.id]) {
-    try {
-      const base64 = await $history.readImage({ filename: item.content });
-      const img = new Image();
-      img.src = `data:image/png;base64,${base64}`;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject();
-      });
-      imageDimensions.value[item.id] = `${img.width}x${img.height}`;
-    } catch (error) {
-      console.error("Error loading image dimensions:", error);
-      imageDimensions.value[item.id] = "Error";
-    }
-  }
-  return imageDimensions.value[item.id] || "Loading...";
+const getFormattedDate = computed(() => {
+  if (!selectedItem.value?.timestamp) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(selectedItem.value.timestamp);
+});
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
-const loadImageUrl = async (item: HistoryItem) => {
-  if (!imageUrls.value[item.id]) {
-    try {
-      const base64 = await $history.readImage({ filename: item.content });
-      imageUrls.value[item.id] = `data:image/png;base64,${base64}`;
-    } catch (error) {
-      console.error("Error loading image:", error);
+const fetchPageMeta = async (url: string) => {
+  try {
+    const [title, ogImage] = await invoke('fetch_page_meta', { url }) as [string, string | null];
+    pageTitle.value = title;
+    if (ogImage) {
+      pageOgImage.value = ogImage;
     }
+  } catch (error) {
+    console.error('Error fetching page meta:', error);
+    pageTitle.value = 'Error loading title';
   }
 };
 
-const getComputedImageUrl = (item: HistoryItem | null): string => {
-  if (!item) return "";
-  return imageUrls.value[item.id] || "";
-};
+watch(() => selectedItem.value, (newItem) => {
+  if (newItem?.content_type === ContentType.Link) {
+    pageTitle.value = 'Loading...';
+    pageOgImage.value = '';
+    fetchPageMeta(newItem.content);
+  } else {
+    pageTitle.value = '';
+    pageOgImage.value = '';
+  }
+});
+
+const getInfo = computed(() => {
+  if (!selectedItem.value) return null;
+
+  const baseInfo = {
+    source: selectedItem.value.source,
+    copied: selectedItem.value.timestamp,
+  };
+
+  const infoMap: Record<ContentType, () => InfoText | InfoImage | InfoFile | InfoLink | InfoColor | InfoCode> = {
+    [ContentType.Text]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Text,
+      characters: selectedItem.value!.content.length,
+      words: selectedItem.value!.content.trim().split(/\s+/).length,
+    }),
+    [ContentType.Image]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Image,
+      dimensions: imageDimensions.value[selectedItem.value!.id] || "Loading...",
+      size: parseInt(imageSizes.value[selectedItem.value!.id] || "0"),
+    }),
+    [ContentType.File]: () => ({
+      ...baseInfo,
+      content_type: ContentType.File,
+      path: selectedItem.value!.content,
+      filesize: 0,
+    }),
+    [ContentType.Link]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Link,
+      title: pageTitle.value,
+      url: selectedItem.value!.content,
+      characters: selectedItem.value!.content.length,
+    }),
+    [ContentType.Color]: () => {
+      const hex = selectedItem.value!.content;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      
+      const rNorm = r / 255;
+      const gNorm = g / 255;
+      const bNorm = b / 255;
+      
+      const max = Math.max(rNorm, gNorm, bNorm);
+      const min = Math.min(rNorm, gNorm, bNorm);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case rNorm:
+            h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0);
+            break;
+          case gNorm:
+            h = (bNorm - rNorm) / d + 2;
+            break;
+          case bNorm:
+            h = (rNorm - gNorm) / d + 4;
+            break;
+        }
+        h /= 6;
+      }
+
+      return {
+        ...baseInfo,
+        content_type: ContentType.Color,
+        hex: hex,
+        rgb: `rgb(${r}, ${g}, ${b})`,
+        hsl: `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`,
+      };
+    },
+    [ContentType.Code]: () => ({
+      ...baseInfo,
+      content_type: ContentType.Code,
+      language: selectedItem.value!.language ?? "Unknown",
+      lines: selectedItem.value!.content.split('\n').length,
+    }),
+  };
+
+  return infoMap[selectedItem.value.content_type]();
+});
+
+const infoRows = computed(() => {
+  if (!getInfo.value) return [];
+
+  const commonRows = [
+    { label: "Source", value: getInfo.value.source, isUrl: false },
+    { label: "Content Type", value: getInfo.value.content_type.charAt(0).toUpperCase() + getInfo.value.content_type.slice(1), isUrl: false },
+  ];
+
+  const typeSpecificRows: Record<ContentType, Array<{ label: string; value: string | number; isUrl?: boolean }>> = {
+    [ContentType.Text]: [
+      { label: "Characters", value: (getInfo.value as InfoText).characters },
+      { label: "Words", value: (getInfo.value as InfoText).words },
+    ],
+    [ContentType.Image]: [
+      { label: "Dimensions", value: (getInfo.value as InfoImage).dimensions },
+      { label: "Image size", value: formatFileSize((getInfo.value as InfoImage).size) },
+    ],
+    [ContentType.File]: [
+      { label: "Path", value: (getInfo.value as InfoFile).path },
+    ],
+    [ContentType.Link]: [
+      ...((getInfo.value as InfoLink).title && (getInfo.value as InfoLink).title !== 'Loading...'
+        ? [{ label: "Title", value: (getInfo.value as InfoLink).title || '' }] 
+        : []),
+      { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },
+      { label: "Characters", value: (getInfo.value as InfoLink).characters },
+    ],
+    [ContentType.Color]: [
+      { label: "Hex", value: (getInfo.value as InfoColor).hex },
+      { label: "RGB", value: (getInfo.value as InfoColor).rgb },
+      { label: "HSL", value: (getInfo.value as InfoColor).hsl },
+    ],
+    [ContentType.Code]: [
+      { label: "Language", value: (getInfo.value as InfoCode).language },
+      { label: "Lines", value: (getInfo.value as InfoCode).lines },
+    ],
+  };
+
+  const specificRows = typeSpecificRows[getInfo.value.content_type]
+    .filter(row => row.value !== "");
+
+  return [
+    ...commonRows,
+    ...specificRows,
+    { label: "Copied", value: getFormattedDate.value },
+  ];
+});
 </script>
 
 <style scoped lang="scss">

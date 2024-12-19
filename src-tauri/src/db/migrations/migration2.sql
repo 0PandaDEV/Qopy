@@ -1,2 +1,3 @@
 ALTER TABLE history ADD COLUMN source TEXT DEFAULT 'System' NOT NULL;
 ALTER TABLE history ADD COLUMN source_icon TEXT;
+ALTER TABLE history ADD COLUMN language TEXT;

@@ -1,5 +1,7 @@
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder}, tray::TrayIconBuilder, Emitter, Manager
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::TrayIconBuilder,
+    Emitter, Manager,
 };
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {

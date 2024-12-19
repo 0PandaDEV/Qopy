@@ -28,7 +28,7 @@ pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::er
 #[tauri::command]
 pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC",
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC",
     )
     .fetch_all(&*pool)
     .await
@@ -44,6 +44,7 @@ pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Histo
             content: row.get("content"),
             favicon: row.get("favicon"),
             timestamp: row.get("timestamp"),
+            language: row.get("language"),
         })
         .collect();
 
@@ -55,33 +56,44 @@ pub async fn add_history_item(
     pool: tauri::State<'_, SqlitePool>,
     item: HistoryItem,
 ) -> Result<(), String> {
-    let (id, source, source_icon, content_type, content, favicon, timestamp) = item.to_row();
+    let (id, source, source_icon, content_type, content, favicon, timestamp, language) =
+        item.to_row();
 
-    let last_content: Option<String> = sqlx::query_scalar(
-        "SELECT content FROM history WHERE content_type = ? ORDER BY timestamp DESC LIMIT 1",
-    )
-    .bind(content_type.clone())
-    .fetch_one(&*pool)
-    .await
-    .unwrap_or(None);
+    let existing = sqlx::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
+        .bind(&content)
+        .bind(&content_type)
+        .fetch_optional(&*pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    if last_content.as_deref() == Some(&content) {
-        return Ok(());
+    match existing {
+        Some(_) => {
+            sqlx::query(
+                "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
+            )
+            .bind(&content)
+            .bind(&content_type)
+            .execute(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+        None => {
+            sqlx::query(
+                "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            .bind(id)
+            .bind(source)
+            .bind(source_icon)
+            .bind(content_type)
+            .bind(content)
+            .bind(favicon)
+            .bind(timestamp)
+            .bind(language)
+            .execute(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
     }
-
-    sqlx::query(
-        "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(id)
-    .bind(source)
-    .bind(source_icon)
-    .bind(content_type)
-    .bind(content)
-    .bind(favicon)
-    .bind(timestamp)
-    .execute(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -93,7 +105,7 @@ pub async fn search_history(
 ) -> Result<Vec<HistoryItem>, String> {
     let query = format!("%{}%", query);
     let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
     )
     .bind(query)
     .fetch_all(&*pool)
@@ -110,6 +122,7 @@ pub async fn search_history(
             content: row.get("content"),
             favicon: row.get("favicon"),
             timestamp: row.get("timestamp"),
+            language: row.get("language"),
         })
         .collect();
 
@@ -123,7 +136,7 @@ pub async fn load_history_chunk(
     limit: i64,
 ) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
     )
     .bind(limit)
     .bind(offset)
@@ -141,6 +154,7 @@ pub async fn load_history_chunk(
             content: row.get("content"),
             favicon: row.get("favicon"),
             timestamp: row.get("timestamp"),
+            language: row.get("language"),
         })
         .collect();
 
