@@ -815,7 +815,9 @@ const infoRows = computed(() => {
       { label: "Path", value: (getInfo.value as InfoFile).path },
     ],
     [ContentType.Link]: [
-      { label: "Title", value: (getInfo.value as InfoLink).title || "No Title Found" },
+      ...((getInfo.value as InfoLink).title && (getInfo.value as InfoLink).title !== 'Loading...'
+        ? [{ label: "Title", value: (getInfo.value as InfoLink).title || '' }] 
+        : []),
       { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },
       { label: "Characters", value: (getInfo.value as InfoLink).characters },
     ],
