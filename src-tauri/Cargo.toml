@@ -1,6 +1,6 @@
 [package]
 name = "qopy"
-version = "0.2.1"
+version = "0.3.0"
 description = "Qopy"
 authors = ["pandadev"]
 edition = "2021"
