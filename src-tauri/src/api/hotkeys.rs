@@ -3,9 +3,9 @@ use global_hotkey::{
     hotkey::{Code, HotKey, Modifiers},
     GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
 };
-use std::str::FromStr;
 use std::cell::RefCell;
-use tauri::{AppHandle, Manager, Listener};
+use std::str::FromStr;
+use tauri::{AppHandle, Listener, Manager};
 
 thread_local! {
     static HOTKEY_MANAGER: RefCell<Option<GlobalHotKeyManager>> = RefCell::new(None);
@@ -18,20 +18,21 @@ pub fn setup(app_handle: tauri::AppHandle) {
     HOTKEY_MANAGER.with(|m| *m.borrow_mut() = Some(manager));
 
     let rt = app_handle.state::<tokio::runtime::Runtime>();
-    let initial_keybind = rt.block_on(crate::db::settings::get_keybind(app_handle_clone.clone()))
+    let initial_keybind = rt
+        .block_on(crate::db::settings::get_keybind(app_handle_clone.clone()))
         .expect("Failed to get initial keybind");
     let initial_shortcut = initial_keybind.join("+");
-    
+
     let initial_shortcut_for_update = initial_shortcut.clone();
     let initial_shortcut_for_save = initial_shortcut.clone();
-    
+
     if let Err(e) = register_shortcut(&initial_shortcut) {
         eprintln!("Error registering initial shortcut: {:?}", e);
     }
 
     app_handle.listen("update-shortcut", move |event| {
         let payload_str = event.payload().to_string();
-        
+
         if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_update) {
             HOTKEY_MANAGER.with(|manager| {
                 if let Some(manager) = manager.borrow().as_ref() {
@@ -47,7 +48,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
 
     app_handle.listen("save_keybind", move |event| {
         let payload_str = event.payload().to_string();
-        
+
         if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_save) {
             HOTKEY_MANAGER.with(|manager| {
                 if let Some(manager) = manager.borrow().as_ref() {
@@ -110,14 +111,17 @@ fn parse_hotkey(shortcut: &str) -> Result<HotKey, Box<dyn std::error::Error>> {
                 } else {
                     key.to_string()
                 };
-                
-                code = Some(Code::from_str(&key_code)
-                    .map_err(|_| format!("Invalid key code: {}", key_code))?);
+
+                code = Some(
+                    Code::from_str(&key_code)
+                        .map_err(|_| format!("Invalid key code: {}", key_code))?,
+                );
             }
         }
     }
 
-    let key_code = code.ok_or_else(|| format!("No valid key code found in shortcut: {}", shortcut))?;
+    let key_code =
+        code.ok_or_else(|| format!("No valid key code found in shortcut: {}", shortcut))?;
     Ok(HotKey::new(Some(modifiers), key_code))
 }
 

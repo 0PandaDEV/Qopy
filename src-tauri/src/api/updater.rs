@@ -1,5 +1,5 @@
-use tauri::{AppHandle, async_runtime};
-use tauri_plugin_dialog::{DialogExt, MessageDialogKind, MessageDialogButtons};
+use tauri::{async_runtime, AppHandle};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_updater::UpdaterExt;
 
 pub async fn check_for_updates(app: AppHandle) {

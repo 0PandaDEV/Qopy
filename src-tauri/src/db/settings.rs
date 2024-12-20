@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use serde_json;
-use tauri::{Emitter, Manager};
 use sqlx::Row;
+use sqlx::SqlitePool;
+use tauri::{Emitter, Manager};
 
 #[derive(Deserialize, Serialize)]
 struct KeybindSetting {
@@ -15,12 +15,10 @@ pub async fn initialize_settings(pool: &SqlitePool) -> Result<(), Box<dyn std::e
     };
     let json = serde_json::to_string(&default_keybind)?;
 
-    sqlx::query(
-        "INSERT INTO settings (key, value) VALUES ('keybind', ?)"
-    )
-    .bind(json)
-    .execute(pool)
-    .await?;
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('keybind', ?)")
+        .bind(json)
+        .execute(pool)
+        .await?;
 
     Ok(())
 }
@@ -50,7 +48,7 @@ pub async fn save_keybind(
 #[tauri::command]
 pub async fn get_setting(
     pool: tauri::State<'_, SqlitePool>,
-    key: String
+    key: String,
 ) -> Result<String, String> {
     let row = sqlx::query("SELECT value FROM settings WHERE key = ?")
         .bind(key)
@@ -65,7 +63,7 @@ pub async fn get_setting(
 pub async fn save_setting(
     pool: tauri::State<'_, SqlitePool>,
     key: String,
-    value: String
+    value: String,
 ) -> Result<(), String> {
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .bind(key)
@@ -78,23 +76,18 @@ pub async fn save_setting(
 }
 
 #[tauri::command]
-pub async fn get_keybind(
-    app_handle: tauri::AppHandle,
-) -> Result<Vec<String>, String> {
+pub async fn get_keybind(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
     let pool = app_handle.state::<SqlitePool>();
-    
+
     let row = sqlx::query("SELECT value FROM settings WHERE key = 'keybind'")
         .fetch_optional(&*pool)
         .await
         .map_err(|e| e.to_string())?;
 
-    let json = row
-        .map(|r| r.get::<String, _>("value"))
-        .unwrap_or_else(|| {
-            serde_json::to_string(&vec!["Meta".to_string(), "V".to_string()])
-                .expect("Failed to serialize default keybind")
-        });
+    let json = row.map(|r| r.get::<String, _>("value")).unwrap_or_else(|| {
+        serde_json::to_string(&vec!["Meta".to_string(), "V".to_string()])
+            .expect("Failed to serialize default keybind")
+    });
 
-    serde_json::from_str::<Vec<String>>(&json)
-        .map_err(|e| e.to_string())
+    serde_json::from_str::<Vec<String>>(&json).map_err(|e| e.to_string())
 }

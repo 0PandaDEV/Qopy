@@ -4,7 +4,9 @@ use image::ImageFormat;
 use reqwest;
 use url::Url;
 
-pub async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, Box<dyn std::error::Error>> {
+pub async fn fetch_favicon_as_base64(
+    url: Url,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
     let favicon_url = format!("https://favicone.com/{}", url.host_str().unwrap());
     let response = client.get(&favicon_url).send().await?;
@@ -18,4 +20,4 @@ pub async fn fetch_favicon_as_base64(url: Url) -> Result<Option<String>, Box<dyn
     } else {
         Ok(None)
     }
-} 
+}

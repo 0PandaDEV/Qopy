@@ -1,20 +1,21 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
+// use hyperpolyglot;
 use lazy_static::lazy_static;
 use rdev::{simulate, EventType, Key};
+use regex::Regex;
 use sqlx::SqlitePool;
-use uuid::Uuid;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter, Listener, Manager, Runtime};
 use tauri_plugin_clipboard::Clipboard;
 use tokio::runtime::Runtime as TokioRuntime;
-use regex::Regex;
 use url::Url;
-use base64::{Engine, engine::general_purpose::STANDARD};
+use uuid::Uuid;
 
+use crate::db;
 use crate::utils::commands::get_app_info;
 use crate::utils::favicon::fetch_favicon_as_base64;
-use crate::db;
 use crate::utils::types::{ContentType, HistoryItem};
 
 lazy_static! {
@@ -111,43 +112,70 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                     .unwrap_or_else(|e| e);
                                 let _ = db::history::add_history_item(
                                     pool,
-                                    HistoryItem::new(app_name, ContentType::Image, file_path, None, app_icon),
+                                    HistoryItem::new(app_name, ContentType::Image, file_path, None, app_icon, None),
                                 ).await;
                             }
                         } else if available_types.files {
                             println!("Handling files change");
                             if let Ok(files) = clipboard.read_files() {
-                                let files_str = files.join(", ");
-                                let _ = db::history::add_history_item(
-                                    pool,
-                                    HistoryItem::new(app_name, ContentType::File, files_str, None, app_icon),
-                                ).await;
+                                for file in files {
+                                    let _ = db::history::add_history_item(
+                                        pool.clone(),
+                                        HistoryItem::new(
+                                            app_name.clone(),
+                                            ContentType::File,
+                                            file,
+                                            None,
+                                            app_icon.clone(),
+                                            None
+                                        ),
+                                    ).await;
+                                }
                             }
                         } else if available_types.text {
                             println!("Handling text change");
                             if let Ok(text) = clipboard.read_text() {
                                 let url_regex = Regex::new(r"^https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$").unwrap();
-                                
+
                                 if url_regex.is_match(&text) {
                                     if let Ok(url) = Url::parse(&text) {
                                         let favicon = match fetch_favicon_as_base64(url).await {
                                             Ok(Some(f)) => Some(f),
                                             _ => None,
                                         };
-                                        
+
                                         let _ = db::history::add_history_item(
                                             pool,
-                                            HistoryItem::new(app_name, ContentType::Link, text, favicon, app_icon)
+                                            HistoryItem::new(app_name, ContentType::Link, text, favicon, app_icon, None)
                                         ).await;
                                     }
                                 } else {
                                     if text.is_empty() {
                                         return;
                                     }
-                                    let _ = db::history::add_history_item(
-                                        pool,
-                                        HistoryItem::new(app_name, ContentType::Text, text, None, app_icon)
-                                    ).await;
+
+                                    // Temporarily disabled code detection
+                                    /*if let Some(detection) = hyperpolyglot::detect_from_text(&text) {
+                                        let language = match detection {
+                                            hyperpolyglot::Detection::Heuristics(lang) => lang.to_string(),
+                                            _ => detection.language().to_string(),
+                                        };
+
+                                        let _ = db::history::add_history_item(
+                                            pool,
+                                            HistoryItem::new(app_name, ContentType::Code, text, None, app_icon, Some(language))
+                                        ).await;
+                                    } else*/ if crate::utils::commands::detect_color(&text) {
+                                        let _ = db::history::add_history_item(
+                                            pool,
+                                            HistoryItem::new(app_name, ContentType::Color, text, None, app_icon, None)
+                                        ).await;
+                                    } else {
+                                        let _ = db::history::add_history_item(
+                                            pool,
+                                            HistoryItem::new(app_name, ContentType::Text, text, None, app_icon, None)
+                                        ).await;
+                                    }
                                 }
                             }
                         } else {
@@ -183,16 +211,19 @@ pub fn start_monitor(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn save_image_to_file<R: Runtime>(app_handle: &AppHandle<R>, base64_data: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn save_image_to_file<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    base64_data: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let app_data_dir = app_handle.path().app_data_dir().unwrap();
     let images_dir = app_data_dir.join("images");
     fs::create_dir_all(&images_dir)?;
-    
+
     let file_name = format!("{}.png", Uuid::new_v4());
     let file_path = images_dir.join(&file_name);
-    
+
     let bytes = STANDARD.decode(base64_data)?;
     fs::write(&file_path, bytes)?;
-    
+
     Ok(file_path.to_string_lossy().into_owned())
 }
