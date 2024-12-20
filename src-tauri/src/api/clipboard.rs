@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use hyperpolyglot;
+// use hyperpolyglot;
 use lazy_static::lazy_static;
 use rdev::{simulate, EventType, Key};
 use regex::Regex;
@@ -154,7 +154,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                         return;
                                     }
 
-                                    if let Some(detection) = hyperpolyglot::detect_from_text(&text) {
+                                    // Temporarily disabled code detection
+                                    /*if let Some(detection) = hyperpolyglot::detect_from_text(&text) {
                                         let language = match detection {
                                             hyperpolyglot::Detection::Heuristics(lang) => lang.to_string(),
                                             _ => detection.language().to_string(),
@@ -164,7 +165,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                             pool,
                                             HistoryItem::new(app_name, ContentType::Code, text, None, app_icon, Some(language))
                                         ).await;
-                                    } else if crate::utils::commands::detect_color(&text) {
+                                    } else*/ if crate::utils::commands::detect_color(&text) {
                                         let _ = db::history::add_history_item(
                                             pool,
                                             HistoryItem::new(app_name, ContentType::Color, text, None, app_icon, None)
