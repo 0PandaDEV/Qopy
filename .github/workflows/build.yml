@@ -115,6 +115,15 @@ jobs:
 
   build-windows:
     needs: prepare
+    strategy:
+      matrix:
+        include:
+          - args: "--target x86_64-pc-windows-msvc"
+            arch: "x64"
+            target: "x86_64-pc-windows-msvc"
+          - args: "--target aarch64-pc-windows-msvc"
+            arch: "arm64"
+            target: "aarch64-pc-windows-msvc"
     runs-on: windows-latest
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -124,6 +133,8 @@ jobs:
         with:
           node-version: 20
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
@@ -142,18 +153,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Rename and Publish Windows Artifacts
         run: |
-          mv src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi
-          mv src-tauri/target/release/bundle/msi/*.msi.sig src-tauri/target/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}.msi.sig
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
       - uses: actions/upload-artifact@v4
         with:
-          name: build-windows-msi
-          path: src-tauri/target/release/bundle/msi/*.msi
+          name: build-windows-msi-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
       - uses: actions/upload-artifact@v4
         with:
-          name: updater-files-windows
+          name: updater-files-windows-${{ matrix.arch }}
           path: | 
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
 
   build-ubuntu:
     needs: prepare
