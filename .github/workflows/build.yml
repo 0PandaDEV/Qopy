@@ -151,36 +151,20 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: List Bundle Directory
-        shell: pwsh
+      - name: Rename and Publish Windows Artifacts
         run: |
-          $bundlePath = "src-tauri/target/${{ matrix.target }}/release/bundle/msi"
-          if (Test-Path $bundlePath) {
-            Write-Output "Contents of ${bundlePath}:"
-            Get-ChildItem -Path $bundlePath
-          } else {
-            Write-Output "Path ${bundlePath} does not exist."
-          }
-      - name: Rename Windows Artifacts
-        shell: pwsh
-        run: |
-          $bundlePath = "src-tauri/target/${{ matrix.target }}/release/bundle/msi"
-          $version = "${{ needs.prepare.outputs.version }}"
-          $arch = "${{ matrix.arch }}"
-          if (Test-Path $bundlePath) {
-            $msiFiles = Get-ChildItem -Path "$bundlePath/*.msi"
-            foreach ($file in $msiFiles) {
-              $newName = "Qopy-$version`_$arch.msi"
-              Rename-Item -Path $file.FullName -NewName $newName
-            }
-          } else {
-            Write-Error "Path ${bundlePath} does not exist."
-            exit 1
-          }
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.arch }}-binaries
+          name: build-windows-msi-${{ matrix.arch }}
           path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-files-windows-${{ matrix.arch }}
+          path: | 
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
 
   build-ubuntu:
     needs: prepare
@@ -206,7 +190,7 @@ jobs:
         with:
           workspaces: "src-tauri -> target"
           cache-directories: "~/.cargo/registry/index/,~/.cargo/registry/cache/,~/.cargo/git/db/"
-          shared-key: "ubuntu-rust-cache"
+          shared-key: "linux-rust-cache"
           save-if: "true"
       - uses: actions/cache@v4
         with:
@@ -214,11 +198,20 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
-      - name: install dependencies
+      - name: Install dependencies
         run: |
+          sudo dpkg --add-architecture arm64
           sudo apt update
           sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
-          echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            sudo apt install -y libwebkit2gtk-4.1-dev:arm64 libssl-dev:arm64 libayatana-appindicator3-dev:arm64 librsvg2-dev:arm64 libasound2-dev:arm64
+          fi
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            echo "PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
+          fi
       - run: npm install -g pnpm && pnpm install
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -229,7 +222,6 @@ jobs:
         run: |
           mv src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb src-tauri/target/${{ matrix.target }}/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.deb
           mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage
-          mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage.sig
           mv src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm src-tauri/target/${{ matrix.target }}/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.rpm
       - uses: actions/upload-artifact@v4
         with:
@@ -237,5 +229,4 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
