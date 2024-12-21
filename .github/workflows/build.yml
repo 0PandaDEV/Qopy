@@ -151,23 +151,46 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename and Publish Windows Artifacts
+      - name: List Bundle Directory
+        shell: pwsh
         run: |
-          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
-          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
+          $bundlePath = "src-tauri/target/${{ matrix.target }}/release/bundle/msi"
+          if (Test-Path $bundlePath) {
+            Write-Output "Contents of ${bundlePath}:"
+            Get-ChildItem -Path $bundlePath
+          } else {
+            Write-Output "Path ${bundlePath} does not exist."
+          }
+      - name: Rename Windows Artifacts
+        shell: pwsh
+        run: |
+          $bundlePath = "src-tauri/target/${{ matrix.target }}/release/bundle/msi"
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          if (Test-Path $bundlePath) {
+            $msiFiles = Get-ChildItem -Path "$bundlePath/*.msi"
+            foreach ($file in $msiFiles) {
+              $newName = "Qopy-$version`_$arch.msi"
+              Rename-Item -Path $file.FullName -NewName $newName
+            }
+          } else {
+            Write-Error "Path ${bundlePath} does not exist."
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with:
-          name: build-windows-msi-${{ matrix.arch }}
+          name: windows-${{ matrix.arch }}-binaries
           path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: updater-files-windows-${{ matrix.arch }}
-          path: | 
-            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
 
   build-ubuntu:
     needs: prepare
+    strategy:
+      matrix:
+        include:
+          - target: "x86_64-unknown-linux-gnu"
+            arch: "x64"
+          - target: "aarch64-unknown-linux-gnu"
+            arch: "arm64"
     runs-on: ubuntu-latest
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -177,6 +200,8 @@ jobs:
         with:
           node-version: 20
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
@@ -192,33 +217,25 @@ jobs:
       - name: install dependencies
         run: |
           sudo apt update
-          sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev
+          sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
       - run: npm install -g pnpm && pnpm install
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename and Publish Ubuntu Artifacts
+        with:
+          args: --target ${{ matrix.target }}
+      - name: Rename Linux Artifacts
         run: |
-          mv src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}.deb
-          mv src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage
-          mv src-tauri/target/release/bundle/appimage/*.AppImage.sig src-tauri/target/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage.sig
-          mv src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}.rpm
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb src-tauri/target/${{ matrix.target }}/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.deb
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage.sig
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm src-tauri/target/${{ matrix.target }}/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.rpm
       - uses: actions/upload-artifact@v4
         with:
-          name: build-ubuntu-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
-      - uses: actions/upload-artifact@v4
-        with:
-          name: build-ubuntu-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
-      - uses: actions/upload-artifact@v4
-        with:
-          name: build-ubuntu-rpm
-          path: src-tauri/target/release/bundle/rpm/*.rpm
-      - uses: actions/upload-artifact@v4
-        with:
-          name: updater-files-ubuntu
+          name: linux-${{ matrix.arch }}-binaries
           path: |
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm

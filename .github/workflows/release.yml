@@ -170,6 +170,13 @@ jobs:
   build-linux:
     permissions: write-all
     needs: prepare
+    strategy:
+      matrix:
+        include:
+          - target: "x86_64-unknown-linux-gnu"
+            arch: "x64"
+          - target: "aarch64-unknown-linux-gnu"
+            arch: "arm64"
     runs-on: ubuntu-latest
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -181,6 +188,8 @@ jobs:
         with:
           node-version: 20
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
@@ -210,20 +219,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: --target x86_64-unknown-linux-gnu
+          args: --target ${{ matrix.target }}
       - name: Rename Linux Artifacts
         run: |
-          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}.deb
-          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}.AppImage
-          mv src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}.rpm
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb src-tauri/target/${{ matrix.target }}/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.deb
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm src-tauri/target/${{ matrix.target }}/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.rpm
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binaries
+          name: linux-${{ matrix.arch }}-binaries
           path: |
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
 
   create-release:
     permissions: write-all
@@ -250,19 +259,12 @@ jobs:
           WINDOWS_64_HASH=$(sha256sum "artifacts/windows-x64-binaries/Qopy-${VERSION}_x64.msi" | awk '{ print $1 }')
           MAC_SILICON_HASH=$(sha256sum "artifacts/macos-silicon-binaries/aarch64-apple-darwin/release/bundle/dmg/Qopy-${VERSION}_silicon.dmg" | awk '{ print $1 }')
           MAC_INTEL_HASH=$(sha256sum "artifacts/macos-intel-binaries/x86_64-apple-darwin/release/bundle/dmg/Qopy-${VERSION}_intel.dmg" | awk '{ print $1 }')
-          DEBIAN_HASH=$(sha256sum "artifacts/linux-binaries/deb/Qopy-${VERSION}.deb" | awk '{ print $1 }')
-          APPIMAGE_HASH=$(sha256sum "artifacts/linux-binaries/appimage/Qopy-${VERSION}.AppImage" | awk '{ print $1 }')
-          REDHAT_HASH=$(sha256sum "artifacts/linux-binaries/rpm/Qopy-${VERSION}.rpm" | awk '{ print $1 }')
-
-          # Debug output
-          echo "Calculated hashes:"
-          echo "Windows ARM: $WINDOWS_ARM_HASH"
-          echo "Windows x64: $WINDOWS_64_HASH"
-          echo "Mac Silicon: $MAC_SILICON_HASH"
-          echo "Mac Intel: $MAC_INTEL_HASH"
-          echo "Debian: $DEBIAN_HASH"
-          echo "AppImage: $APPIMAGE_HASH"
-          echo "Red Hat: $REDHAT_HASH"
+          DEBIAN_X64_HASH=$(sha256sum "artifacts/linux-x64-binaries/deb/Qopy-${VERSION}_x64.deb" | awk '{ print $1 }')
+          APPIMAGE_X64_HASH=$(sha256sum "artifacts/linux-x64-binaries/appimage/Qopy-${VERSION}_x64.AppImage" | awk '{ print $1 }')
+          RPM_X64_HASH=$(sha256sum "artifacts/linux-x64-binaries/rpm/Qopy-${VERSION}_x64.rpm" | awk '{ print $1 }')
+          DEBIAN_ARM64_HASH=$(sha256sum "artifacts/linux-arm64-binaries/deb/Qopy-${VERSION}_arm64.deb" | awk '{ print $1 }')
+          APPIMAGE_ARM64_HASH=$(sha256sum "artifacts/linux-arm64-binaries/appimage/Qopy-${VERSION}_arm64.AppImage" | awk '{ print $1 }')
+          RPM_ARM64_HASH=$(sha256sum "artifacts/linux-arm64-binaries/rpm/Qopy-${VERSION}_arm64.rpm" | awk '{ print $1 }')
 
           RELEASE_BODY=$(cat <<-EOF
           ## ♻️ Changelog
@@ -275,9 +277,12 @@ jobs:
           - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.msi) - ${WINDOWS_ARM_HASH}
           - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_silicon.dmg) - ${MAC_SILICON_HASH}
           - [macOS (Intel)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_intel.dmg) - ${MAC_INTEL_HASH}
-          - [Debian](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.deb) - ${DEBIAN_HASH}
-          - [AppImage](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.AppImage) - ${APPIMAGE_HASH}
-          - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.rpm) - ${REDHAT_HASH}
+          - [Debian (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.deb) - ${DEBIAN_X64_HASH}
+          - [AppImage (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.AppImage) - ${APPIMAGE_X64_HASH}
+          - [Red Hat (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.rpm) - ${RPM_X64_HASH}
+          - [Debian (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.deb) - ${DEBIAN_ARM64_HASH}
+          - [AppImage (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.AppImage) - ${APPIMAGE_ARM64_HASH}
+          - [Red Hat (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.rpm) - ${RPM_ARM64_HASH}
           EOF
           )
 
