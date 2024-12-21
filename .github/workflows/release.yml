@@ -242,25 +242,17 @@ jobs:
       - name: Generate Release Body
         id: release_body
         run: |
-          # Store version in a variable first
           VERSION="${{ needs.prepare.outputs.version }}"
           CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
-
-          # Calculate SHA256 hashes for each artifact
-          echo "Calculating hashes..."
           
-          # Debug output
-          echo "Looking for files in artifacts directory:"
-          ls -R artifacts/
-          
-          # Calculate hashes with proper paths
+          # Calculate hashes with corrected paths
           WINDOWS_ARM_HASH=$(sha256sum "artifacts/windows-arm64-binaries/Qopy-${VERSION}_arm64.msi" | awk '{ print $1 }')
           WINDOWS_64_HASH=$(sha256sum "artifacts/windows-x64-binaries/Qopy-${VERSION}_x64.msi" | awk '{ print $1 }')
-          MAC_SILICON_HASH=$(sha256sum "artifacts/macos-silicon-binaries/Qopy-${VERSION}_silicon.dmg" | awk '{ print $1 }')
-          MAC_INTEL_HASH=$(sha256sum "artifacts/macos-intel-binaries/Qopy-${VERSION}_intel.dmg" | awk '{ print $1 }')
-          DEBIAN_HASH=$(sha256sum "artifacts/linux-binaries/Qopy-${VERSION}.deb" | awk '{ print $1 }')
-          APPIMAGE_HASH=$(sha256sum "artifacts/linux-binaries/Qopy-${VERSION}.AppImage" | awk '{ print $1 }')
-          REDHAT_HASH=$(sha256sum "artifacts/linux-binaries/Qopy-${VERSION}.rpm" | awk '{ print $1 }')
+          MAC_SILICON_HASH=$(sha256sum "artifacts/macos-silicon-binaries/aarch64-apple-darwin/release/bundle/dmg/Qopy-${VERSION}_silicon.dmg" | awk '{ print $1 }')
+          MAC_INTEL_HASH=$(sha256sum "artifacts/macos-intel-binaries/x86_64-apple-darwin/release/bundle/dmg/Qopy-${VERSION}_intel.dmg" | awk '{ print $1 }')
+          DEBIAN_HASH=$(sha256sum "artifacts/linux-binaries/deb/Qopy-${VERSION}.deb" | awk '{ print $1 }')
+          APPIMAGE_HASH=$(sha256sum "artifacts/linux-binaries/appimage/Qopy-${VERSION}.AppImage" | awk '{ print $1 }')
+          REDHAT_HASH=$(sha256sum "artifacts/linux-binaries/rpm/Qopy-${VERSION}.rpm" | awk '{ print $1 }')
 
           # Debug output
           echo "Calculated hashes:"
