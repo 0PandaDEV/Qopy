@@ -247,6 +247,13 @@ jobs:
           CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
 
           # Calculate SHA256 hashes for each artifact
+          echo "Calculating hashes..."
+          
+          # Debug output
+          echo "Looking for files in artifacts directory:"
+          ls -R artifacts/
+          
+          # Calculate hashes with proper paths
           WINDOWS_ARM_HASH=$(sha256sum "artifacts/windows-arm64-binaries/Qopy-${VERSION}_arm64.msi" | awk '{ print $1 }')
           WINDOWS_64_HASH=$(sha256sum "artifacts/windows-x64-binaries/Qopy-${VERSION}_x64.msi" | awk '{ print $1 }')
           MAC_SILICON_HASH=$(sha256sum "artifacts/macos-silicon-binaries/Qopy-${VERSION}_silicon.dmg" | awk '{ print $1 }')
@@ -255,6 +262,16 @@ jobs:
           APPIMAGE_HASH=$(sha256sum "artifacts/linux-binaries/Qopy-${VERSION}.AppImage" | awk '{ print $1 }')
           REDHAT_HASH=$(sha256sum "artifacts/linux-binaries/Qopy-${VERSION}.rpm" | awk '{ print $1 }')
 
+          # Debug output
+          echo "Calculated hashes:"
+          echo "Windows ARM: $WINDOWS_ARM_HASH"
+          echo "Windows x64: $WINDOWS_64_HASH"
+          echo "Mac Silicon: $MAC_SILICON_HASH"
+          echo "Mac Intel: $MAC_INTEL_HASH"
+          echo "Debian: $DEBIAN_HASH"
+          echo "AppImage: $APPIMAGE_HASH"
+          echo "Red Hat: $REDHAT_HASH"
+
           RELEASE_BODY=$(cat <<-EOF
           ## ♻️ Changelog
           
@@ -262,13 +279,13 @@ jobs:
           
           ## ⬇️ Downloads
           
-          - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.msi) - $WINDOWS_64_HASH
-          - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.msi) - $WINDOWS_ARM_HASH
-          - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_silicon.dmg) - $MAC_SILICON_HASH
-          - [macOS (Intel)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_intel.dmg) - $MAC_INTEL_HASH
-          - [Debian](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.deb) - $DEBIAN_HASH
-          - [AppImage](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.AppImage) - $APPIMAGE_HASH
-          - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.rpm) - $REDHAT_HASH
+          - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.msi) - ${WINDOWS_64_HASH}
+          - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.msi) - ${WINDOWS_ARM_HASH}
+          - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_silicon.dmg) - ${MAC_SILICON_HASH}
+          - [macOS (Intel)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_intel.dmg) - ${MAC_INTEL_HASH}
+          - [Debian](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.deb) - ${DEBIAN_HASH}
+          - [AppImage](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.AppImage) - ${APPIMAGE_HASH}
+          - [Red Hat](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}.rpm) - ${REDHAT_HASH}
           EOF
           )
 
