@@ -202,16 +202,51 @@ jobs:
         run: |
           sudo dpkg --add-architecture arm64
           sudo apt update
-          sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
+          sudo apt install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libasound2-dev \
+            rpm \
+            pkg-config
+
           if [ "${{ matrix.arch }}" = "arm64" ]; then
-            sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-            sudo apt install -y libwebkit2gtk-4.1-dev:arm64 libssl-dev:arm64 libayatana-appindicator3-dev:arm64 librsvg2-dev:arm64 libasound2-dev:arm64
+            sudo apt install -y \
+              gcc-aarch64-linux-gnu \
+              g++-aarch64-linux-gnu \
+              libglib2.0-dev:arm64 \
+              libwebkit2gtk-4.1-dev:arm64 \
+              libssl-dev:arm64 \
+              libayatana-appindicator3-dev:arm64 \
+              librsvg2-dev:arm64 \
+              libasound2-dev:arm64 \
+              libgtk-3-dev:arm64 \
+              libatk1.0-dev:arm64 \
+              libgdk-pixbuf-2.0-dev:arm64 \
+              libcairo2-dev:arm64 \
+              libpango1.0-dev:arm64 \
+              libsoup-3.0-dev:arm64
+
+            # Set up pkg-config for ARM64
+            sudo mkdir -p /usr/lib/aarch64-linux-gnu/pkgconfig
+            sudo cp /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/aarch64-linux-gnu/pkgconfig/
+            
+            # Environment variables for cross-compilation
+            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_SYSROOT_DIR=/usr" >> $GITHUB_ENV
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+            echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+          else
+            echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
           fi
-          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            echo "PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
-          fi
+
       - run: npm install -g pnpm && pnpm install
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -222,6 +257,7 @@ jobs:
         run: |
           mv src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb src-tauri/target/${{ matrix.target }}/release/bundle/deb/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.deb
           mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig src-tauri/target/${{ matrix.target }}/release/bundle/appimage/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.AppImage.sig
           mv src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm src-tauri/target/${{ matrix.target }}/release/bundle/rpm/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.rpm
       - uses: actions/upload-artifact@v4
         with:
@@ -229,4 +265,5 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
