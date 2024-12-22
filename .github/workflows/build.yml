@@ -151,17 +151,48 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename and Publish Windows Artifacts
+      - name: List Build Directories
+        shell: pwsh
         run: |
-          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
-          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
+          Write-Output "Checking build directories..."
+          Get-ChildItem -Path "src-tauri/target" -Recurse -Directory | Where-Object { $_.Name -eq "msi" } | ForEach-Object {
+            Write-Output "Found MSI directory: $($_.FullName)"
+            Get-ChildItem -Path $_.FullName -Filter "*.msi" | ForEach-Object {
+              Write-Output "Found MSI file: $($_.FullName)"
+            }
+          }
+
+      - name: Rename Windows Artifacts
+        shell: pwsh
+        run: |
+          $targetPath = "src-tauri/target/${{ matrix.target }}/release/bundle/msi"
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          
+          Write-Output "Looking for MSI files in: $targetPath"
+          
+          if (!(Test-Path $targetPath)) {
+            Write-Error "Target path does not exist: $targetPath"
+            Write-Output "Available directories:"
+            Get-ChildItem -Path "src-tauri/target" -Recurse -Directory | Format-Table -Property FullName
+            exit 1
+          }
+          
+          $msiFiles = Get-ChildItem -Path "$targetPath/*.msi" -ErrorAction SilentlyContinue
+          if ($null -eq $msiFiles) {
+            Write-Error "No MSI files found in: $targetPath"
+            exit 1
+          }
+          
+          foreach ($file in $msiFiles) {
+            $newName = "Qopy-${version}_${arch}.msi"
+            Write-Output "Renaming $($file.Name) to $newName"
+            Rename-Item -Path $file.FullName -NewName $newName -ErrorAction Stop
+          }
+
       - uses: actions/upload-artifact@v4
         with:
-          name: build-windows-msi-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: updater-files-windows-${{ matrix.arch }}
+          name: windows-${{ matrix.arch }}-binaries
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
@@ -201,16 +232,26 @@ jobs:
       - name: Install dependencies
         run: |
           sudo dpkg --add-architecture arm64
+          # Update sources.list to use jammy (22.04)
+          sudo sed -i 's/noble/jammy/g' /etc/apt/sources.list
           sudo apt update
           sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
           sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          # Install ARM64 dependencies
+          
           if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            sudo apt install -y libwebkit2gtk-4.1-dev:arm64 libssl-dev:arm64 libayatana-appindicator3-dev:arm64 librsvg2-dev:arm64 libasound2-dev:arm64
+            # Install ARM64 dependencies from jammy
+            sudo apt install -y \
+              libwebkit2gtk-4.1-dev:arm64 \
+              libssl-dev:arm64 \
+              libayatana-appindicator3-dev:arm64 \
+              librsvg2-dev:arm64 \
+              libasound2-dev:arm64
+            
+            # Set up cross-compilation environment
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           fi
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
       - run: npm install -g pnpm && pnpm install
       - uses: tauri-apps/tauri-action@v0
         env:
