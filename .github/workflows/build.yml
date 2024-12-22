@@ -163,34 +163,20 @@ jobs:
               Write-Output "Found MSI file: $($_.FullName)"
             }
           }
-      - name: Rename Windows Artifacts
-        shell: pwsh
+      - name: Rename and Publish Windows Artifacts
         run: |
-          $version = "${{ needs.prepare.outputs.version }}"
-          $arch = "${{ matrix.arch }}"
-          
-          # Find MSI files recursively
-          $msiFiles = Get-ChildItem -Path "src-tauri/target" -Recurse -Filter "*.msi"
-          
-          foreach ($file in $msiFiles) {
-            $newName = "Qopy-${version}_${arch}.msi"
-            Write-Output "Renaming $($file.Name) to $newName"
-            Rename-Item -Path $file.FullName -NewName $newName
-            $newPath = Join-Path $file.Directory.FullName $newName
-            Write-Output "New file path: $newPath"
-          }
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi
+          mv src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig src-tauri/target/${{ matrix.target }}/release/bundle/msi/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.msi.sig
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
-          path: |
-            src-tauri/target/**/release/bundle/msi/*.msi
-            src-tauri/target/**/release/bundle/msi/*.msi.sig
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
       - uses: actions/upload-artifact@v4
         with:
           name: updater-windows-${{ matrix.arch }}
           path: |
-            src-tauri/target/${{ matrix.target }}/release/Qopy.msi
-            src-tauri/target/${{ matrix.target }}/release/Qopy.msi.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
 
   build-ubuntu:
     needs: prepare
@@ -237,18 +223,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ubuntu-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
+          path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
       - uses: actions/upload-artifact@v4
         with:
           name: ubuntu-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: ubuntu-rpm
-          path: src-tauri/target/release/bundle/rpm/*.rpm
+          path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
       - uses: actions/upload-artifact@v4
         with:
-          name: updater-files-ubuntu
+          name: updater-ubuntu
           path: |
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage.sig
