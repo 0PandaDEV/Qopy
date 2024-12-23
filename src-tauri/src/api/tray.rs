@@ -3,10 +3,14 @@ use tauri::{
     tray::TrayIconBuilder,
     Emitter, Manager,
 };
+use tauri_plugin_aptabase::EventTracker;
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = app.get_webview_window("main").unwrap();
-    let window_clone_for_tray = window.clone();
+    let is_visible = window.is_visible().unwrap();
+    let _ = app.track_event("tray_toggle", Some(serde_json::json!({
+        "action": if is_visible { "hide" } else { "show" }
+    })));
 
     let icon_bytes = include_bytes!("../../icons/Square71x71Logo.png");
     let icon = tauri::image::Image::from_bytes(icon_bytes).unwrap();
@@ -24,20 +28,25 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         )
         .on_menu_event(move |_app, event| match event.id().as_ref() {
             "quit" => {
+                let _ = _app.track_event("app_quit", None);
                 std::process::exit(0);
             }
             "show" => {
-                let is_visible = window_clone_for_tray.is_visible().unwrap();
+                let _ = _app.track_event("tray_toggle", Some(serde_json::json!({
+                    "action": if is_visible { "hide" } else { "show" }
+                })));
+                let is_visible = window.is_visible().unwrap();
                 if is_visible {
-                    window_clone_for_tray.hide().unwrap();
+                    window.hide().unwrap();
                 } else {
-                    window_clone_for_tray.show().unwrap();
-                    window_clone_for_tray.set_focus().unwrap();
+                    window.show().unwrap();
+                    window.set_focus().unwrap();
                 }
-                window_clone_for_tray.emit("main_route", ()).unwrap();
+                window.emit("main_route", ()).unwrap();
             }
             "keybind" => {
-                window_clone_for_tray.emit("change_keybind", ()).unwrap();
+                let _ = _app.track_event("tray_keybind_change", None);
+                window.emit("change_keybind", ()).unwrap();
             }
             _ => (),
         })

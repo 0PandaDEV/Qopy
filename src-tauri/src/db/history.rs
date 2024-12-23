@@ -4,6 +4,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use sqlx::{Row, SqlitePool};
 use std::fs;
+use tauri_plugin_aptabase::EventTracker;
 
 pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
     let id: String = thread_rng()
@@ -53,6 +54,7 @@ pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Histo
 
 #[tauri::command]
 pub async fn add_history_item(
+    app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
     item: HistoryItem,
 ) -> Result<(), String> {
@@ -94,6 +96,10 @@ pub async fn add_history_item(
             .map_err(|e| e.to_string())?;
         }
     }
+
+    let _ = app_handle.track_event("history_item_added", Some(serde_json::json!({
+        "content_type": item.content_type.to_string()
+    })));
 
     Ok(())
 }
@@ -163,6 +169,7 @@ pub async fn load_history_chunk(
 
 #[tauri::command]
 pub async fn delete_history_item(
+    app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
     id: String,
 ) -> Result<(), String> {
@@ -172,15 +179,22 @@ pub async fn delete_history_item(
         .await
         .map_err(|e| e.to_string())?;
 
+    let _ = app_handle.track_event("history_item_deleted", None);
+
     Ok(())
 }
 
 #[tauri::command]
-pub async fn clear_history(pool: tauri::State<'_, SqlitePool>) -> Result<(), String> {
+pub async fn clear_history(
+    app_handle: tauri::AppHandle,
+    pool: tauri::State<'_, SqlitePool>
+) -> Result<(), String> {
     sqlx::query("DELETE FROM history")
         .execute(&*pool)
         .await
         .map_err(|e| e.to_string())?;
+
+    let _ = app_handle.track_event("history_cleared", None);
 
     Ok(())
 }

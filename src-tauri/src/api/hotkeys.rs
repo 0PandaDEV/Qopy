@@ -1,3 +1,4 @@
+use tauri_plugin_aptabase::EventTracker;
 use crate::utils::commands::center_window_on_current_monitor;
 use global_hotkey::{
     hotkey::{Code, HotKey, Modifiers},
@@ -142,4 +143,8 @@ fn handle_hotkey_event(app_handle: &AppHandle) {
 
         center_window_on_current_monitor(&window);
     }
+
+    let _ = app_handle.track_event("hotkey_triggered", Some(serde_json::json!({
+        "action": if window.is_visible().unwrap() { "hide" } else { "show" }
+    })));
 }

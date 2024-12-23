@@ -1,3 +1,4 @@
+use tauri_plugin_aptabase::EventTracker;
 use base64::{engine::general_purpose::STANDARD, Engine};
 // use hyperpolyglot;
 use lazy_static::lazy_static;
@@ -7,7 +8,7 @@ use sqlx::SqlitePool;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
-use tauri::{AppHandle, Emitter, Listener, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Listener, Manager};
 use tauri_plugin_clipboard::Clipboard;
 use tokio::runtime::Runtime as TokioRuntime;
 use url::Url;
@@ -23,8 +24,8 @@ lazy_static! {
 }
 
 #[tauri::command]
-pub async fn write_and_paste<R: Runtime>(
-    app_handle: tauri::AppHandle<R>,
+pub async fn write_and_paste(
+    app_handle: AppHandle,
     content: String,
     content_type: String,
 ) -> Result<(), String> {
@@ -80,39 +81,44 @@ pub async fn write_and_paste<R: Runtime>(
         IS_PROGRAMMATIC_PASTE.store(false, Ordering::SeqCst);
     });
 
+    let _ = app_handle.track_event("clipboard_paste", Some(serde_json::json!({
+        "content_type": content_type
+    })));
+
     Ok(())
 }
 
-pub fn setup<R: Runtime>(app: &AppHandle<R>) {
-    let app = app.clone();
+pub fn setup(app: &AppHandle) {
+    let app_handle = app.clone();
     let runtime = TokioRuntime::new().expect("Failed to create Tokio runtime");
 
-    app.clone().listen(
+    app_handle.clone().listen(
         "plugin:clipboard://clipboard-monitor/update",
         move |_event| {
-            let app = app.clone();
+            let app_handle = app_handle.clone();
             runtime.block_on(async move {
                 if IS_PROGRAMMATIC_PASTE.load(Ordering::SeqCst) {
                     return;
                 }
 
-                let clipboard = app.state::<Clipboard>();
+                let clipboard = app_handle.state::<Clipboard>();
                 let available_types = clipboard.available_types().unwrap();
 
                 let (app_name, app_icon) = get_app_info();
 
-                match get_pool(&app).await {
+                match get_pool(&app_handle).await {
                     Ok(pool) => {
                         if available_types.image {
                             println!("Handling image change");
                             if let Ok(image_data) = clipboard.read_image_base64() {
-                                let file_path = save_image_to_file(&app, &image_data)
+                                let file_path = save_image_to_file(&app_handle, &image_data)
                                     .await
                                     .map_err(|e| e.to_string())
                                     .unwrap_or_else(|e| e);
                                 let _ = db::history::add_history_item(
+                                    app_handle.clone(),
                                     pool,
-                                    HistoryItem::new(app_name, ContentType::Image, file_path, None, app_icon, None),
+                                    HistoryItem::new(app_name, ContentType::Image, file_path, None, app_icon, None)
                                 ).await;
                             }
                         } else if available_types.files {
@@ -120,6 +126,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                             if let Ok(files) = clipboard.read_files() {
                                 for file in files {
                                     let _ = db::history::add_history_item(
+                                        app_handle.clone(),
                                         pool.clone(),
                                         HistoryItem::new(
                                             app_name.clone(),
@@ -135,6 +142,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                         } else if available_types.text {
                             println!("Handling text change");
                             if let Ok(text) = clipboard.read_text() {
+                                let text = text.to_string();
                                 let url_regex = Regex::new(r"^https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$").unwrap();
 
                                 if url_regex.is_match(&text) {
@@ -145,6 +153,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                         };
 
                                         let _ = db::history::add_history_item(
+                                            app_handle.clone(),
                                             pool,
                                             HistoryItem::new(app_name, ContentType::Link, text, favicon, app_icon, None)
                                         ).await;
@@ -167,13 +176,15 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                                         ).await;
                                     } else*/ if crate::utils::commands::detect_color(&text) {
                                         let _ = db::history::add_history_item(
+                                            app_handle.clone(),
                                             pool,
                                             HistoryItem::new(app_name, ContentType::Color, text, None, app_icon, None)
                                         ).await;
                                     } else {
                                         let _ = db::history::add_history_item(
+                                            app_handle.clone(),
                                             pool,
-                                            HistoryItem::new(app_name, ContentType::Text, text, None, app_icon, None)
+                                            HistoryItem::new(app_name, ContentType::Text, text.clone(), None, app_icon, None)
                                         ).await;
                                     }
                                 }
@@ -187,14 +198,20 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) {
                     }
                 }
 
-                let _ = app.emit("clipboard-content-updated", ());
+                let _ = app_handle.emit("clipboard-content-updated", ());
+                let _ = app_handle.track_event("clipboard_copied", Some(serde_json::json!({
+                    "content_type": if available_types.image { "image" }
+                        else if available_types.files { "files" }
+                        else if available_types.text { "text" }
+                        else { "unknown" }
+                })));
             });
         },
     );
 }
 
-async fn get_pool<R: Runtime>(
-    app_handle: &AppHandle<R>,
+async fn get_pool(
+    app_handle: &AppHandle,
 ) -> Result<tauri::State<'_, SqlitePool>, Box<dyn std::error::Error + Send + Sync>> {
     Ok(app_handle.state::<SqlitePool>())
 }
@@ -211,8 +228,8 @@ pub fn start_monitor(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn save_image_to_file<R: Runtime>(
-    app_handle: &AppHandle<R>,
+async fn save_image_to_file(
+    app_handle: &AppHandle,
     base64_data: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let app_data_dir = app_handle.path().app_data_dir().unwrap();

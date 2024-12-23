@@ -3,6 +3,7 @@ use serde_json;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use tauri::{Emitter, Manager};
+use tauri_plugin_aptabase::EventTracker;
 
 #[derive(Deserialize, Serialize)]
 struct KeybindSetting {
@@ -26,9 +27,16 @@ pub async fn initialize_settings(pool: &SqlitePool) -> Result<(), Box<dyn std::e
 #[tauri::command]
 pub async fn save_keybind(
     app_handle: tauri::AppHandle,
-    keybind: Vec<String>,
     pool: tauri::State<'_, SqlitePool>,
+    keybind: Vec<String>,
 ) -> Result<(), String> {
+    let keybind_str = keybind.join("+");
+    let keybind_clone = keybind_str.clone();
+    
+    app_handle
+        .emit("update-shortcut", &keybind_str)
+        .map_err(|e| e.to_string())?;
+
     let json = serde_json::to_string(&keybind).map_err(|e| e.to_string())?;
 
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)")
@@ -37,10 +45,9 @@ pub async fn save_keybind(
         .await
         .map_err(|e| e.to_string())?;
 
-    let keybind_str = keybind.join("+");
-    app_handle
-        .emit("update-shortcut", keybind_str)
-        .map_err(|e| e.to_string())?;
+    let _ = app_handle.track_event("keybind_saved", Some(serde_json::json!({
+        "keybind": keybind_clone
+    })));
 
     Ok(())
 }
@@ -61,16 +68,21 @@ pub async fn get_setting(
 
 #[tauri::command]
 pub async fn save_setting(
+    app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
     key: String,
     value: String,
 ) -> Result<(), String> {
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .bind(key)
+        .bind(key.clone())
         .bind(value)
         .execute(&*pool)
         .await
         .map_err(|e| e.to_string())?;
+
+    let _ = app_handle.track_event("setting_saved", Some(serde_json::json!({
+        "key": key
+    })));
 
     Ok(())
 }

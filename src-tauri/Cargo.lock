@@ -1644,6 +1644,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "645c6916888f6cb6350d2550b80fb63e734897a8498abe35cfb732b6487804b0"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1729,6 +1744,7 @@ version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d6401deb83407ab3da39eba7e33987a73c3df0c82b4bb5813ee871c19c41d48"
 dependencies = [
+ "futures-channel",
  "futures-core",
  "futures-io",
  "futures-macro",
@@ -4081,6 +4097,7 @@ dependencies = [
  "sqlx",
  "tauri",
  "tauri-build",
+ "tauri-plugin-aptabase",
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard",
  "tauri-plugin-dialog",
@@ -4796,9 +4813,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.133"
+version = "1.0.134"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
+checksum = "d00f4175c42ee48b15416f6193a959ba3a0d67fc699a0db9ad12df9f83991c7d"
 dependencies = [
  "itoa 1.0.11",
  "memchr",
@@ -5662,6 +5679,25 @@ dependencies = [
  "tauri-utils",
  "toml 0.8.2",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-aptabase"
+version = "0.5.1"
+source = "git+https://github.com/aptabase/tauri-plugin-aptabase?branch=v2#373abe1954bf20152082e506d36be07727259bb5"
+dependencies = [
+ "futures",
+ "log",
+ "os_info",
+ "rand 0.8.5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sys-locale",
+ "tauri",
+ "tauri-plugin",
+ "time",
+ "tokio",
 ]
 
 [[package]]

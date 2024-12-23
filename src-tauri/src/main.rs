@@ -7,15 +7,19 @@ mod api;
 mod db;
 mod utils;
 
-use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use tauri::Manager;
 use tauri::WebviewUrl;
 use tauri::WebviewWindow;
+use sqlx::sqlite::SqlitePoolOptions;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
+use tauri_plugin_aptabase::{EventTracker, InitOptions};
 
 fn main() {
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+    let _guard = runtime.enter();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_os::init())
@@ -23,6 +27,19 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::default().build())
+        .plugin(tauri_plugin_aptabase::Builder::new("A-SH-8937252746")
+            .with_options(InitOptions {
+                host: Some("https://aptabase.pandadev.net".to_string()),
+                flush_interval: None,
+            })
+            .with_panic_hook(Box::new(|client, info, msg| {
+                let location = info.location().map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column())).unwrap_or_else(|| "".to_string());
+
+                let _ = client.track_event("panic", Some(serde_json::json!({
+                    "info": format!("{} ({})", msg, location),
+                })));
+            }))
+            .build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![]),
@@ -84,6 +101,8 @@ fn main() {
 
             utils::commands::center_window_on_current_monitor(&main_window);
             main_window.hide()?;
+
+            let _ = app.track_event("app_started", None);
 
             tauri::async_runtime::spawn(async move {
                 api::updater::check_for_updates(app_handle).await;
