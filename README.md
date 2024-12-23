@@ -10,22 +10,27 @@ The fixed and simple clipboard manager for both Windows and Linux.
     <tr>
       <td>Download for</td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.2.0/Qopy-0.2.0.msi">
-          <img src="./public/windows.png"> Windows
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_x64.msi">
+          <img src="./public/windows.png"> Windows (x64)
         </a>
       </td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.2.0/Qopy-0.2.0_silicon.dmg">
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_arm64.msi">
+          <img src="./public/windows.png"> Windows (arm64)
+        </a>
+      </td>
+      <td>
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_silicon.dmg">
           <img src="./public/apple.png"> macOS (Silicon)
         </a>
       </td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.2.0/Qopy-0.2.0_intel.dmg">
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_intel.dmg">
           <img src="./public/apple.png"> macOS (Intel)
         </a>
       </td>
       <td>
-        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.2.0/Qopy-0.2.0.AppImage">
+        <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0.AppImage">
           <img src="./public/linux.png"> Linux
         </a>
       </td>
