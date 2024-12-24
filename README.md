@@ -5,31 +5,31 @@
 
 The fixed and simple clipboard manager for both Windows and Linux.
 
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_x64.msi">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1_x64.msi">
   <img src="./public/windows.png"> Windows (x64)
 </a>
 •
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_arm64.msi">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1_arm64.msi">
   Windows (arm64)
 </a>
 <br>
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0.deb">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1.deb">
   <img src="./public/linux.png"> Linux (deb)
 </a>
 •
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0.rpm">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1.rpm">
   Linux (rpm)
 </a>
 •
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0.">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1.">
   Linux (AppImage)
 </a>
 <br>
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_silicon.dmg">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1_silicon.dmg">
   <img src="./public/apple.png"> macOS (Silicon)
 </a>
 •
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.0/Qopy-0.3.0_intel.dmg">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1_intel.dmg">
   macOS (Intel)
 </a>
 <br>
