@@ -243,12 +243,18 @@ jobs:
         id: release_body
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Debug: Listing tags"
-          git tag -l
-          echo "Debug: Getting latest tag"
-          git describe --tags --abbrev=0 || echo "No tags found"
-          echo "Debug: Generating changelog"
-          CHANGES=$(git log "$(git describe --tags --abbrev=0 2>/dev/null || echo HEAD^)" HEAD --pretty=format:"- %s" || echo "No changelog available")
+          
+          # Get the most recent release tag (v* tags only)
+          LAST_TAG=$(git describe --match "v*" --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1` 2>/dev/null || echo "")
+          
+          if [ -n "$LAST_TAG" ]; then
+            echo "Debug: Found last release tag: $LAST_TAG"
+            CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s")
+          else
+            echo "Debug: No previous release tag found, using first commit"
+            CHANGES=$(git log --pretty=format:"- %s")
+          fi
+          
           echo "Debug: Changelog content:"
           echo "$CHANGES"
           
