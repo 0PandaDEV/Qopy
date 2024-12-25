@@ -14,7 +14,7 @@
     "@tauri-apps/cli": "2.1.0",
     "@tauri-apps/plugin-autostart": "2.2.0",
     "@tauri-apps/plugin-os": "2.2.0",
-    "nuxt": "3.14.1592",
+    "nuxt": "3.15.0",
     "overlayscrollbars": "2.10.1",
     "overlayscrollbars-vue": "0.5.9",
     "sass-embedded": "1.83.0",
