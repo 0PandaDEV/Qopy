@@ -12,7 +12,7 @@
   height: 100vh;
   pointer-events: none;
   user-select: none;
-  z-index: 0;
+  z-index: -1;
   background-image: url('/noise.png');
   background-repeat: repeat;
   image-rendering: pixelated;

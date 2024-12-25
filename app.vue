@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="pointer-events: auto;">
     <NuxtPage />
   </div>
 </template>
@@ -59,6 +59,8 @@ onMounted(async () => {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   user-select: none;
+  position: relative;
+  z-index: 1;
 
   --os-handle-bg: #ADA9A1;
   --os-handle-bg-hover: #78756F;
@@ -66,11 +68,12 @@ onMounted(async () => {
 }
 
 html,
-body,
-#__nuxt {
+body {
   background-color: transparent;
   width: 750px;
   height: 474px;
+  user-select: none !important;
+  pointer-events: none !important;
 }
 
 .os-scrollbar-horizontal {
