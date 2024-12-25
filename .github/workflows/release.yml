@@ -243,7 +243,14 @@ jobs:
         id: release_body
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+          echo "Debug: Listing tags"
+          git tag -l
+          echo "Debug: Getting latest tag"
+          git describe --tags --abbrev=0 || echo "No tags found"
+          echo "Debug: Generating changelog"
+          CHANGES=$(git log "$(git describe --tags --abbrev=0 2>/dev/null || echo HEAD^)" HEAD --pretty=format:"- %s" || echo "No changelog available")
+          echo "Debug: Changelog content:"
+          echo "$CHANGES"
           
           # Calculate hashes with corrected paths
           WINDOWS_ARM_HASH=$(sha256sum "artifacts/windows-arm64-binaries/Qopy-${VERSION}_arm64.msi" | awk '{ print $1 }')
