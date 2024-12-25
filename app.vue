@@ -69,6 +69,8 @@ html,
 body,
 #__nuxt {
   background-color: transparent;
+  width: 750px;
+  height: 474px;
 }
 
 .os-scrollbar-horizontal {
