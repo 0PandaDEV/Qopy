@@ -21,7 +21,7 @@ The fixed and simple clipboard manager for both Windows and Linux.
   Linux (rpm)
 </a>
 •
-<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1.">
+<a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1.AppImage">
   Linux (AppImage)
 </a>
 <br>
