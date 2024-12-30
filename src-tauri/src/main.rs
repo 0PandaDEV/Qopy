@@ -7,14 +7,12 @@ mod api;
 mod db;
 mod utils;
 
+use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use tauri::Manager;
-use tauri::WebviewUrl;
-use tauri::WebviewWindow;
-use sqlx::sqlite::SqlitePoolOptions;
+use tauri_plugin_aptabase::{EventTracker, InitOptions};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
-use tauri_plugin_aptabase::{EventTracker, InitOptions};
 
 fn main() {
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -27,19 +25,27 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::default().build())
-        .plugin(tauri_plugin_aptabase::Builder::new("A-SH-8937252746")
-            .with_options(InitOptions {
-                host: Some("https://aptabase.pandadev.net".to_string()),
-                flush_interval: None,
-            })
-            .with_panic_hook(Box::new(|client, info, msg| {
-                let location = info.location().map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column())).unwrap_or_else(|| "".to_string());
+        .plugin(
+            tauri_plugin_aptabase::Builder::new("A-SH-8937252746")
+                .with_options(InitOptions {
+                    host: Some("https://aptabase.pandadev.net".to_string()),
+                    flush_interval: None,
+                })
+                .with_panic_hook(Box::new(|client, info, msg| {
+                    let location = info
+                        .location()
+                        .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+                        .unwrap_or_else(|| "".to_string());
 
-                let _ = client.track_event("panic", Some(serde_json::json!({
-                    "info": format!("{} ({})", msg, location),
-                })));
-            }))
-            .build())
+                    let _ = client.track_event(
+                        "panic",
+                        Some(serde_json::json!({
+                            "info": format!("{} ({})", msg, location),
+                        })),
+                    );
+                }))
+                .build(),
+        )
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![]),
@@ -52,7 +58,7 @@ fn main() {
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();
             utils::logger::init_logger(&app_data_dir).expect("Failed to initialize logger");
-            
+
             fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
 
             let db_path = app_data_dir.join("data.db");
@@ -76,22 +82,7 @@ fn main() {
                 app_handle_clone.manage(pool);
             });
 
-            let main_window = if let Some(window) = app.get_webview_window("main") {
-                window
-            } else {
-                WebviewWindow::builder(app.handle(), "main", WebviewUrl::App("index.html".into()))
-                    .title("Qopy")
-                    .resizable(false)
-                    .fullscreen(false)
-                    .inner_size(750.0, 474.0)
-                    .focused(true)
-                    .skip_taskbar(true)
-                    .visible(false)
-                    .decorations(false)
-                    .transparent(true)
-                    .always_on_top(false)
-                    .build()?
-            };
+            let main_window = app.get_webview_window("main");
 
             let _ = db::database::setup(app);
             api::hotkeys::setup(app_handle.clone());
@@ -99,8 +90,8 @@ fn main() {
             api::clipboard::setup(app.handle());
             let _ = api::clipboard::start_monitor(app_handle.clone());
 
-            utils::commands::center_window_on_current_monitor(&main_window);
-            main_window.hide()?;
+            utils::commands::center_window_on_current_monitor(main_window.as_ref().unwrap());
+            main_window.as_ref().map(|w| w.hide()).unwrap_or(Ok(()))?;
 
             let _ = app.track_event("app_started", None);
 
