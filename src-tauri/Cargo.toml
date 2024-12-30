@@ -26,14 +26,14 @@ tauri-plugin-prevent-default = "1.0.1"
 tauri-plugin-global-shortcut = "2.2.0"
 tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
 sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 tokio = { version = "1.42.0", features = ["full"] }
 serde_json = "1.0.134"
 rdev = "0.5.3"
 rand = "0.8.5"
 base64 = "0.22.1"
 image = "0.25.5"
-reqwest = { version = "0.12.9", features = ["json", "blocking"] }
+reqwest = { version = "0.12.11", features = ["json", "blocking"] }
 url = "2.5.4"
 regex = "1.11.1"
 sha2 = "0.10.8"
