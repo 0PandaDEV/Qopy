@@ -22,7 +22,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     .enabled(false)
                     .build(app)?])
                 .items(&[&MenuItemBuilder::with_id("show", "Show/Hide").build(app)?])
-                .items(&[&MenuItemBuilder::with_id("keybind", "Change keybind").build(app)?])
+                .items(&[&MenuItemBuilder::with_id("settings", "Settings").build(app)?])
                 .items(&[&MenuItemBuilder::with_id("quit", "Quit").build(app)?])
                 .build()?,
         )
@@ -44,9 +44,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 }
                 window.emit("main_route", ()).unwrap();
             }
-            "keybind" => {
-                let _ = _app.track_event("tray_keybind_change", None);
-                window.emit("change_keybind", ()).unwrap();
+            "settings" => {
+                let _ = _app.track_event("tray_settings", None);
+                window.emit("settings", ()).unwrap();
             }
             _ => (),
         })

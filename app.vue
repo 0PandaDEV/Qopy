@@ -10,15 +10,13 @@ import { app, window } from '@tauri-apps/api';
 import { onMounted } from 'vue'
 
 onMounted(async () => {
-  await listen('change_keybind', async () => {
-    console.log("change_keybind");
+  await listen('settings', async () => {
     await navigateTo('/settings')
     await app.show();
     await window.getCurrentWindow().show();
   })
 
   await listen('main_route', async () => {
-    console.log("main_route");
     await navigateTo('/')
   })
 })
