@@ -23,6 +23,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     .build(app)?])
                 .items(&[&MenuItemBuilder::with_id("show", "Show/Hide").build(app)?])
                 .items(&[&MenuItemBuilder::with_id("keybind", "Change keybind").build(app)?])
+                .items(&[&MenuItemBuilder::with_id("check_updates", "Check for updates").build(app)?])
                 .items(&[&MenuItemBuilder::with_id("quit", "Quit").build(app)?])
                 .build()?,
         )
@@ -47,6 +48,13 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             "keybind" => {
                 let _ = _app.track_event("tray_keybind_change", None);
                 window.emit("change_keybind", ()).unwrap();
+            }
+            "check_updates" => {
+                let _ = _app.track_event("tray_check_updates", None);
+                let app_handle = _app.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    crate::api::updater::check_for_updates(app_handle, true).await;
+                });
             }
             _ => (),
         })
