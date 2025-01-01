@@ -8,7 +8,7 @@ All the data of Qopy is stored inside of a SQLite database.
 |------------------|-----------------------------------------------------------------|
 | Windows          | `C:\Users\USERNAME\AppData\Roaming\net.pandadev.qopy`           |
 | macOS            | `/Users/USERNAME/Library/Application Support/net.pandadev.qopy` |
-| Linux            | `` |
+| Linux            | `/home/USERNAME/.local/share/net.pandadev.qopy` |
 
 ## Disable Windows+V for default clipboard manager
 
