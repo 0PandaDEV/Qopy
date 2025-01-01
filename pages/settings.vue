@@ -1,9 +1,9 @@
 <template>
   <div class="bg">
-    <div class="back">
-      <img @click="router.push('/')" src="../public/back_arrow.svg" />
+    <NuxtLink to="/" class="back">
+      <img src="../public/back_arrow.svg" />
       <p>Back</p>
-    </div>
+    </NuxtLink>
     <div class="bottom-bar">
       <div class="left">
         <img alt="" class="logo" src="../public/logo.png" width="18px" />
@@ -154,29 +154,41 @@ const saveKeybind = async () => {
 onMounted(() => {
   os.value = platform();
 
-  keyboard.down("all", (event) => {
-    const isMacSaveCombo =
-      os.value === "macos" &&
-      (event.code === "MetaLeft" || event.code === "MetaRight") &&
-      event.key === "Enter";
-
-    const isOtherOsSaveCombo =
-      os.value !== "macos" &&
-      (event.code === "ControlLeft" || event.code === "ControlRight") &&
-      event.key === "Enter";
-
-    if (
-      (isMacSaveCombo || isOtherOsSaveCombo) &&
-      !isKeybindInputFocused.value
-    ) {
-      event.preventDefault();
-      saveKeybind();
+  keyboard.down("MetaLeft+Enter", (event) => {
+    if (os.value === "macos" && !isKeybindInputFocused.value) {
+      console.log("Save on macOS")
+      event.preventDefault()
+      saveKeybind()
     }
-  });
+  })
+
+  keyboard.down("MetaRight+Enter", (event) => {
+    if (os.value === "macos" && !isKeybindInputFocused.value) {
+      console.log("Save on macOS")
+      event.preventDefault()
+      saveKeybind()
+    }
+  })
+
+  keyboard.down("ControlLeft+Enter", (event) => {
+    if (os.value !== "macos" && !isKeybindInputFocused.value) {
+      console.log("Save on other OS")
+      event.preventDefault()
+      saveKeybind()
+    }
+  })
+
+  keyboard.down("ControlRight+Enter", (event) => {
+    if (os.value !== "macos" && !isKeybindInputFocused.value) {
+      console.log("Save on other OS")
+      event.preventDefault()
+      saveKeybind()
+    }
+  })
 
   keyboard.down("Escape", (event) => {
-    const now = Date.now();
-    if (!isKeybindInputFocused.value && now - lastBlurTime.value > 100) {
+    console.log("Escape");
+    if (!isKeybindInputFocused.value) {
       event.preventDefault();
       router.push("/");
     }

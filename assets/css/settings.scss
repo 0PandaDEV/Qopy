@@ -43,6 +43,7 @@ $mutedtext: #78756F;
   justify-content: center;
   height: 100vh;
   gap: 6px;
+  z-index: -1;
 
   .title {
     font-size: 20px;
