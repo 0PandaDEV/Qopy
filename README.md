@@ -95,13 +95,13 @@ You can use GitHub Codespaces for online development:
 
 [![][codespaces-shield]][codespaces-link]
 
-Or to get Qopy set up on your machine, you'll need to have Rust and pnpm installed. Then, follow these steps:
+Or to get Qopy set up on your machine, you'll need to have Rust and bun installed. Then, follow these steps:
 
 ```zsh
 git clone https://github.com/0pandadev/Qopy.git
 cd Qopy
-pnpm i
-pnpm dev
+bun i
+bun dev
 ```
 
 > \[!TIP]
@@ -113,7 +113,7 @@ pnpm dev
 To build for production simply execute:
 
 ```zsh
-pnpm build
+bun build
 ```
 
 > \[!NOTE]

@@ -57,11 +57,11 @@ jobs:
           save-if: "true"
       - uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-
-      - run: npm install -g pnpm && pnpm install
+            ${{ runner.os }}-bun-
+      - run: curl -fsSL https://bun.sh/install | bash && bun install
       - name: Import Apple Developer Certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -83,7 +83,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           args: ${{ matrix.args }}
-          
+
       - name: Rename macOS Artifacts
         run: |
           mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
@@ -125,11 +125,11 @@ jobs:
           save-if: "true"
       - uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-
-      - run: npm install -g pnpm && pnpm install
+            ${{ runner.os }}-bun-
+      - run: curl -fsSL https://bun.sh/install | bash && bun install
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -189,16 +189,16 @@ jobs:
           save-if: "true"
       - uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-
+            ${{ runner.os }}-bun-
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-      - run: npm install -g pnpm && pnpm install
+      - run: curl -fsSL https://bun.sh/install | bash && bun install
       - name: Generate Changelog
         id: changelog
         run: |
@@ -243,10 +243,10 @@ jobs:
         id: release_body
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          
+
           # Get the most recent release tag (v* tags only)
           LAST_TAG=$(git describe --match "v*" --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1` 2>/dev/null || echo "")
-          
+
           if [ -n "$LAST_TAG" ]; then
             echo "Debug: Found last release tag: $LAST_TAG"
             CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s")
@@ -254,10 +254,10 @@ jobs:
             echo "Debug: No previous release tag found, using first commit"
             CHANGES=$(git log --pretty=format:"- %s")
           fi
-          
+
           echo "Debug: Changelog content:"
           echo "$CHANGES"
-          
+
           # Calculate hashes with corrected paths
           WINDOWS_ARM_HASH=$(sha256sum "artifacts/windows-arm64-binaries/Qopy-${VERSION}_arm64.msi" | awk '{ print $1 }')
           WINDOWS_64_HASH=$(sha256sum "artifacts/windows-x64-binaries/Qopy-${VERSION}_x64.msi" | awk '{ print $1 }')
@@ -279,11 +279,11 @@ jobs:
 
           RELEASE_BODY=$(cat <<-EOF
           ## ♻️ Changelog
-          
+
           $CHANGES
-          
+
           ## ⬇️ Downloads
-          
+
           - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.msi) - ${WINDOWS_64_HASH}
           - [Windows (ARM64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_arm64.msi) - ${WINDOWS_ARM_HASH}
           - [macOS (Silicon)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_silicon.dmg) - ${MAC_SILICON_HASH}

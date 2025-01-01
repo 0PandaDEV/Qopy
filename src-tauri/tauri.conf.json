@@ -5,8 +5,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm nuxt dev",
-    "beforeBuildCommand": "pnpm nuxt generate"
+    "beforeDevCommand": "bun nuxt dev",
+    "beforeBuildCommand": "bun nuxt generate"
   },
   "app": {
     "windows": [
@@ -51,9 +51,7 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDExNDIzNjA1QjE0NjU1OTkKUldTWlZVYXhCVFpDRWNvNmt0UE5lQmZkblEyZGZiZ2tHelJvT2YvNVpLU1RIM1RKZFQrb2tzWWwK",
-      "endpoints": [
-        "https://qopy.pandadev.net/"
-      ]
+      "endpoints": ["https://qopy.pandadev.net/"]
     }
   },
   "$schema": "../node_modules/@tauri-apps/cli/schema.json"
