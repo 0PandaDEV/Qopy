@@ -61,7 +61,12 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-      - run: curl -fsSL https://bun.sh/install | bash && bun install
+      - run: curl -fsSL https://bun.sh/install | bash
+      - name: Install dependencies
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          source ~/.bashrc
+          bun install
       - name: Import Apple Developer Certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -129,7 +134,12 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-      - run: curl -fsSL https://bun.sh/install | bash && bun install
+      - run: curl -fsSL https://bun.sh/install | bash
+      - name: Install dependencies
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          source ~/.bashrc
+          bun install
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -198,7 +208,12 @@ jobs:
           sudo apt update
           sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev rpm
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-      - run: curl -fsSL https://bun.sh/install | bash && bun install
+      - run: curl -fsSL https://bun.sh/install | bash
+      - name: Install dependencies
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          source ~/.bashrc
+          bun install
       - name: Generate Changelog
         id: changelog
         run: |
