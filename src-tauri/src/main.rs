@@ -96,7 +96,7 @@ fn main() {
             let _ = app.track_event("app_started", None);
 
             tauri::async_runtime::spawn(async move {
-                api::updater::check_for_updates(app_handle).await;
+                api::updater::check_for_updates(app_handle, false).await;
             });
 
             Ok(())
