@@ -12,7 +12,7 @@ use tauri_plugin_aptabase::EventTracker;
 
 lazy_static! {
     static ref HOTKEY_MANAGER: Mutex<Option<GlobalHotKeyManager>> = Mutex::new(None);
-    static ref REGISTERED_HOTKEYS: Mutex<Vec<HotKey>> = Mutex::new(Vec::new());
+    static ref REGISTERED_HOTKEY: Mutex<Option<HotKey>> = Mutex::new(None);
 }
 
 pub fn setup(app_handle: tauri::AppHandle) {
@@ -36,9 +36,6 @@ pub fn setup(app_handle: tauri::AppHandle) {
         .block_on(crate::db::settings::get_keybind(app_handle_clone.clone()))
         .expect("Failed to get initial keybind");
 
-    let initial_shortcut_for_update = initial_keybind.clone();
-    let initial_shortcut_for_save = initial_keybind.clone();
-
     if let Err(e) = register_shortcut(&initial_keybind) {
         eprintln!("Error registering initial shortcut: {:?}", e);
     }
@@ -46,7 +43,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
     app_handle.listen("update-shortcut", move |event| {
         let payload_str = event.payload();
 
-        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_update) {
+        if let Some(old_hotkey) = REGISTERED_HOTKEY.lock().unwrap().take() {
             let manager_guard = HOTKEY_MANAGER.lock().unwrap();
             if let Some(manager) = manager_guard.as_ref() {
                 let _ = manager.unregister(old_hotkey);
@@ -63,7 +60,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
     app_handle.listen("save_keybind", move |event| {
         let payload_str = event.payload().to_string();
 
-        if let Ok(old_hotkey) = parse_hotkey(&initial_shortcut_for_save) {
+        if let Some(old_hotkey) = REGISTERED_HOTKEY.lock().unwrap().take() {
             let manager_guard = HOTKEY_MANAGER.lock().unwrap();
             if let Some(manager) = manager_guard.as_ref() {
                 let _ = manager.unregister(old_hotkey);
@@ -100,7 +97,7 @@ fn register_shortcut(shortcut: &[String]) -> Result<(), Box<dyn std::error::Erro
     let manager_guard = HOTKEY_MANAGER.lock().unwrap();
     if let Some(manager) = manager_guard.as_ref() {
         manager.register(hotkey.clone())?;
-        REGISTERED_HOTKEYS.lock().unwrap().push(hotkey);
+        *REGISTERED_HOTKEY.lock().unwrap() = Some(hotkey);
         Ok(())
     } else {
         Err("Hotkey manager not initialized".into())
