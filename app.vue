@@ -1,25 +1,28 @@
 <template>
-  <div style="pointer-events: auto;">
+  <div style="pointer-events: auto">
     <NuxtPage />
   </div>
 </template>
 
 <script setup lang="ts">
-import { listen } from '@tauri-apps/api/event'
-import { app, window } from '@tauri-apps/api';
-import { onMounted } from 'vue'
+import { listen } from "@tauri-apps/api/event";
+import { app, window } from "@tauri-apps/api";
+import { onMounted } from "vue";
+
+const keyboard = useKeyboard();
 
 onMounted(async () => {
-  await listen('settings', async () => {
-    await navigateTo('/settings')
+  await listen("settings", async () => {
+    keyboard.unregisterAll();
+    await navigateTo("/settings");
     await app.show();
     await window.getCurrentWindow().show();
-  })
+  });
 
-  await listen('main_route', async () => {
-    await navigateTo('/')
-  })
-})
+  await listen("main_route", async () => {
+    await navigateTo("/");
+  });
+});
 </script>
 
 <style lang="scss">
@@ -51,7 +54,7 @@ onMounted(async () => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  color: #E5DFD5;
+  color: #e5dfd5;
   text-decoration: none;
   font-family: SFRoundedRegular;
   scroll-behavior: smooth;
@@ -60,9 +63,9 @@ onMounted(async () => {
   position: relative;
   z-index: 1;
 
-  --os-handle-bg: #ADA9A1;
-  --os-handle-bg-hover: #78756F;
-  --os-handle-bg-active: #78756F;
+  --os-handle-bg: #ada9a1;
+  --os-handle-bg-hover: #78756f;
+  --os-handle-bg-active: #78756f;
 }
 
 html,

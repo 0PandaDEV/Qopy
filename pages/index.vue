@@ -65,10 +65,17 @@
           </template>
           <template v-else-if="hasFavicon(item.favicon ?? '')">
             <img
-              :src="item.favicon ? getFaviconFromDb(item.favicon) : '../public/icons/Link.svg'"
+              :src="
+                item.favicon
+                  ? getFaviconFromDb(item.favicon)
+                  : '../public/icons/Link.svg'
+              "
               alt="Favicon"
               class="favicon"
-              @error="($event.target as HTMLImageElement).src = '../public/icons/Link.svg'" />
+              @error="
+                ($event.target as HTMLImageElement).src =
+                  '../public/icons/Link.svg'
+              " />
           </template>
           <img
             src="../public/icons/File.svg"
@@ -121,8 +128,12 @@
         :src="getYoutubeThumbnail(selectedItem.content)"
         alt="YouTube Thumbnail" />
     </div>
-    <div class="content" v-else-if="selectedItem?.content_type === ContentType.Link && pageOgImage">
-      <img :src="pageOgImage" alt="Image" class="image">
+    <div
+      class="content"
+      v-else-if="
+        selectedItem?.content_type === ContentType.Link && pageOgImage
+      ">
+      <img :src="pageOgImage" alt="Image" class="image" />
     </div>
     <OverlayScrollbarsComponent v-else class="content">
       <span>{{ selectedItem?.content || "" }}</span>
@@ -135,9 +146,7 @@
       <div class="info-content" v-if="selectedItem && getInfo">
         <div class="info-row" v-for="(row, index) in infoRows" :key="index">
           <p class="label">{{ row.label }}</p>
-          <span
-            :class="{ 'url-truncate': row.isUrl }"
-            :data-text="row.value">
+          <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
             {{ row.value }}
           </span>
         </div>
@@ -158,7 +167,15 @@ import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
 import { invoke } from "@tauri-apps/api/core";
 import { HistoryItem, ContentType } from "~/types/types";
-import type { InfoText, InfoImage, InfoFile, InfoLink, InfoColor, InfoCode } from "~/types/types";
+import type {
+  InfoText,
+  InfoImage,
+  InfoFile,
+  InfoLink,
+  InfoColor,
+  InfoCode,
+} from "~/types/types";
+import { Key } from "wrdu-keyboard/key";
 
 interface GroupedHistory {
   label: string;
@@ -188,8 +205,8 @@ const imageSizes = shallowRef<Record<string, string>>({});
 const lastUpdateTime = ref<number>(Date.now());
 const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
-const pageTitle = ref<string>('');
-const pageOgImage = ref<string>('');
+const pageTitle = ref<string>("");
+const pageOgImage = ref<string>("");
 
 const keyboard = useKeyboard();
 
@@ -583,41 +600,35 @@ const setupEventListeners = async (): Promise<void> => {
     searchInput.value?.blur();
   });
 
-  keyboard.down("ArrowDown", (event) => {
-    event.preventDefault();
+  keyboard.prevent.down([Key.DownArrow], (event) => {
     selectNext();
   });
 
-  keyboard.down("ArrowUp", (event) => {
-    event.preventDefault();
+  keyboard.prevent.down([Key.UpArrow], (event) => {
     selectPrevious();
   });
 
-  keyboard.down("Enter", (event) => {
-    event.preventDefault();
+  keyboard.prevent.down([Key.Enter], (event) => {
     pasteSelectedItem();
   });
 
-  keyboard.down("Escape", (event) => {
-    event.preventDefault();
+  keyboard.prevent.down([Key.Escape], (event) => {
     hideApp();
   });
 
-  keyboard.down("all", (event) => {
-    const isMacActionCombo =
-      os.value === "macos" &&
-      (event.code === "MetaLeft" || event.code === "MetaRight") &&
-      event.key === "k";
+  switch (os.value) {
+    case "macos":
+      keyboard.prevent.down([Key.LeftMeta, Key.K], (event) => {});
 
-    const isOtherOsActionCombo =
-      os.value !== "macos" &&
-      (event.code === "ControlLeft" || event.code === "ControlRight") &&
-      event.key === "k";
+      keyboard.prevent.down([Key.RightMeta, Key.K], (event) => {});
+      break;
 
-    if (isMacActionCombo || isOtherOsActionCombo) {
-      event.preventDefault();
-    }
-  });
+    case "linux" || "windows":
+      keyboard.prevent.down([Key.LeftControl, Key.K], (event) => {});
+
+      keyboard.prevent.down([Key.RightControl, Key.K], (event) => {});
+      break;
+  }
 };
 
 const hideApp = async (): Promise<void> => {
@@ -646,7 +657,7 @@ watch(searchQuery, () => {
 
 onMounted(async () => {
   try {
-    os.value = await platform();
+    os.value = platform();
     await loadHistoryChunk();
 
     resultsContainer.value
@@ -686,27 +697,33 @@ const formatFileSize = (bytes: number): string => {
 
 const fetchPageMeta = async (url: string) => {
   try {
-    const [title, ogImage] = await invoke('fetch_page_meta', { url }) as [string, string | null];
+    const [title, ogImage] = (await invoke("fetch_page_meta", { url })) as [
+      string,
+      string | null
+    ];
     pageTitle.value = title;
     if (ogImage) {
       pageOgImage.value = ogImage;
     }
   } catch (error) {
-    console.error('Error fetching page meta:', error);
-    pageTitle.value = 'Error loading title';
+    console.error("Error fetching page meta:", error);
+    pageTitle.value = "Error loading title";
   }
 };
 
-watch(() => selectedItem.value, (newItem) => {
-  if (newItem?.content_type === ContentType.Link) {
-    pageTitle.value = 'Loading...';
-    pageOgImage.value = '';
-    fetchPageMeta(newItem.content);
-  } else {
-    pageTitle.value = '';
-    pageOgImage.value = '';
+watch(
+  () => selectedItem.value,
+  (newItem) => {
+    if (newItem?.content_type === ContentType.Link) {
+      pageTitle.value = "Loading...";
+      pageOgImage.value = "";
+      fetchPageMeta(newItem.content);
+    } else {
+      pageTitle.value = "";
+      pageOgImage.value = "";
+    }
   }
-});
+);
 
 const getInfo = computed(() => {
   if (!selectedItem.value) return null;
@@ -716,7 +733,10 @@ const getInfo = computed(() => {
     copied: selectedItem.value.timestamp,
   };
 
-  const infoMap: Record<ContentType, () => InfoText | InfoImage | InfoFile | InfoLink | InfoColor | InfoCode> = {
+  const infoMap: Record<
+    ContentType,
+    () => InfoText | InfoImage | InfoFile | InfoLink | InfoColor | InfoCode
+  > = {
     [ContentType.Text]: () => ({
       ...baseInfo,
       content_type: ContentType.Text,
@@ -747,20 +767,21 @@ const getInfo = computed(() => {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
-      
+
       const rNorm = r / 255;
       const gNorm = g / 255;
       const bNorm = b / 255;
-      
+
       const max = Math.max(rNorm, gNorm, bNorm);
       const min = Math.min(rNorm, gNorm, bNorm);
-      let h = 0, s = 0;
+      let h = 0,
+        s = 0;
       const l = (max + min) / 2;
 
       if (max !== min) {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        
+
         switch (max) {
           case rNorm:
             h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0);
@@ -780,14 +801,16 @@ const getInfo = computed(() => {
         content_type: ContentType.Color,
         hex: hex,
         rgb: `rgb(${r}, ${g}, ${b})`,
-        hsl: `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`,
+        hsl: `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(
+          l * 100
+        )}%)`,
       };
     },
     [ContentType.Code]: () => ({
       ...baseInfo,
       content_type: ContentType.Code,
       language: selectedItem.value!.language ?? "Unknown",
-      lines: selectedItem.value!.content.split('\n').length,
+      lines: selectedItem.value!.content.split("\n").length,
     }),
   };
 
@@ -799,24 +822,37 @@ const infoRows = computed(() => {
 
   const commonRows = [
     { label: "Source", value: getInfo.value.source, isUrl: false },
-    { label: "Content Type", value: getInfo.value.content_type.charAt(0).toUpperCase() + getInfo.value.content_type.slice(1), isUrl: false },
+    {
+      label: "Content Type",
+      value:
+        getInfo.value.content_type.charAt(0).toUpperCase() +
+        getInfo.value.content_type.slice(1),
+      isUrl: false,
+    },
   ];
 
-  const typeSpecificRows: Record<ContentType, Array<{ label: string; value: string | number; isUrl?: boolean }>> = {
+  const typeSpecificRows: Record<
+    ContentType,
+    Array<{ label: string; value: string | number; isUrl?: boolean }>
+  > = {
     [ContentType.Text]: [
       { label: "Characters", value: (getInfo.value as InfoText).characters },
       { label: "Words", value: (getInfo.value as InfoText).words },
     ],
     [ContentType.Image]: [
       { label: "Dimensions", value: (getInfo.value as InfoImage).dimensions },
-      { label: "Image size", value: formatFileSize((getInfo.value as InfoImage).size) },
+      {
+        label: "Image size",
+        value: formatFileSize((getInfo.value as InfoImage).size),
+      },
     ],
     [ContentType.File]: [
       { label: "Path", value: (getInfo.value as InfoFile).path },
     ],
     [ContentType.Link]: [
-      ...((getInfo.value as InfoLink).title && (getInfo.value as InfoLink).title !== 'Loading...'
-        ? [{ label: "Title", value: (getInfo.value as InfoLink).title || '' }] 
+      ...((getInfo.value as InfoLink).title &&
+      (getInfo.value as InfoLink).title !== "Loading..."
+        ? [{ label: "Title", value: (getInfo.value as InfoLink).title || "" }]
         : []),
       { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },
       { label: "Characters", value: (getInfo.value as InfoLink).characters },
@@ -832,8 +868,9 @@ const infoRows = computed(() => {
     ],
   };
 
-  const specificRows = typeSpecificRows[getInfo.value.content_type]
-    .filter(row => row.value !== "");
+  const specificRows = typeSpecificRows[getInfo.value.content_type].filter(
+    (row) => row.value !== ""
+  );
 
   return [
     ...commonRows,

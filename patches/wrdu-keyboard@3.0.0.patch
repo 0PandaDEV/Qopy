@@ -1,0 +1,123 @@
+diff --git a/node_modules/wrdu-keyboard/.DS_Store b/.DS_Store
+new file mode 100644
+index 0000000000000000000000000000000000000000..fabbd951c2d14c46fd10fa167b8836d116bc0db6
+Binary files /dev/null and b/.DS_Store differ
+diff --git a/dist/runtime/keyboard.d.ts b/dist/runtime/keyboard.d.ts
+index aeae40f3d2bc3efd459cce04c29c21c43884154d..6131bab4895ebb3048a5225f366430d23c5f1f13 100644
+--- a/dist/runtime/keyboard.d.ts
++++ b/dist/runtime/keyboard.d.ts
+@@ -1,15 +1,16 @@
+-import { Key } from './types/keys.js';
+-import { type Plugin } from '#app';
++import { Key } from "./types/keys.js";
++import { type Plugin } from "#app";
+ type Handler = (event: KeyboardEvent) => void;
+ type Config = {
+     once?: boolean;
+     prevent?: boolean;
+ };
+-type PublicConfig = Omit<Config, 'prevent'>;
++type PublicConfig = Omit<Config, "prevent">;
+ type New = (keys: Key[], handler: Handler, config?: PublicConfig) => void;
+ export interface Keyboard {
+     init: () => void;
+     stop: () => void;
++    unregisterAll: () => void;
+     down: New;
+     up: New;
+     prevent: {
+diff --git a/dist/runtime/keyboard.js b/dist/runtime/keyboard.js
+index e16f600258cee90d185ffc52777bed95c14bd93e..e4ce2678db649ec82e5a67fcdb74f5cdb37820aa 100644
+--- a/dist/runtime/keyboard.js
++++ b/dist/runtime/keyboard.js
+@@ -1,13 +1,14 @@
+ import { Key } from "./types/keys.js";
+ import { defineNuxtPlugin } from "#app";
+-const getKeyString = (keys) => keys[0] == Key.All ? keys.sort().join("+") : "All";
++const getKeyString = (keys) => keys.includes(Key.All) ? "All" : keys.sort().join("+");
+ const handlers = {
+   down: {},
+   up: {}
+ };
+ const pressedKeys = /* @__PURE__ */ new Set();
+ const onKeydown = (event) => {
+-  pressedKeys.add(event.code);
++  const key = event.code;
++  pressedKeys.add(key);
+   const pressedArray = Array.from(pressedKeys);
+   const keyString = getKeyString(pressedArray);
+   if (handlers.down[keyString]) {
+@@ -17,13 +18,16 @@ const onKeydown = (event) => {
+       }
+       eventHandler.handler(event);
+       if (eventHandler.once) {
+-        handlers.down[keyString] = handlers.down[keyString].filter((h) => h !== eventHandler);
++        handlers.down[keyString] = handlers.down[keyString].filter(
++          (h) => h !== eventHandler
++        );
+       }
+     });
+   }
+ };
+ const onKeyup = (event) => {
+-  pressedKeys.delete(event.code);
++  const key = event.code;
++  pressedKeys.delete(key);
+   const releasedArray = Array.from(pressedKeys);
+   const keyString = getKeyString(releasedArray);
+   if (handlers.up[keyString]) {
+@@ -33,13 +37,16 @@ const onKeyup = (event) => {
+       }
+       eventHandler.handler(event);
+       if (eventHandler.once) {
+-        handlers.up[keyString] = handlers.up[keyString].filter((h) => h !== eventHandler);
++        handlers.up[keyString] = handlers.up[keyString].filter(
++          (h) => h !== eventHandler
++        );
+       }
+     });
+   }
+ };
+ const init = () => {
+   stop();
++  pressedKeys.clear();
+   window.addEventListener("keydown", onKeydown);
+   window.addEventListener("keyup", onKeyup);
+ };
+@@ -47,6 +54,20 @@ const stop = () => {
+   window.removeEventListener("keydown", onKeydown);
+   window.removeEventListener("keyup", onKeyup);
+ };
++const unregisterAll = () => {
++  Object.keys(handlers.down).forEach((key) => {
++    handlers.down[key].forEach((handler) => {
++      console.log(`Unregistering ${key} ${handler.handler.toString()}`);
++    });
++  });
++  Object.keys(handlers.up).forEach((key) => {
++    handlers.up[key].forEach((handler) => {
++      console.log(`Unregistering ${key} ${handler.handler.toString()}`);
++    });
++  });
++  handlers.down = {};
++  handlers.up = {};
++};
+ const down = (keys, handler, config = {}) => {
+   if (keys.includes(Key.All)) {
+     keys = [Key.All];
+@@ -59,6 +80,7 @@ const down = (keys, handler, config = {}) => {
+     handlers.down[key] = [];
+   }
+   const { once = false, prevent = false } = config;
++  console.log(key, handler.toString());
+   handlers.down[key].push({ handler, prevent, once });
+ };
+ const up = (keys, handler, config = {}) => {
+@@ -84,6 +106,7 @@ const keyboard = defineNuxtPlugin((nuxtApp) => {
+       keyboard: {
+         init,
+         stop,
++        unregisterAll,
+         down: (keys, handler, config = {}) => down(keys, handler, config),
+         up: (keys, handler, config = {}) => up(keys, handler, config),
+         prevent: {
