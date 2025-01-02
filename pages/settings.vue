@@ -10,7 +10,10 @@
         <p>Qopy</p>
       </div>
       <div class="right">
-        <div @click="saveKeybind" class="actions">
+        <div
+          @click="saveKeybind"
+          class="actions"
+          :class="{ disabled: keybind.length === 0 }">
           <p>Save</p>
           <div>
             <img alt="" src="../public/cmd.svg" v-if="os === 'macos'" />
@@ -23,7 +26,9 @@
         </div>
       </div>
     </div>
-    <div class="keybind-container">
+    <div
+      class="keybind-container"
+      :class="{ 'empty-keybind': showEmptyKeybindError }">
       <h2 class="title">Record a new Hotkey</h2>
       <div
         @blur="onBlur"
@@ -52,6 +57,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
+import { Key } from "wrdu-keyboard/key";
 
 const activeModifiers = reactive<Set<string>>(new Set());
 const isKeybindInputFocused = ref(false);
@@ -61,6 +67,7 @@ const lastBlurTime = ref(0);
 const os = ref("");
 const router = useRouter();
 const keyboard = useKeyboard();
+const showEmptyKeybindError = ref(false);
 
 const keyToDisplayMap: Record<string, string> = {
   " ": "Space",
@@ -115,16 +122,17 @@ const updateKeybind = () => {
 const onBlur = () => {
   isKeybindInputFocused.value = false;
   lastBlurTime.value = Date.now();
+  showEmptyKeybindError.value = false;
 };
 
 const onFocus = () => {
   isKeybindInputFocused.value = true;
   activeModifiers.clear();
   keybind.value = [];
+  showEmptyKeybindError.value = false;
 };
 
 const onKeyDown = (event: KeyboardEvent) => {
-  event.preventDefault();
   const key = event.code;
 
   if (key === "Escape") {
@@ -142,57 +150,63 @@ const onKeyDown = (event: KeyboardEvent) => {
   }
 
   updateKeybind();
+  showEmptyKeybindError.value = false;
 };
 
 const saveKeybind = async () => {
-  console.log("New:", keybind.value);
-  const oldKeybind = await invoke<string[]>("get_keybind");
-  console.log("Old:", oldKeybind);
-  await invoke("save_keybind", { keybind: keybind.value });
+  if (keybind.value.length > 0) {
+    console.log("Saving keybind", keybind.value);
+    await invoke("save_keybind", { keybind: keybind });
+  } else {
+    showEmptyKeybindError.value = true;
+  }
 };
 
+os.value = platform();
+
 onMounted(() => {
-  os.value = platform();
-
-  keyboard.down("MetaLeft+Enter", (event) => {
-    if (os.value === "macos" && !isKeybindInputFocused.value) {
-      console.log("Save on macOS")
-      event.preventDefault()
-      saveKeybind()
-    }
-  })
-
-  keyboard.down("MetaRight+Enter", (event) => {
-    if (os.value === "macos" && !isKeybindInputFocused.value) {
-      console.log("Save on macOS")
-      event.preventDefault()
-      saveKeybind()
-    }
-  })
-
-  keyboard.down("ControlLeft+Enter", (event) => {
-    if (os.value !== "macos" && !isKeybindInputFocused.value) {
-      console.log("Save on other OS")
-      event.preventDefault()
-      saveKeybind()
-    }
-  })
-
-  keyboard.down("ControlRight+Enter", (event) => {
-    if (os.value !== "macos" && !isKeybindInputFocused.value) {
-      console.log("Save on other OS")
-      event.preventDefault()
-      saveKeybind()
-    }
-  })
-
-  keyboard.down("Escape", (event) => {
-    console.log("Escape");
-    if (!isKeybindInputFocused.value) {
-      event.preventDefault();
+  keyboard.down([Key.Escape], (event) => {
+    console.log("Escape key pressed");
+    if (isKeybindInputFocused.value) {
+      keybindInput.value?.blur();
+    } else {
       router.push("/");
     }
   });
+
+  switch (os.value) {
+    case "macos":
+      keyboard.down([Key.LeftMeta, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+
+      keyboard.down([Key.RightMeta, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+      break;
+
+    case "linux" || "windows":
+      keyboard.down([Key.LeftControl, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+
+      keyboard.down([Key.RightControl, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+      break;
+  }
+});
+
+onUnmounted(() => {
+  keyboard.unregisterAll();
 });
 </script>
 
