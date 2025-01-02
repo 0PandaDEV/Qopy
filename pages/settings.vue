@@ -1,9 +1,11 @@
 <template>
   <div class="bg">
-    <NuxtLink to="/" class="back">
-      <img src="../public/back_arrow.svg" />
-      <p>Back</p>
-    </NuxtLink>
+    <div class="top-bar">
+      <NuxtLink to="/" class="back">
+        <img src="../public/back_arrow.svg" />
+        <p>Back</p>
+      </NuxtLink>
+    </div>
     <div class="bottom-bar">
       <div class="left">
         <img alt="" class="logo" src="../public/logo.png" width="18px" />
@@ -26,26 +28,61 @@
         </div>
       </div>
     </div>
-    <div
-      class="keybind-container"
-      :class="{ 'empty-keybind': showEmptyKeybindError }">
-      <h2 class="title">Record a new Hotkey</h2>
-      <div
-        @blur="onBlur"
-        @focus="onFocus"
-        class="keybind-input"
-        ref="keybindInput"
-        tabindex="0">
-        <span class="key" v-if="keybind.length === 0">Click here</span>
-        <template v-else>
-          <span
-            :key="index"
-            class="key"
-            :class="{ modifier: isModifier(key) }"
-            v-for="(key, index) in keybind">
-            {{ keyToLabel(key) }}
-          </span>
-        </template>
+    <div class="settings-container">
+      <div class="settings">
+        <div class="names">
+          <p style="line-height: 14px">Startup</p>
+          <p style="line-height: 34px">Qopy Hotkey</p>
+        </div>
+        <div class="actions">
+          <div class="launch">
+            <input
+              type="checkbox"
+              id="launch"
+              v-model="autostart"
+              @change="toggleAutostart" />
+            <label for="launch" class="checkmark">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <g>
+                  <rect width="14" height="14" />
+                  <path
+                    id="Path"
+                    d="M0 2.00696L2.25015 4.25L6 0"
+                    fill="none"
+                    stroke-width="1.5"
+                    stroke="#E5DFD5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    transform="translate(4 5)" />
+                </g>
+              </svg>
+            </label>
+            <p for="launch">Launch Qopy at login</p>
+          </div>
+          <div
+            @blur="onBlur"
+            @focus="onFocus"
+            class="keybind-input"
+            ref="keybindInput"
+            tabindex="0"
+            :class="{ 'empty-keybind': showEmptyKeybindError }">
+            <span class="key" v-if="keybind.length === 0">Click here</span>
+            <template v-else>
+              <span
+                :key="index"
+                class="key"
+                :class="{ modifier: isModifier(key) }"
+                v-for="(key, index) in keybind">
+                {{ keyToLabel(key) }}
+              </span>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -58,6 +95,7 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
 import { Key } from "wrdu-keyboard/key";
 import { KeyValues, KeyLabels } from "../types/keys";
+import { disable, enable } from "@tauri-apps/plugin-autostart";
 
 const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);
@@ -68,6 +106,8 @@ const os = ref("");
 const router = useRouter();
 const keyboard = useKeyboard();
 const showEmptyKeybindError = ref(false);
+const autostart = ref(false);
+const { $settings } = useNuxtApp();
 
 const modifierKeySet = new Set([
   KeyValues.AltLeft,
@@ -130,16 +170,25 @@ const onKeyDown = (event: KeyboardEvent) => {
 
 const saveKeybind = async () => {
   if (keybind.value.length > 0) {
-    await invoke("save_keybind", { keybind: keybind.value });
+    await $settings.saveSetting("keybind", JSON.stringify(keybind.value));
     router.push("/");
   } else {
     showEmptyKeybindError.value = true;
   }
 };
 
+const toggleAutostart = async () => {
+  if (autostart.value === true) {
+    await enable();
+  } else {
+    await disable();
+  }
+  await $settings.saveSetting("autostart", autostart.value ? "true" : "false");
+};
+
 os.value = platform();
 
-onMounted(() => {
+onMounted(async () => {
   keyboard.down([Key.All], (event) => {
     if (isKeybindInputFocused.value) {
       onKeyDown(event);
@@ -183,6 +232,8 @@ onMounted(() => {
       });
       break;
   }
+
+  autostart.value = (await $settings.getSetting("autostart")) === "true";
 });
 
 onUnmounted(() => {

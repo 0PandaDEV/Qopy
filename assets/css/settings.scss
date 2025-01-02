@@ -36,47 +36,114 @@ $mutedtext: #78756f;
   }
 }
 
-.keybind-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 6px;
-  z-index: -1;
+p {
+  font-family: SFRoundedMedium;
+}
 
-  .title {
-    font-size: 20px;
-    font-weight: 800;
-  }
+.settings-container {
+  width: 100%;
+  margin-top: 26px;
+  position: relative;
+  font-size: 12px;
+  font-family: SFRoundedMedium;
 
-  .keybind-input {
-    padding: 6px;
-    border: 1px solid $divider;
-    color: $text2;
+  .settings {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-left: -26px;
     display: flex;
-    border-radius: 13px;
-    outline: none;
-    gap: 6px;
+    gap: 24px;
 
-    .key {
-      color: $text2;
-      font-family: SFRoundedMedium;
-      background-color: $divider;
-      padding: 6px 8px;
-      border-radius: 8px;
+    .names {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      p {
+        font-family: SFRoundedSemiBold;
+        color: $text2;
+      }
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      color: $mutedtext;
+    }
+  }
+}
+
+.launch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background-color: transparent;
+    border-radius: 5px;
+    border: 1px solid $mutedtext;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:checked {
+      ~ .checkmark {
+        opacity: 1;
+      }
     }
   }
 
-  .keybind-input:focus {
-    border: 1px solid rgba(255, 255, 255, 0.2);
+  .checkmark {
+    height: 14px;
+    width: 14px;
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.2s;
   }
 
-  &.empty-keybind {
-    .keybind-input {
-      border-color: rgba(255, 82, 82, 0.298);
-    }
+  p {
+    color: $text2;
   }
+}
+
+.keybind-input {
+  width: min-content;
+  white-space: nowrap;
+  padding: 6px;
+  border: 1px solid $divider;
+  color: $text2;
+  display: flex;
+  border-radius: 10px;
+  outline: none;
+  gap: 4px;
+
+  .key {
+    color: $text2;
+    font-family: SFRoundedMedium;
+    background-color: $divider;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+}
+
+.keybind-input:focus {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-keybind {
+  border-color: rgba(255, 82, 82, 0.298);
+}
+
+.top-bar {
+  width: 100%;
+  height: 56px;
+  border-bottom: 1px solid $divider;
 }
 
 .bottom-bar {
@@ -143,6 +210,10 @@ $mutedtext: #78756f;
       background-color: transparent;
       transition: all 0.2s;
       cursor: pointer;
+
+      p {
+        color: $text;
+      }
 
       &.disabled {
         pointer-events: none;
