@@ -22,7 +22,7 @@ $mutedtext: #78756f;
   position: fixed;
   top: 0;
   left: 0;
-  height: 54px;
+  height: 56px;
   background-color: transparent;
   outline: none;
   border: none;
@@ -35,10 +35,10 @@ $mutedtext: #78756f;
 
 .results {
   position: absolute;
-  width: 284px;
-  top: 53px;
+  width: 286px;
+  top: 55px;
   left: 0;
-  height: calc(100vh - 95px);
+  height: 417px;
   border-right: 1px solid $divider;
   display: flex;
   flex-direction: column;
@@ -46,6 +46,7 @@ $mutedtext: #78756f;
   padding-bottom: 8px;
   overflow-y: auto;
   overflow-x: hidden;
+  z-index: 3;
 
   .result {
     height: 40px;
@@ -59,6 +60,7 @@ $mutedtext: #78756f;
     overflow: hidden;
     text-overflow: clip;
     white-space: nowrap;
+    color: $text;
   }
 
   .result {
@@ -96,20 +98,22 @@ $mutedtext: #78756f;
 
 .content {
   position: absolute;
-  top: 53px;
-  left: 284px;
-  height: calc(100vh - 254px);
+  top: 55px;
+  left: 285px;
+  height: 220px;
   font-family: CommitMono !important;
   font-size: 12px;
   letter-spacing: 1;
   border-radius: 10px;
-  width: calc(100vw - 286px);
+  width: 465px;
   white-space: pre-wrap;
   word-wrap: break-word;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
+  z-index: 2;
+  color: $text;
 
   &:not(:has(.image)) {
     padding: 8px;
@@ -128,7 +132,7 @@ $mutedtext: #78756f;
 }
 
 .bottom-bar {
-  height: 40px;
+  height: 39px;
   width: calc(100vw - 2px);
   backdrop-filter: blur(18px);
   background-color: hsla(40, 3%, 16%, 0.8);
@@ -215,18 +219,20 @@ $mutedtext: #78756f;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  bottom: 40px;
-  left: 284px;
+  bottom: 39px;
+  left: 285px;
   height: 160px;
-  width: calc(100vw - 286px);
+  width: 465px;
   border-top: 1px solid $divider;
   background-color: $primary;
   padding: 14px;
+  z-index: 1;
 
   .title {
     font-family: SFRoundedSemiBold;
     font-size: 12px;
     letter-spacing: 0.6px;
+    color: $text;
   }
 
   .info-content {
