@@ -131,6 +131,7 @@ const onKeyDown = (event: KeyboardEvent) => {
 const saveKeybind = async () => {
   if (keybind.value.length > 0) {
     await invoke("save_keybind", { keybind: keybind.value });
+    router.push("/");
   } else {
     showEmptyKeybindError.value = true;
   }
