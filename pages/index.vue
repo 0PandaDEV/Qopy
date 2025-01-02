@@ -162,7 +162,6 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { app, window } from "@tauri-apps/api";
 import { platform } from "@tauri-apps/plugin-os";
-import { enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
 import { invoke } from "@tauri-apps/api/core";
@@ -666,10 +665,6 @@ onMounted(async () => {
       ?.viewport?.addEventListener("scroll", handleScroll);
 
     await setupEventListeners();
-
-    if (!(await isEnabled())) {
-      await enable();
-    }
   } catch (error) {
     console.error("Error during onMounted:", error);
   }

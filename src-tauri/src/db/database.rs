@@ -69,9 +69,9 @@ async fn apply_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::E
         .files()
         .filter_map(|file| {
             let file_name = file.path().file_name()?.to_str()?;
-            if file_name.ends_with(".sql") && file_name.starts_with("migration") {
+            if file_name.ends_with(".sql") && file_name.starts_with("v") {
                 let version: i64 = file_name
-                    .trim_start_matches("migration")
+                    .trim_start_matches("v")
                     .trim_end_matches(".sql")
                     .parse()
                     .ok()?;

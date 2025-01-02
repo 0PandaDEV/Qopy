@@ -12,14 +12,6 @@ export default defineNuxtPlugin(() => {
         async saveSetting(key: string, value: string): Promise<void> {
           await invoke<void>("save_setting", { key, value });
         },
-
-        async getKeybind(): Promise<string[]> {
-          return await invoke<string[]>("get_keybind");
-        },
-
-        async saveKeybind(keybind: string[]): Promise<void> {
-          await invoke<void>("save_keybind", { keybind });
-        },
       },
     },
   };

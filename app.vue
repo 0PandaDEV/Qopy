@@ -7,9 +7,11 @@
 <script setup lang="ts">
 import { listen } from "@tauri-apps/api/event";
 import { app, window } from "@tauri-apps/api";
+import { disable, enable } from "@tauri-apps/plugin-autostart";
 import { onMounted } from "vue";
 
 const keyboard = useKeyboard();
+const { $settings } = useNuxtApp();
 
 onMounted(async () => {
   await listen("settings", async () => {
@@ -18,6 +20,12 @@ onMounted(async () => {
     await app.show();
     await window.getCurrentWindow().show();
   });
+
+  if ((await $settings.getSetting("autostart")) === "true") {
+    await enable();
+  } else {
+    await disable();
+  }
 
   await listen("main_route", async () => {
     await navigateTo("/");
@@ -54,7 +62,6 @@ onMounted(async () => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  color: #e5dfd5;
   text-decoration: none;
   font-family: SFRoundedRegular;
   scroll-behavior: smooth;
