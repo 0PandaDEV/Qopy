@@ -59,10 +59,12 @@ p {
       display: flex;
       flex-direction: column;
       gap: 16px;
-
+      
       p {
         font-family: SFRoundedSemiBold;
         color: $text2;
+        display: flex;
+        justify-content: right;
       }
     }
 
