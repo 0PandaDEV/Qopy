@@ -1,10 +1,10 @@
-$primary: #2E2D2B;
-$accent: #FEB453;
+$primary: #2e2d2b;
+$accent: #feb453;
 $divider: #ffffff0d;
 
-$text: #E5DFD5;
-$text2: #ADA9A1;
-$mutedtext: #78756F;
+$text: #e5dfd5;
+$text2: #ada9a1;
+$mutedtext: #78756f;
 
 .bg {
   width: 750px;
@@ -25,7 +25,7 @@ $mutedtext: #78756F;
   gap: 8px;
   align-items: center;
 
-  img{
+  img {
     background-color: $divider;
     border-radius: 6px;
     padding: 8px 6px;
@@ -70,6 +70,12 @@ $mutedtext: #78756F;
 
   .keybind-input:focus {
     border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  &.empty-keybind {
+    .keybind-input {
+      border-color: rgba(255, 82, 82, 0.298);
+    }
   }
 }
 
@@ -124,7 +130,7 @@ $mutedtext: #78756F;
       background-color: $divider;
       margin-left: 8px;
       margin-right: 4px;
-      transition: all .2s;
+      transition: all 0.2s;
     }
 
     .actions {
@@ -135,15 +141,20 @@ $mutedtext: #78756F;
       gap: 8px;
       border-radius: 7px;
       background-color: transparent;
-      transition: all .2s;
+      transition: all 0.2s;
       cursor: pointer;
+
+      &.disabled {
+        pointer-events: none;
+        opacity: 0.5;
+      }
     }
 
     .actions:hover {
       background-color: $divider;
     }
 
-    &:hover .actions:hover~.divider {
+    &:hover .actions:hover ~ .divider {
       opacity: 0;
     }
   }
