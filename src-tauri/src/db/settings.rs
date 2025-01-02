@@ -30,11 +30,8 @@ pub async fn save_keybind(
     pool: tauri::State<'_, SqlitePool>,
     keybind: Vec<String>,
 ) -> Result<(), String> {
-    let keybind_str = keybind.join("+");
-    let keybind_clone = keybind_str.clone();
-    
     app_handle
-        .emit("update-shortcut", &keybind_str)
+        .emit("update-shortcut", &keybind)
         .map_err(|e| e.to_string())?;
 
     let json = serde_json::to_string(&keybind).map_err(|e| e.to_string())?;
@@ -46,7 +43,7 @@ pub async fn save_keybind(
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("keybind_saved", Some(serde_json::json!({
-        "keybind": keybind_clone
+        "keybind": keybind
     })));
 
     Ok(())
@@ -97,7 +94,7 @@ pub async fn get_keybind(app_handle: tauri::AppHandle) -> Result<Vec<String>, St
         .map_err(|e| e.to_string())?;
 
     let json = row.map(|r| r.get::<String, _>("value")).unwrap_or_else(|| {
-        serde_json::to_string(&vec!["Meta".to_string(), "V".to_string()])
+        serde_json::to_string(&vec!["MetaLeft".to_string(), "KeyV".to_string()])
             .expect("Failed to serialize default keybind")
     });
 
