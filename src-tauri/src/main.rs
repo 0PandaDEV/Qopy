@@ -1,7 +1,4 @@
-#![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
-)]
+#![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
 
 mod api;
 mod db;
@@ -10,7 +7,7 @@ mod utils;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use tauri::Manager;
-use tauri_plugin_aptabase::{EventTracker, InitOptions};
+use tauri_plugin_aptabase::{ EventTracker, InitOptions };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
 
@@ -18,7 +15,8 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     let _guard = runtime.enter();
 
-    tauri::Builder::default()
+    tauri::Builder
+        ::default()
         .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
@@ -26,34 +24,37 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::default().build())
         .plugin(
-            tauri_plugin_aptabase::Builder::new("A-SH-8937252746")
+            tauri_plugin_aptabase::Builder
+                ::new("A-SH-8937252746")
                 .with_options(InitOptions {
                     host: Some("https://aptabase.pandadev.net".to_string()),
                     flush_interval: None,
                 })
-                .with_panic_hook(Box::new(|client, info, msg| {
-                    let location = info
-                        .location()
-                        .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
-                        .unwrap_or_else(|| "".to_string());
+                .with_panic_hook(
+                    Box::new(|client, info, msg| {
+                        let location = info
+                            .location()
+                            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+                            .unwrap_or_else(|| "".to_string());
 
-                    let _ = client.track_event(
-                        "panic",
-                        Some(serde_json::json!({
+                        let _ = client.track_event(
+                            "panic",
+                            Some(
+                                serde_json::json!({
                             "info": format!("{} ({})", msg, location),
-                        })),
-                    );
-                }))
-                .build(),
+                        })
+                            )
+                        );
+                    })
+                )
+                .build()
         )
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec![]),
-        ))
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(
-            tauri_plugin_prevent_default::Builder::new()
+            tauri_plugin_prevent_default::Builder
+                ::new()
                 .with_flags(Flags::all().difference(Flags::CONTEXT_MENU))
-                .build(),
+                .build()
         )
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().unwrap();
@@ -75,8 +76,7 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 let pool = SqlitePoolOptions::new()
                     .max_connections(5)
-                    .connect(&db_url)
-                    .await
+                    .connect(&db_url).await
                     .expect("Failed to create pool");
 
                 app_handle_clone.manage(pool);
@@ -91,7 +91,10 @@ fn main() {
             let _ = api::clipboard::start_monitor(app_handle.clone());
 
             utils::commands::center_window_on_current_monitor(main_window.as_ref().unwrap());
-            main_window.as_ref().map(|w| w.hide()).unwrap_or(Ok(()))?;
+            main_window
+                .as_ref()
+                .map(|w| w.hide())
+                .unwrap_or(Ok(()))?;
 
             let _ = app.track_event("app_started", None);
 
@@ -109,21 +112,23 @@ fn main() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            api::clipboard::write_and_paste,
-            db::history::get_history,
-            db::history::add_history_item,
-            db::history::search_history,
-            db::history::load_history_chunk,
-            db::history::delete_history_item,
-            db::history::clear_history,
-            db::history::read_image,
-            db::settings::get_setting,
-            db::settings::save_setting,
-            db::settings::save_keybind,
-            db::settings::get_keybind,
-            utils::commands::fetch_page_meta,
-        ])
+        .invoke_handler(
+            tauri::generate_handler![
+                api::clipboard::write_and_paste,
+                db::history::get_history,
+                db::history::add_history_item,
+                db::history::search_history,
+                db::history::load_history_chunk,
+                db::history::delete_history_item,
+                db::history::clear_history,
+                db::history::read_image,
+                db::settings::get_setting,
+                db::settings::save_setting,
+                db::settings::save_keybind,
+                db::settings::get_keybind,
+                utils::commands::fetch_page_meta
+            ]
+        )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

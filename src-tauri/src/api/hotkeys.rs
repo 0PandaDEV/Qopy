@@ -1,13 +1,15 @@
 use crate::utils::commands::center_window_on_current_monitor;
 use crate::utils::keys::KeyCode;
 use global_hotkey::{
-    hotkey::{Code, HotKey, Modifiers},
-    GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
+    hotkey::{ Code, HotKey, Modifiers },
+    GlobalHotKeyEvent,
+    GlobalHotKeyManager,
+    HotKeyState,
 };
 use lazy_static::lazy_static;
 use std::str::FromStr;
 use std::sync::Mutex;
-use tauri::{AppHandle, Listener, Manager};
+use tauri::{ AppHandle, Listener, Manager };
 use tauri_plugin_aptabase::EventTracker;
 
 lazy_static! {
@@ -110,10 +112,18 @@ fn parse_hotkey(shortcut: &[String]) -> Result<HotKey, Box<dyn std::error::Error
 
     for part in shortcut {
         match part.as_str() {
-            "ControlLeft" => modifiers |= Modifiers::CONTROL,
-            "AltLeft" => modifiers |= Modifiers::ALT,
-            "ShiftLeft" => modifiers |= Modifiers::SHIFT,
-            "MetaLeft" => modifiers |= Modifiers::META,
+            "ControlLeft" => {
+                modifiers |= Modifiers::CONTROL;
+            }
+            "AltLeft" => {
+                modifiers |= Modifiers::ALT;
+            }
+            "ShiftLeft" => {
+                modifiers |= Modifiers::SHIFT;
+            }
+            "MetaLeft" => {
+                modifiers |= Modifiers::META;
+            }
             key => {
                 code = Some(Code::from(KeyCode::from_str(key)?));
             }
@@ -144,8 +154,10 @@ fn handle_hotkey_event(app_handle: &AppHandle) {
 
     let _ = app_handle.track_event(
         "hotkey_triggered",
-        Some(serde_json::json!({
+        Some(
+            serde_json::json!({
             "action": if window.is_visible().unwrap() { "hide" } else { "show" }
-        })),
+        })
+        )
     );
 }

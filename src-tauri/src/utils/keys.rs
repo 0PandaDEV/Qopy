@@ -105,7 +105,9 @@ impl FromStr for KeyCode {
             "F10" => Code::F10,
             "F11" => Code::F11,
             "F12" => Code::F12,
-            _ => return Err(format!("Unknown key code: {}", s)),
+            _ => {
+                return Err(format!("Unknown key code: {}", s));
+            }
         };
         Ok(KeyCode(code))
     }

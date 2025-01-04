@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::{ DateTime, Utc };
+use serde::{ Deserialize, Serialize };
 use std::fmt;
 use uuid::Uuid;
 
@@ -115,7 +115,7 @@ impl HistoryItem {
         content: String,
         favicon: Option<String>,
         source_icon: Option<String>,
-        language: Option<String>,
+        language: Option<String>
     ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -130,7 +130,7 @@ impl HistoryItem {
     }
 
     pub fn to_row(
-        &self,
+        &self
     ) -> (
         String,
         String,

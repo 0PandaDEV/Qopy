@@ -1,5 +1,5 @@
-use include_dir::{include_dir, Dir};
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use include_dir::{ include_dir, Dir };
+use sqlx::sqlite::{ SqlitePool, SqlitePoolOptions };
 use std::fs;
 use tauri::Manager;
 use tokio::runtime::Runtime as TokioRuntime;
@@ -25,8 +25,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let pool = rt.block_on(async {
         SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(&db_url)
-            .await
+            .connect(&db_url).await
             .expect("Failed to create pool")
     });
 
@@ -49,24 +48,22 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn apply_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS schema_version (
+    sqlx
+        ::query(
+            "CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER PRIMARY KEY,
             applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );",
-    )
-    .execute(pool)
-    .await?;
+        );"
+        )
+        .execute(pool).await?;
 
-    let current_version: Option<i64> =
-        sqlx::query_scalar("SELECT MAX(version) FROM schema_version")
-            .fetch_one(pool)
-            .await?;
+    let current_version: Option<i64> = sqlx
+        ::query_scalar("SELECT MAX(version) FROM schema_version")
+        .fetch_one(pool).await?;
 
     let current_version = current_version.unwrap_or(0);
 
-    let mut migration_files: Vec<(i64, &str)> = MIGRATIONS_DIR
-        .files()
+    let mut migration_files: Vec<(i64, &str)> = MIGRATIONS_DIR.files()
         .filter_map(|file| {
             let file_name = file.path().file_name()?.to_str()?;
             if file_name.ends_with(".sql") && file_name.starts_with("v") {
@@ -93,16 +90,16 @@ async fn apply_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::E
                 .collect();
 
             for statement in statements {
-                sqlx::query(statement)
-                    .execute(pool)
-                    .await
+                sqlx
+                    ::query(statement)
+                    .execute(pool).await
                     .map_err(|e| format!("Failed to execute migration {}: {}", version, e))?;
             }
 
-            sqlx::query("INSERT INTO schema_version (version) VALUES (?)")
+            sqlx
+                ::query("INSERT INTO schema_version (version) VALUES (?)")
                 .bind(version)
-                .execute(pool)
-                .await?;
+                .execute(pool).await?;
         }
     }
 
