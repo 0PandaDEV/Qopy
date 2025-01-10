@@ -6,20 +6,21 @@ use global_hotkey::{
     GlobalHotKeyManager,
     HotKeyState,
 };
+use parking_lot::Mutex;
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::Arc;
 use tauri::{ AppHandle, Manager, Listener };
 use tauri_plugin_aptabase::EventTracker;
-use tokio::sync::OnceCell;
 
-static HOTKEY_MANAGER: OnceCell<Mutex<Option<GlobalHotKeyManager>>> = OnceCell::const_new();
-static REGISTERED_HOTKEY: OnceCell<Mutex<Option<HotKey>>> = OnceCell::const_new();
+#[derive(Default)]
+struct HotkeyState {
+    manager: Option<GlobalHotKeyManager>,
+    registered_hotkey: Option<HotKey>,
+}
 
 pub fn setup(app_handle: tauri::AppHandle) {
-    let _ = HOTKEY_MANAGER.set(Mutex::new(None));
-    let _ = REGISTERED_HOTKEY.set(Mutex::new(None));
-
-    let app_handle_clone = app_handle.clone();
+    let state = Arc::new(Mutex::new(HotkeyState::default()));
+    
     let manager = match GlobalHotKeyManager::new() {
         Ok(manager) => manager,
         Err(err) => {
@@ -28,49 +29,48 @@ pub fn setup(app_handle: tauri::AppHandle) {
         }
     };
 
-    if let Some(hotkey_manager) = HOTKEY_MANAGER.get() {
-        let mut manager_guard = hotkey_manager.lock().unwrap();
-        *manager_guard = Some(manager);
+    {
+        let mut hotkey_state = state.lock();
+        hotkey_state.manager = Some(manager);
     }
 
     let rt = app_handle.state::<tokio::runtime::Runtime>();
     let initial_keybind = rt
-        .block_on(crate::db::settings::get_keybind(app_handle_clone.clone()))
+        .block_on(crate::db::settings::get_keybind(app_handle.clone()))
         .expect("Failed to get initial keybind");
 
-    if let Err(e) = register_shortcut(&initial_keybind) {
+    if let Err(e) = register_shortcut(&state, &initial_keybind) {
         eprintln!("Error registering initial shortcut: {:?}", e);
     }
 
-    setup_event_listeners(&app_handle);
-    setup_hotkey_receiver(app_handle);
-}
-
-fn setup_event_listeners(app_handle: &AppHandle) {
+    let state_clone = state.clone();
     app_handle.listen("update-shortcut", move |event| {
         let payload_str = event.payload().replace("\\\"", "\"");
         let trimmed_str = payload_str.trim_matches('"');
-        unregister_current_hotkey();
+        unregister_current_hotkey(&state_clone);
         
         let payload: Vec<String> = serde_json::from_str(trimmed_str).unwrap_or_default();
-        if let Err(e) = register_shortcut(&payload) {
+        if let Err(e) = register_shortcut(&state_clone, &payload) {
             eprintln!("Error re-registering shortcut: {:?}", e);
         }
     });
 
+    let state_clone = state.clone();
     app_handle.listen("save_keybind", move |event| {
         let payload_str = event.payload().to_string();
-        unregister_current_hotkey();
+        unregister_current_hotkey(&state_clone);
         
         let payload: Vec<String> = serde_json::from_str(&payload_str).unwrap_or_default();
-        if let Err(e) = register_shortcut(&payload) {
+        if let Err(e) = register_shortcut(&state_clone, &payload) {
             eprintln!("Error registering saved shortcut: {:?}", e);
         }
     });
+
+    setup_hotkey_receiver(app_handle);
 }
 
 fn setup_hotkey_receiver(app_handle: AppHandle) {
-    tauri::async_runtime::spawn(async move {
+    std::thread::spawn(move || {
         loop {
             match GlobalHotKeyEvent::receiver().recv() {
                 Ok(event) => {
@@ -85,32 +85,23 @@ fn setup_hotkey_receiver(app_handle: AppHandle) {
     });
 }
 
-fn unregister_current_hotkey() {
-    if let Some(registered) = REGISTERED_HOTKEY.get() {
-        if let Some(old_hotkey) = registered.lock().unwrap().take() {
-            if let Some(manager) = HOTKEY_MANAGER.get() {
-                if let Some(manager) = manager.lock().unwrap().as_ref() {
-                    let _ = manager.unregister(old_hotkey);
-                }
-            }
+fn unregister_current_hotkey(state: &Arc<Mutex<HotkeyState>>) {
+    let mut hotkey_state = state.lock();
+    if let Some(old_hotkey) = hotkey_state.registered_hotkey.take() {
+        if let Some(manager) = &hotkey_state.manager {
+            let _ = manager.unregister(old_hotkey);
         }
     }
 }
 
-fn register_shortcut(shortcut: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+fn register_shortcut(state: &Arc<Mutex<HotkeyState>>, shortcut: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let hotkey = parse_hotkey(shortcut)?;
+    let mut hotkey_state = state.lock();
 
-    if let Some(manager) = HOTKEY_MANAGER.get() {
-        let manager_guard = manager.lock().unwrap();
-        if let Some(manager) = manager_guard.as_ref() {
-            manager.register(hotkey.clone())?;
-            if let Some(registered) = REGISTERED_HOTKEY.get() {
-                *registered.lock().unwrap() = Some(hotkey);
-            }
-            Ok(())
-        } else {
-            Err("Hotkey manager not initialized".into())
-        }
+    if let Some(manager) = &hotkey_state.manager {
+        manager.register(hotkey.clone())?;
+        hotkey_state.registered_hotkey = Some(hotkey);
+        Ok(())
     } else {
         Err("Hotkey manager not initialized".into())
     }
