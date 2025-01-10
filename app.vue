@@ -1,27 +1,36 @@
 <template>
-  <div style="pointer-events: auto;">
+  <div style="pointer-events: auto">
     <NuxtPage />
   </div>
 </template>
 
 <script setup lang="ts">
-import { listen } from '@tauri-apps/api/event'
-import { app, window } from '@tauri-apps/api';
-import { onMounted } from 'vue'
+import { listen } from "@tauri-apps/api/event";
+import { app, window } from "@tauri-apps/api";
+import { disable, enable } from "@tauri-apps/plugin-autostart";
+import { onMounted } from "vue";
+
+const keyboard = useKeyboard();
+const { $settings } = useNuxtApp();
 
 onMounted(async () => {
-  await listen('change_keybind', async () => {
-    console.log("change_keybind");
-    await navigateTo('/settings')
+  await listen("settings", async () => {
+    keyboard.unregisterAll();
+    await navigateTo("/settings");
     await app.show();
     await window.getCurrentWindow().show();
-  })
+  });
 
-  await listen('main_route', async () => {
-    console.log("main_route");
-    await navigateTo('/')
-  })
-})
+  if ((await $settings.getSetting("autostart")) === "true") {
+    await enable();
+  } else {
+    await disable();
+  }
+
+  await listen("main_route", async () => {
+    await navigateTo("/");
+  });
+});
 </script>
 
 <style lang="scss">
@@ -53,7 +62,6 @@ onMounted(async () => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  color: #E5DFD5;
   text-decoration: none;
   font-family: SFRoundedRegular;
   scroll-behavior: smooth;
@@ -62,9 +70,9 @@ onMounted(async () => {
   position: relative;
   z-index: 1;
 
-  --os-handle-bg: #ADA9A1;
-  --os-handle-bg-hover: #78756F;
-  --os-handle-bg-active: #78756F;
+  --os-handle-bg: #ada9a1;
+  --os-handle-bg-hover: #78756f;
+  --os-handle-bg-active: #78756f;
 }
 
 html,

@@ -1,6 +1,5 @@
-use tauri::Manager;
-use tauri::{async_runtime, AppHandle};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri::{ async_runtime, AppHandle };
+use tauri_plugin_dialog::{ DialogExt, MessageDialogButtons, MessageDialogKind };
 use tauri_plugin_updater::UpdaterExt;
 
 pub async fn check_for_updates(app: AppHandle, prompted: bool) {
@@ -26,18 +25,35 @@ pub async fn check_for_updates(app: AppHandle, prompted: bool) {
             app.dialog()
                 .message(msg)
                 .title("Qopy Update Available")
-                .buttons(MessageDialogButtons::OkCancelCustom(String::from("Install"), String::from("Cancel")))
+                .buttons(
+                    MessageDialogButtons::OkCancelCustom(
+                        String::from("Install"),
+                        String::from("Cancel")
+                    )
+                )
                 .show(move |response| {
                     if !response {
                         return;
                     }
                     async_runtime::spawn(async move {
-                        match update.download_and_install(|_, _| {}, || {}).await {
+                        match
+                            update.download_and_install(
+                                |_, _| {},
+                                || {}
+                            ).await
+                        {
                             Ok(_) => {
                                 app.dialog()
-                                    .message("Update installed successfully. The application needs to restart to apply the changes.")
-                                    .title("Qopy Needs to Restart")
-                                    .buttons(MessageDialogButtons::OkCancelCustom(String::from("Restart"), String::from("Cancel")))
+                                    .message(
+                                        "Update installed successfully. The application needs to restart to apply the changes."
+                                    )
+                                    .title("Qopy Update Installed")
+                                    .buttons(
+                                        MessageDialogButtons::OkCancelCustom(
+                                            String::from("Restart"),
+                                            String::from("Cancel")
+                                        )
+                                    )
                                     .show(move |response| {
                                         if response {
                                             app.restart();
@@ -47,7 +63,9 @@ pub async fn check_for_updates(app: AppHandle, prompted: bool) {
                             Err(e) => {
                                 println!("Error installing new update: {:?}", e);
                                 app.dialog()
-                                    .message("Failed to install new update. The new update can be downloaded from Github")
+                                    .message(
+                                        "Failed to install new update. The new update can be downloaded from Github"
+                                    )
                                     .kind(MessageDialogKind::Error)
                                     .show(|_| {});
                             }

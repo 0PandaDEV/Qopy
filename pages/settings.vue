@@ -1,8 +1,10 @@
 <template>
   <div class="bg">
-    <div class="back">
-      <img @click="router.push('/')" src="../public/back_arrow.svg" />
-      <p>Back</p>
+    <div class="top-bar">
+      <NuxtLink to="/" class="back">
+        <img src="../public/back_arrow.svg" />
+        <p>Back</p>
+      </NuxtLink>
     </div>
     <div class="bottom-bar">
       <div class="left">
@@ -10,7 +12,10 @@
         <p>Qopy</p>
       </div>
       <div class="right">
-        <div @click="saveKeybind" class="actions">
+        <div
+          @click="saveKeybind"
+          class="actions"
+          :class="{ disabled: keybind.length === 0 }">
           <p>Save</p>
           <div>
             <img alt="" src="../public/cmd.svg" v-if="os === 'macos'" />
@@ -23,25 +28,61 @@
         </div>
       </div>
     </div>
-    <div class="keybind-container">
-      <h2 class="title">Record a new Hotkey</h2>
-      <div
-        @blur="onBlur"
-        @focus="onFocus"
-        @keydown="onKeyDown"
-        class="keybind-input"
-        ref="keybindInput"
-        tabindex="0">
-        <span class="key" v-if="keybind.length === 0">Click here</span>
-        <template v-else>
-          <span
-            :key="index"
-            class="key"
-            :class="{ modifier: isModifier(key) }"
-            v-for="(key, index) in keybind">
-            {{ keyToDisplay(key) }}
-          </span>
-        </template>
+    <div class="settings-container">
+      <div class="settings">
+        <div class="names">
+          <p style="line-height: 14px">Startup</p>
+          <p style="line-height: 34px">Qopy Hotkey</p>
+        </div>
+        <div class="actions">
+          <div class="launch">
+            <input
+              type="checkbox"
+              id="launch"
+              v-model="autostart"
+              @change="toggleAutostart" />
+            <label for="launch" class="checkmark">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <g>
+                  <rect width="14" height="14" />
+                  <path
+                    id="Path"
+                    d="M0 2.00696L2.25015 4.25L6 0"
+                    fill="none"
+                    stroke-width="1.5"
+                    stroke="#E5DFD5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    transform="translate(4 5)" />
+                </g>
+              </svg>
+            </label>
+            <p for="launch">Launch Qopy at login</p>
+          </div>
+          <div
+            @blur="onBlur"
+            @focus="onFocus"
+            class="keybind-input"
+            ref="keybindInput"
+            tabindex="0"
+            :class="{ 'empty-keybind': showEmptyKeybindError }">
+            <span class="key" v-if="keybind.length === 0">Click here</span>
+            <template v-else>
+              <span
+                :key="index"
+                class="key"
+                :class="{ modifier: isModifier(key) }"
+                v-for="(key, index) in keybind">
+                {{ keyToLabel(key) }}
+              </span>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -52,62 +93,43 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
+import { Key } from "wrdu-keyboard/key";
+import { KeyValues, KeyLabels } from "../types/keys";
+import { disable, enable } from "@tauri-apps/plugin-autostart";
 
-const activeModifiers = reactive<Set<string>>(new Set());
+const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);
-const keybind = ref<string[]>([]);
+const keybind = ref<KeyValues[]>([]);
 const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
 const os = ref("");
 const router = useRouter();
 const keyboard = useKeyboard();
-
-const keyToDisplayMap: Record<string, string> = {
-  " ": "Space",
-  Alt: "Alt",
-  AltLeft: "Alt L",
-  AltRight: "Alt R",
-  ArrowDown: "↓",
-  ArrowLeft: "←",
-  ArrowRight: "→",
-  ArrowUp: "↑",
-  Control: "Ctrl",
-  ControlLeft: "Ctrl L",
-  ControlRight: "Ctrl R",
-  Enter: "↵",
-  Meta: "Meta",
-  MetaLeft: "Meta L",
-  MetaRight: "Meta R",
-  Shift: "⇧",
-  ShiftLeft: "⇧ L",
-  ShiftRight: "⇧ R",
-};
+const showEmptyKeybindError = ref(false);
+const autostart = ref(false);
+const { $settings } = useNuxtApp();
 
 const modifierKeySet = new Set([
-  "Alt",
-  "AltLeft",
-  "AltRight",
-  "Control",
-  "ControlLeft",
-  "ControlRight",
-  "Meta",
-  "MetaLeft",
-  "MetaRight",
-  "Shift",
-  "ShiftLeft",
-  "ShiftRight",
+  KeyValues.AltLeft,
+  KeyValues.AltRight,
+  KeyValues.ControlLeft,
+  KeyValues.ControlRight,
+  KeyValues.MetaLeft,
+  KeyValues.MetaRight,
+  KeyValues.ShiftLeft,
+  KeyValues.ShiftRight,
 ]);
 
-const isModifier = (key: string): boolean => {
+const isModifier = (key: KeyValues): boolean => {
   return modifierKeySet.has(key);
 };
 
-const keyToDisplay = (key: string): string => {
-  return keyToDisplayMap[key] || key;
+const keyToLabel = (key: KeyValues): string => {
+  return KeyLabels[key] || key;
 };
 
 const updateKeybind = () => {
-  const modifiers = Array.from(activeModifiers).sort();
+  const modifiers = Array.from(activeModifiers);
   const nonModifiers = keybind.value.filter((key) => !isModifier(key));
   keybind.value = [...modifiers, ...nonModifiers];
 };
@@ -115,19 +137,20 @@ const updateKeybind = () => {
 const onBlur = () => {
   isKeybindInputFocused.value = false;
   lastBlurTime.value = Date.now();
+  showEmptyKeybindError.value = false;
 };
 
 const onFocus = () => {
   isKeybindInputFocused.value = true;
   activeModifiers.clear();
   keybind.value = [];
+  showEmptyKeybindError.value = false;
 };
 
 const onKeyDown = (event: KeyboardEvent) => {
-  event.preventDefault();
-  const key = event.code;
+  const key = event.code as KeyValues;
 
-  if (key === "Escape") {
+  if (key === KeyValues.Escape) {
     if (keybindInput.value) {
       keybindInput.value.blur();
     }
@@ -142,45 +165,79 @@ const onKeyDown = (event: KeyboardEvent) => {
   }
 
   updateKeybind();
+  showEmptyKeybindError.value = false;
 };
 
 const saveKeybind = async () => {
-  console.log("New:", keybind.value);
-  const oldKeybind = await invoke<string[]>("get_keybind");
-  console.log("Old:", oldKeybind);
-  await invoke("save_keybind", { keybind: keybind.value });
+  if (keybind.value.length > 0) {
+    await $settings.saveSetting("keybind", JSON.stringify(keybind.value));
+    router.push("/");
+  } else {
+    showEmptyKeybindError.value = true;
+  }
 };
 
-onMounted(() => {
-  os.value = platform();
+const toggleAutostart = async () => {
+  if (autostart.value === true) {
+    await enable();
+  } else {
+    await disable();
+  }
+  await $settings.saveSetting("autostart", autostart.value ? "true" : "false");
+};
 
-  keyboard.down("all", (event) => {
-    const isMacSaveCombo =
-      os.value === "macos" &&
-      (event.code === "MetaLeft" || event.code === "MetaRight") &&
-      event.key === "Enter";
+os.value = platform();
 
-    const isOtherOsSaveCombo =
-      os.value !== "macos" &&
-      (event.code === "ControlLeft" || event.code === "ControlRight") &&
-      event.key === "Enter";
-
-    if (
-      (isMacSaveCombo || isOtherOsSaveCombo) &&
-      !isKeybindInputFocused.value
-    ) {
-      event.preventDefault();
-      saveKeybind();
+onMounted(async () => {
+  keyboard.down([Key.All], (event) => {
+    if (isKeybindInputFocused.value) {
+      onKeyDown(event);
     }
   });
 
-  keyboard.down("Escape", (event) => {
-    const now = Date.now();
-    if (!isKeybindInputFocused.value && now - lastBlurTime.value > 100) {
-      event.preventDefault();
+  keyboard.down([Key.Escape], (event) => {
+    if (isKeybindInputFocused.value) {
+      keybindInput.value?.blur();
+    } else {
       router.push("/");
     }
   });
+
+  switch (os.value) {
+    case "macos":
+      keyboard.down([Key.LeftMeta, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+
+      keyboard.down([Key.RightMeta, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+      break;
+
+    case "linux" || "windows":
+      keyboard.down([Key.LeftControl, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+
+      keyboard.down([Key.RightControl, Key.Enter], (event) => {
+        if (!isKeybindInputFocused.value) {
+          saveKeybind();
+        }
+      });
+      break;
+  }
+
+  autostart.value = (await $settings.getSetting("autostart")) === "true";
+});
+
+onUnmounted(() => {
+  keyboard.unregisterAll();
 });
 </script>
 

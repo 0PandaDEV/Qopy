@@ -20,9 +20,12 @@
     "sass-embedded": "1.83.0",
     "uuid": "11.0.3",
     "vue": "3.5.13",
-    "wrdu-keyboard": "1.1.1"
+    "wrdu-keyboard": "3.0.0"
   },
   "overrides": {
     "chokidar": "^3.6.0"
+  },
+  "patchedDependencies": {
+    "wrdu-keyboard@3.0.0": "patches/wrdu-keyboard@3.0.0.patch"
   }
 }

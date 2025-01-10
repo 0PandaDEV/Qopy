@@ -234,30 +234,41 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check if release already exists
+        id: check_release
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          RELEASE_EXISTS=$(gh release view v$VERSION --json id --jq '.id' 2>/dev/null || echo "")
+          if [ -n "$RELEASE_EXISTS" ]; then
+            echo "Release v$VERSION already exists. Skipping release creation."
+            echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+          else
+            echo "Release v$VERSION does not exist. Proceeding with release creation."
+            echo "SKIP_RELEASE=false" >> $GITHUB_ENV
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download all artifacts
+        if: env.SKIP_RELEASE == 'false'
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: Update CHANGELOG
+        if: env.SKIP_RELEASE == 'false'
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          tag: ${{ github.ref_name }}
+
       - name: Generate Release Body
+        if: env.SKIP_RELEASE == 'false'
         id: release_body
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          
-          # Get the most recent release tag (v* tags only)
-          LAST_TAG=$(git describe --match "v*" --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1` 2>/dev/null || echo "")
-          
-          if [ -n "$LAST_TAG" ]; then
-            echo "Debug: Found last release tag: $LAST_TAG"
-            CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s")
-          else
-            echo "Debug: No previous release tag found, using first commit"
-            CHANGES=$(git log --pretty=format:"- %s")
-          fi
-          
-          echo "Debug: Changelog content:"
-          echo "$CHANGES"
-          
+
           # Calculate hashes with corrected paths
           WINDOWS_ARM_HASH=$(sha256sum "artifacts/windows-arm64-binaries/Qopy-${VERSION}_arm64.msi" | awk '{ print $1 }')
           WINDOWS_64_HASH=$(sha256sum "artifacts/windows-x64-binaries/Qopy-${VERSION}_x64.msi" | awk '{ print $1 }')
@@ -278,10 +289,9 @@ jobs:
           echo "Red Hat: $REDHAT_HASH"
 
           RELEASE_BODY=$(cat <<-EOF
-          ## ♻️ Changelog
-          
-          $CHANGES
-          
+
+          ${{ needs.create-release.outputs.changelog }}
+
           ## ⬇️ Downloads
           
           - [Windows (x64)](https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Qopy-${VERSION}_x64.msi) - ${WINDOWS_64_HASH}
@@ -299,6 +309,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create Release
+        if: env.SKIP_RELEASE == 'false'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

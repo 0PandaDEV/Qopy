@@ -1,0 +1,120 @@
+use global_hotkey::hotkey::Code;
+use std::str::FromStr;
+
+pub struct KeyCode(Code);
+
+impl FromStr for KeyCode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let code = match s {
+            "Backquote" => Code::Backquote,
+            "Backslash" => Code::Backslash,
+            "BracketLeft" => Code::BracketLeft,
+            "BracketRight" => Code::BracketRight,
+            "Comma" => Code::Comma,
+            "Digit0" => Code::Digit0,
+            "Digit1" => Code::Digit1,
+            "Digit2" => Code::Digit2,
+            "Digit3" => Code::Digit3,
+            "Digit4" => Code::Digit4,
+            "Digit5" => Code::Digit5,
+            "Digit6" => Code::Digit6,
+            "Digit7" => Code::Digit7,
+            "Digit8" => Code::Digit8,
+            "Digit9" => Code::Digit9,
+            "Equal" => Code::Equal,
+            "KeyA" => Code::KeyA,
+            "KeyB" => Code::KeyB,
+            "KeyC" => Code::KeyC,
+            "KeyD" => Code::KeyD,
+            "KeyE" => Code::KeyE,
+            "KeyF" => Code::KeyF,
+            "KeyG" => Code::KeyG,
+            "KeyH" => Code::KeyH,
+            "KeyI" => Code::KeyI,
+            "KeyJ" => Code::KeyJ,
+            "KeyK" => Code::KeyK,
+            "KeyL" => Code::KeyL,
+            "KeyM" => Code::KeyM,
+            "KeyN" => Code::KeyN,
+            "KeyO" => Code::KeyO,
+            "KeyP" => Code::KeyP,
+            "KeyQ" => Code::KeyQ,
+            "KeyR" => Code::KeyR,
+            "KeyS" => Code::KeyS,
+            "KeyT" => Code::KeyT,
+            "KeyU" => Code::KeyU,
+            "KeyV" => Code::KeyV,
+            "KeyW" => Code::KeyW,
+            "KeyX" => Code::KeyX,
+            "KeyY" => Code::KeyY,
+            "KeyZ" => Code::KeyZ,
+            "Minus" => Code::Minus,
+            "Period" => Code::Period,
+            "Quote" => Code::Quote,
+            "Semicolon" => Code::Semicolon,
+            "Slash" => Code::Slash,
+            "Backspace" => Code::Backspace,
+            "CapsLock" => Code::CapsLock,
+            "Delete" => Code::Delete,
+            "Enter" => Code::Enter,
+            "Space" => Code::Space,
+            "Tab" => Code::Tab,
+            "End" => Code::End,
+            "Home" => Code::Home,
+            "Insert" => Code::Insert,
+            "PageDown" => Code::PageDown,
+            "PageUp" => Code::PageUp,
+            "ArrowDown" => Code::ArrowDown,
+            "ArrowLeft" => Code::ArrowLeft,
+            "ArrowRight" => Code::ArrowRight,
+            "ArrowUp" => Code::ArrowUp,
+            "NumLock" => Code::NumLock,
+            "Numpad0" => Code::Numpad0,
+            "Numpad1" => Code::Numpad1,
+            "Numpad2" => Code::Numpad2,
+            "Numpad3" => Code::Numpad3,
+            "Numpad4" => Code::Numpad4,
+            "Numpad5" => Code::Numpad5,
+            "Numpad6" => Code::Numpad6,
+            "Numpad7" => Code::Numpad7,
+            "Numpad8" => Code::Numpad8,
+            "Numpad9" => Code::Numpad9,
+            "NumpadAdd" => Code::NumpadAdd,
+            "NumpadDecimal" => Code::NumpadDecimal,
+            "NumpadDivide" => Code::NumpadDivide,
+            "NumpadMultiply" => Code::NumpadMultiply,
+            "NumpadSubtract" => Code::NumpadSubtract,
+            "Escape" => Code::Escape,
+            "PrintScreen" => Code::PrintScreen,
+            "ScrollLock" => Code::ScrollLock,
+            "Pause" => Code::Pause,
+            "AudioVolumeDown" => Code::AudioVolumeDown,
+            "AudioVolumeMute" => Code::AudioVolumeMute,
+            "AudioVolumeUp" => Code::AudioVolumeUp,
+            "F1" => Code::F1,
+            "F2" => Code::F2,
+            "F3" => Code::F3,
+            "F4" => Code::F4,
+            "F5" => Code::F5,
+            "F6" => Code::F6,
+            "F7" => Code::F7,
+            "F8" => Code::F8,
+            "F9" => Code::F9,
+            "F10" => Code::F10,
+            "F11" => Code::F11,
+            "F12" => Code::F12,
+            _ => {
+                return Err(format!("Unknown key code: {}", s));
+            }
+        };
+        Ok(KeyCode(code))
+    }
+}
+
+impl From<KeyCode> for Code {
+    fn from(key_code: KeyCode) -> Self {
+        key_code.0
+    }
+}

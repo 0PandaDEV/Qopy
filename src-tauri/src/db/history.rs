@@ -1,39 +1,35 @@
-use crate::utils::types::{ContentType, HistoryItem};
-use base64::{engine::general_purpose::STANDARD, Engine};
+use crate::utils::types::{ ContentType, HistoryItem };
+use base64::{ engine::general_purpose::STANDARD, Engine };
 use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-use sqlx::{Row, SqlitePool};
+use rand::{ thread_rng, Rng };
+use sqlx::{ Row, SqlitePool };
 use std::fs;
 use tauri_plugin_aptabase::EventTracker;
 
 pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
-    let id: String = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(16)
-        .map(char::from)
-        .collect();
+    let id: String = thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
 
-    sqlx::query(
-        "INSERT INTO history (id, source, content_type, content, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
-    )
-    .bind(id)
-    .bind("System")
-    .bind("text")
-    .bind("Welcome to your clipboard history!")
-    .execute(pool)
-    .await?;
+    sqlx
+        ::query(
+            "INSERT INTO history (id, source, content_type, content, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+        )
+        .bind(id)
+        .bind("System")
+        .bind("text")
+        .bind("Welcome to your clipboard history!")
+        .execute(pool).await?;
 
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<HistoryItem>, String> {
-    let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC",
-    )
-    .fetch_all(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    let rows = sqlx
+        ::query(
+            "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC"
+        )
+        .fetch_all(&*pool).await
+        .map_err(|e| e.to_string())?;
 
     let items = rows
         .iter()
@@ -56,50 +52,53 @@ pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Histo
 pub async fn add_history_item(
     app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
-    item: HistoryItem,
+    item: HistoryItem
 ) -> Result<(), String> {
     let (id, source, source_icon, content_type, content, favicon, timestamp, language) =
         item.to_row();
 
-    let existing = sqlx::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
+    let existing = sqlx
+        ::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
         .bind(&content)
         .bind(&content_type)
-        .fetch_optional(&*pool)
-        .await
+        .fetch_optional(&*pool).await
         .map_err(|e| e.to_string())?;
 
     match existing {
         Some(_) => {
-            sqlx::query(
-                "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
-            )
-            .bind(&content)
-            .bind(&content_type)
-            .execute(&*pool)
-            .await
-            .map_err(|e| e.to_string())?;
+            sqlx
+                ::query(
+                    "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
+                )
+                .bind(&content)
+                .bind(&content_type)
+                .execute(&*pool).await
+                .map_err(|e| e.to_string())?;
         }
         None => {
-            sqlx::query(
-                "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            .bind(id)
-            .bind(source)
-            .bind(source_icon)
-            .bind(content_type)
-            .bind(content)
-            .bind(favicon)
-            .bind(timestamp)
-            .bind(language)
-            .execute(&*pool)
-            .await
-            .map_err(|e| e.to_string())?;
+            sqlx
+                ::query(
+                    "INSERT INTO history (id, source, source_icon, content_type, content, favicon, timestamp, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(id)
+                .bind(source)
+                .bind(source_icon)
+                .bind(content_type)
+                .bind(content)
+                .bind(favicon)
+                .bind(timestamp)
+                .bind(language)
+                .execute(&*pool).await
+                .map_err(|e| e.to_string())?;
         }
     }
 
-    let _ = app_handle.track_event("history_item_added", Some(serde_json::json!({
+    let _ = app_handle.track_event(
+        "history_item_added",
+        Some(serde_json::json!({
         "content_type": item.content_type.to_string()
-    })));
+    }))
+    );
 
     Ok(())
 }
@@ -107,16 +106,16 @@ pub async fn add_history_item(
 #[tauri::command]
 pub async fn search_history(
     pool: tauri::State<'_, SqlitePool>,
-    query: String,
+    query: String
 ) -> Result<Vec<HistoryItem>, String> {
     let query = format!("%{}%", query);
-    let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
-    )
-    .bind(query)
-    .fetch_all(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    let rows = sqlx
+        ::query(
+            "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
+        )
+        .bind(query)
+        .fetch_all(&*pool).await
+        .map_err(|e| e.to_string())?;
 
     let items = rows
         .iter()
@@ -139,16 +138,16 @@ pub async fn search_history(
 pub async fn load_history_chunk(
     pool: tauri::State<'_, SqlitePool>,
     offset: i64,
-    limit: i64,
+    limit: i64
 ) -> Result<Vec<HistoryItem>, String> {
-    let rows = sqlx::query(
-        "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&*pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    let rows = sqlx
+        ::query(
+            "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*pool).await
+        .map_err(|e| e.to_string())?;
 
     let items = rows
         .iter()
@@ -171,12 +170,12 @@ pub async fn load_history_chunk(
 pub async fn delete_history_item(
     app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
-    id: String,
+    id: String
 ) -> Result<(), String> {
-    sqlx::query("DELETE FROM history WHERE id = ?")
+    sqlx
+        ::query("DELETE FROM history WHERE id = ?")
         .bind(id)
-        .execute(&*pool)
-        .await
+        .execute(&*pool).await
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_item_deleted", None);
@@ -189,9 +188,9 @@ pub async fn clear_history(
     app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>
 ) -> Result<(), String> {
-    sqlx::query("DELETE FROM history")
-        .execute(&*pool)
-        .await
+    sqlx
+        ::query("DELETE FROM history")
+        .execute(&*pool).await
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_cleared", None);

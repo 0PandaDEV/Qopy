@@ -1,6 +1,6 @@
 use chrono;
-use log::{LevelFilter, SetLoggerError};
-use std::fs::{File, OpenOptions};
+use log::{ LevelFilter, SetLoggerError };
+use std::fs::{ File, OpenOptions };
 use std::io::Write;
 use std::panic;
 
@@ -16,7 +16,7 @@ impl log::Log for FileLogger {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             let mut file = self.file.try_clone().expect("Failed to clone file handle");
-            
+
             // Format: timestamp [LEVEL] target: message (file:line)
             writeln!(
                 file,
@@ -50,32 +50,38 @@ pub fn init_logger(app_data_dir: &std::path::Path) -> Result<(), SetLoggerError>
 
     // Set up panic hook
     let panic_file = file.try_clone().expect("Failed to clone file handle");
-    panic::set_hook(Box::new(move |panic_info| {
-        let mut file = panic_file.try_clone().expect("Failed to clone file handle");
-        
-        let location = panic_info.location()
-            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
-            .unwrap_or_else(|| "unknown location".to_string());
+    panic::set_hook(
+        Box::new(move |panic_info| {
+            let mut file = panic_file.try_clone().expect("Failed to clone file handle");
 
-        let message = match panic_info.payload().downcast_ref::<&str>() {
-            Some(s) => *s,
-            None => match panic_info.payload().downcast_ref::<String>() {
-                Some(s) => s.as_str(),
-                None => "Unknown panic message",
-            },
-        };
+            let location = panic_info
+                .location()
+                .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+                .unwrap_or_else(|| "unknown location".to_string());
 
-        let _ = writeln!(
-            file,
-            "{} [PANIC] rust_panic: {} ({})",
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-            message,
-            location
-        );
-    }));
+            let message = match panic_info.payload().downcast_ref::<&str>() {
+                Some(s) => *s,
+                None =>
+                    match panic_info.payload().downcast_ref::<String>() {
+                        Some(s) => s.as_str(),
+                        None => "Unknown panic message",
+                    }
+            };
+
+            let _ = writeln!(
+                file,
+                "{} [PANIC] rust_panic: {} ({})",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                message,
+                location
+            );
+        })
+    );
 
     let logger = Box::new(FileLogger { file });
-    unsafe { log::set_logger_racy(Box::leak(logger))? };
+    unsafe {
+        log::set_logger_racy(Box::leak(logger))?;
+    }
     log::set_max_level(LevelFilter::Debug);
     Ok(())
 }
