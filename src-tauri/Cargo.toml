@@ -48,6 +48,7 @@ include_dir = "0.7.4"
 # hyperpolyglot = { git = "https://github.com/0pandadev/hyperpolyglot" }
 applications = { git = "https://github.com/HuakunShen/applications-rs", branch = "dev" }
 meta_fetcher = "0.1.1"
+parking_lot = "0.12.3"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
