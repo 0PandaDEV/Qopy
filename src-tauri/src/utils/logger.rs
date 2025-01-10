@@ -17,7 +17,6 @@ impl log::Log for FileLogger {
         if self.enabled(record.metadata()) {
             let mut file = self.file.try_clone().expect("Failed to clone file handle");
 
-            // Format: timestamp [LEVEL] target: message (file:line)
             writeln!(
                 file,
                 "{} [{:<5}] {}: {} ({}:{})",
@@ -40,15 +39,13 @@ pub fn init_logger(app_data_dir: &std::path::Path) -> Result<(), SetLoggerError>
     let logs_dir = app_data_dir.join("logs");
     std::fs::create_dir_all(&logs_dir).expect("Failed to create logs directory");
 
-    // Use .log extension for standard log files
     let log_path = logs_dir.join("app.log");
     let file = OpenOptions::new()
         .create(true)
-        .append(true) // Use append mode instead of write
+        .append(true)
         .open(&log_path)
         .expect("Failed to open log file");
 
-    // Set up panic hook
     let panic_file = file.try_clone().expect("Failed to clone file handle");
     panic::set_hook(
         Box::new(move |panic_info| {
