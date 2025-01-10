@@ -1,4 +1,4 @@
-use tauri::{ async_runtime, AppHandle };
+use tauri::{ async_runtime, AppHandle, Manager };
 use tauri_plugin_dialog::{ DialogExt, MessageDialogButtons, MessageDialogKind };
 use tauri_plugin_updater::UpdaterExt;
 
