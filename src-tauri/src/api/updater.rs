@@ -2,7 +2,7 @@ use tauri::{ async_runtime, AppHandle };
 use tauri_plugin_dialog::{ DialogExt, MessageDialogButtons, MessageDialogKind };
 use tauri_plugin_updater::UpdaterExt;
 
-pub async fn check_for_updates(app: AppHandle) {
+pub async fn check_for_updates(app: AppHandle, prompted: bool) {
     println!("Checking for updates...");
 
     let updater = app.updater().unwrap();
@@ -17,6 +17,10 @@ pub async fn check_for_updates(app: AppHandle) {
                 &format!("{cur_ver} -> {new_ver}\n\n"),
                 "Would you like to install it now?",
             ]);
+
+            let window = app.get_webview_window("main").unwrap();
+            window.show().unwrap();
+            window.set_focus().unwrap();
 
             app.dialog()
                 .message(msg)
@@ -69,9 +73,22 @@ pub async fn check_for_updates(app: AppHandle) {
                     });
                 });
         }
-        Ok(None) => println!("No updates available."),
+        Ok(None) => {
+            println!("No updates available.");
+        }
         Err(e) => {
-            println!("Failed to check for updates: {:?}", e);
+            if prompted {
+                let window = app.get_webview_window("main").unwrap();
+                window.show().unwrap();
+                window.set_focus().unwrap();
+
+                app.dialog()
+                    .message("No updates available.")
+                    .title("Qopy Update Check")
+                    .show(|_| {});
+            }
+
+            println!("No updates available. {}", e.to_string());
         }
     }
 }
