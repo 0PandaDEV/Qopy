@@ -15,7 +15,7 @@ const { $settings } = useNuxtApp();
 
 onMounted(async () => {
   await listen("settings", async () => {
-    keyboard.unregisterAll();
+    keyboard.clear();
     await navigateTo("/settings");
     await app.show();
     await window.getCurrentWindow().show();

@@ -1,0 +1,190 @@
+diff --git a/node_modules/wrdu-keyboard/.DS_Store b/.DS_Store
+new file mode 100644
+index 0000000000000000000000000000000000000000..5008ddfcf53c02e82d7eee2e57c38e5672ef89f6
+Binary files /dev/null and b/.DS_Store differ
+diff --git a/dist/runtime/composables.d.ts b/dist/runtime/composables.d.ts
+index fb2e51205317d4bf2530528da750cd18f6486022..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 100644
+--- a/dist/runtime/composables.d.ts
++++ b/dist/runtime/composables.d.ts
+@@ -1,3 +0,0 @@
+-import type { Keyboard } from './keyboard.js';
+-export * from './keyboard.js';
+-export declare const useKeyboard: () => Keyboard;
+diff --git a/dist/runtime/keyboard.d.ts b/dist/runtime/keyboard.d.ts
+index 1cd64674456f1598acb93ed77d4f84ff4823ba40..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 100644
+--- a/dist/runtime/keyboard.d.ts
++++ b/dist/runtime/keyboard.d.ts
+@@ -1,25 +0,0 @@
+-import { Key } from './types/keys.js';
+-import { type Plugin } from '#app';
+-type Handler = (event: KeyboardEvent) => void;
+-type Config = {
+-    once?: boolean;
+-    prevent?: boolean;
+-};
+-type PublicConfig = Omit<Config, 'prevent'>;
+-type New = (keys: Key[], handler: Handler, config?: PublicConfig) => void;
+-export interface Keyboard {
+-    init: () => void;
+-    stop: () => void;
+-    clear: () => void;
+-    down: New;
+-    up: New;
+-    prevent: {
+-        down: New;
+-        up: New;
+-    };
+-}
+-type KeyboardPlugin = Plugin<{
+-    keyboard: Keyboard;
+-}>;
+-declare const keyboard: KeyboardPlugin;
+-export default keyboard;
+diff --git a/dist/runtime/keyboard.js b/dist/runtime/keyboard.js
+index e49c3d115e570a91ad814e4fba013d61a6399637..a2e390e66b59c1af3506d7394ce6a6600f6d205e 100644
+--- a/dist/runtime/keyboard.js
++++ b/dist/runtime/keyboard.js
+@@ -12,15 +12,22 @@ const onKeydown = (event) => {
+   const keyString = getKeyString(pressedArray);
+   if (handlers.down[keyString]) {
+     handlers.down[keyString].forEach((eventHandler) => {
+-      if (eventHandler.prevent) {
+-        event.preventDefault();
+-      }
++      if (eventHandler.prevent) event.preventDefault();
+       eventHandler.handler(event);
+       if (eventHandler.once) {
+         handlers.down[keyString] = handlers.down[keyString].filter((h) => h !== eventHandler);
+       }
+     });
+   }
++  if (handlers.down["All"]) {
++    handlers.down["All"].forEach((eventHandler) => {
++      if (eventHandler.prevent) event.preventDefault();
++      eventHandler.handler(event);
++      if (eventHandler.once) {
++        handlers.down["All"] = handlers.down["All"].filter((h) => h !== eventHandler);
++      }
++    });
++  }
+ };
+ const onKeyup = (event) => {
+   const releasedArray = Array.from(pressedKeys);
+diff --git a/dist/runtime/types/keys.d.ts b/dist/runtime/types/keys.d.ts
+index f48fa8415a91f17626f9aaa0a03f14426785744b..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 100644
+--- a/dist/runtime/types/keys.d.ts
++++ b/dist/runtime/types/keys.d.ts
+@@ -1,113 +0,0 @@
+-export declare const Key: {
+-    Backspace: string;
+-    Tab: string;
+-    Enter: string;
+-    LeftShift: string;
+-    RightShift: string;
+-    LeftControl: string;
+-    RightControl: string;
+-    LeftAlt: string;
+-    RightAlt: string;
+-    Pause: string;
+-    CapsLock: string;
+-    Escape: string;
+-    Space: string;
+-    PageUp: string;
+-    PageDown: string;
+-    End: string;
+-    Home: string;
+-    LeftArrow: string;
+-    UpArrow: string;
+-    RightArrow: string;
+-    DownArrow: string;
+-    PrintScreen: string;
+-    Insert: string;
+-    Delete: string;
+-    Zero: string;
+-    One: string;
+-    Two: string;
+-    Three: string;
+-    Four: string;
+-    Five: string;
+-    Six: string;
+-    Seven: string;
+-    Eight: string;
+-    Nine: string;
+-    A: string;
+-    B: string;
+-    C: string;
+-    D: string;
+-    E: string;
+-    F: string;
+-    G: string;
+-    H: string;
+-    I: string;
+-    J: string;
+-    K: string;
+-    L: string;
+-    M: string;
+-    N: string;
+-    O: string;
+-    P: string;
+-    Q: string;
+-    R: string;
+-    S: string;
+-    T: string;
+-    U: string;
+-    V: string;
+-    W: string;
+-    X: string;
+-    Y: string;
+-    Z: string;
+-    LeftMeta: string;
+-    RightMeta: string;
+-    ContextMenu: string;
+-    NumpadZero: string;
+-    NumpadOne: string;
+-    NumpadTwo: string;
+-    NumpadThree: string;
+-    NumpadFour: string;
+-    NumpadFive: string;
+-    NumpadSix: string;
+-    NumpadSeven: string;
+-    NumpadEight: string;
+-    NumpadNine: string;
+-    NumpadMultiply: string;
+-    NumpadAdd: string;
+-    NumpadSubtract: string;
+-    NumpadDecimal: string;
+-    NumpadDivide: string;
+-    F1: string;
+-    F2: string;
+-    F3: string;
+-    F4: string;
+-    F5: string;
+-    F6: string;
+-    F7: string;
+-    F8: string;
+-    F9: string;
+-    F10: string;
+-    F11: string;
+-    F12: string;
+-    NumLock: string;
+-    ScrollLock: string;
+-    VolumeMute: string;
+-    VolumeDown: string;
+-    VolumeUp: string;
+-    MediaPlayer: string;
+-    LaunchApp1: string;
+-    LaunchApp2: string;
+-    Semicolon: string;
+-    Equal: string;
+-    Comma: string;
+-    Minus: string;
+-    Period: string;
+-    Slash: string;
+-    Backquote: string;
+-    LeftBracket: string;
+-    Backslash: string;
+-    RightBracket: string;
+-    Quote: string;
+-    All: string;
+-};
+-export type Key = (typeof Key)[keyof typeof Key];

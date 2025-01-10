@@ -237,7 +237,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  keyboard.unregisterAll();
+  keyboard.clear();
 });
 </script>
 
