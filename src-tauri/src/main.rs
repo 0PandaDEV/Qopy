@@ -124,8 +124,6 @@ fn main() {
                 db::history::read_image,
                 db::settings::get_setting,
                 db::settings::save_setting,
-                db::settings::save_keybind,
-                db::settings::get_keybind,
                 utils::commands::fetch_page_meta
             ]
         )

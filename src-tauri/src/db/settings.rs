@@ -25,32 +25,6 @@ pub async fn initialize_settings(pool: &SqlitePool) -> Result<(), Box<dyn std::e
 }
 
 #[tauri::command]
-pub async fn save_keybind(
-    app_handle: tauri::AppHandle,
-    pool: tauri::State<'_, SqlitePool>,
-    keybind: Vec<String>
-) -> Result<(), String> {
-    app_handle.emit("update-shortcut", &keybind).map_err(|e| e.to_string())?;
-
-    let json = serde_json::to_string(&keybind).map_err(|e| e.to_string())?;
-
-    sqlx
-        ::query("INSERT OR REPLACE INTO settings (key, value) VALUES ('keybind', ?)")
-        .bind(json)
-        .execute(&*pool).await
-        .map_err(|e| e.to_string())?;
-
-    let _ = app_handle.track_event(
-        "keybind_saved",
-        Some(serde_json::json!({
-        "keybind": keybind
-    }))
-    );
-
-    Ok(())
-}
-
-#[tauri::command]
 pub async fn get_setting(
     pool: tauri::State<'_, SqlitePool>,
     key: String
@@ -74,7 +48,7 @@ pub async fn save_setting(
     sqlx
         ::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .bind(key.clone())
-        .bind(value)
+        .bind(value.clone())
         .execute(&*pool).await
         .map_err(|e| e.to_string())?;
 
@@ -84,6 +58,10 @@ pub async fn save_setting(
         "key": key
     }))
     );
+
+    if key == "keybind" {
+        let _ = app_handle.emit("update-shortcut", &value).map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }

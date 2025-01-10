@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Settings } from "~/types/types";
 
 export default defineNuxtPlugin(() => {
   return {

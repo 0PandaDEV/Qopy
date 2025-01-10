@@ -43,7 +43,8 @@ pub fn setup(app_handle: tauri::AppHandle) {
     }
 
     app_handle.listen("update-shortcut", move |event| {
-        let payload_str = event.payload();
+        let payload_str = event.payload().replace("\\\"", "\"");
+        let trimmed_str = payload_str.trim_matches('"');
 
         if let Some(old_hotkey) = REGISTERED_HOTKEY.lock().unwrap().take() {
             let manager_guard = HOTKEY_MANAGER.lock().unwrap();
@@ -52,7 +53,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
             }
         }
 
-        let payload: Vec<String> = serde_json::from_str(payload_str).unwrap_or_default();
+        let payload: Vec<String> = serde_json::from_str(trimmed_str).unwrap_or_default();
 
         if let Err(e) = register_shortcut(&payload) {
             eprintln!("Error re-registering shortcut: {:?}", e);
