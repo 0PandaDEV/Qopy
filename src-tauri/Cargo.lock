@@ -5713,6 +5713,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-aptabase"
 version = "0.5.1"
+source = "git+https://github.com/0PandaDEV/tauri-plugin-aptabase?branch=v2#c843c6b5b814fcc9daeb3f7fe4c67276c38bc6dd"
 dependencies = [
  "futures",
  "log",
