@@ -18,10 +18,9 @@ struct HotkeyState {
     registered_hotkey: Option<HotKey>,
 }
 
-unsafe impl Send for HotkeyState {}
-
 pub fn setup(app_handle: tauri::AppHandle) {
     let state = Arc::new(Mutex::new(HotkeyState::default()));
+    
     let manager = match GlobalHotKeyManager::new() {
         Ok(manager) => manager,
         Err(err) => {
@@ -44,7 +43,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
         eprintln!("Error registering initial shortcut: {:?}", e);
     }
 
-    let state_clone = Arc::clone(&state);
+    let state_clone = state.clone();
     app_handle.listen("update-shortcut", move |event| {
         let payload_str = event.payload().replace("\\\"", "\"");
         let trimmed_str = payload_str.trim_matches('"');
@@ -56,7 +55,7 @@ pub fn setup(app_handle: tauri::AppHandle) {
         }
     });
 
-    let state_clone = Arc::clone(&state);
+    let state_clone = state.clone();
     app_handle.listen("save_keybind", move |event| {
         let payload_str = event.payload().to_string();
         unregister_current_hotkey(&state_clone);

@@ -1,26 +1,23 @@
 use crate::utils::types::{ ContentType, HistoryItem };
 use base64::{ engine::general_purpose::STANDARD, Engine };
-use rand::{ rng, Rng };
-use rand::distr::Alphanumeric;
+use rand::distributions::Alphanumeric;
+use rand::{ thread_rng, Rng };
 use sqlx::{ Row, SqlitePool };
 use std::fs;
 use tauri_plugin_aptabase::EventTracker;
 
 pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
-    let id: String = rng()
-        .sample_iter(&Alphanumeric)
-        .take(16)
-        .map(char::from)
-        .collect();
+    let id: String = thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect();
 
-    sqlx::query(
-        "INSERT INTO history (id, source, content_type, content, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
-    )
-    .bind(id)
-    .bind("System")
-    .bind("text")
-    .bind("Welcome to your clipboard history!")
-    .execute(pool).await?;
+    sqlx
+        ::query(
+            "INSERT INTO history (id, source, content_type, content, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+        )
+        .bind(id)
+        .bind("System")
+        .bind("text")
+        .bind("Welcome to your clipboard history!")
+        .execute(pool).await?;
 
     Ok(())
 }
