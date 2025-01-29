@@ -53,6 +53,8 @@ include_dir = "0.7.4"
 applications = { git = "https://github.com/HuakunShen/applications-rs", branch = "dev" }
 meta_fetcher = "0.1.1"
 parking_lot = "0.12.3"
+aes-gcm = "0.10.3"
+typenum = "1.17.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

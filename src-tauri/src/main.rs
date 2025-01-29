@@ -3,6 +3,7 @@
 mod api;
 mod db;
 mod utils;
+mod sync;
 
 use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
@@ -10,11 +11,13 @@ use tauri::Manager;
 use tauri_plugin_aptabase::{ EventTracker, InitOptions };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_prevent_default::Flags;
+use sync::sync::ClipboardSync;
+use sync::pairing::PairingManager;
+use tokio::sync::Mutex;
+use std::sync::Arc;
 
-fn main() {
-    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-    let _guard = runtime.enter();
-
+#[tokio::main]
+async fn main() {
     tauri::Builder
         ::default()
         .plugin(tauri_plugin_clipboard::init())
@@ -69,38 +72,52 @@ fn main() {
             }
 
             let db_url = format!("sqlite:{}", db_path.to_str().unwrap());
-
             let app_handle = app.handle().clone();
 
-            let app_handle_clone = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                let pool = SqlitePoolOptions::new()
-                    .max_connections(5)
-                    .connect(&db_url).await
-                    .expect("Failed to create pool");
+            // Create the pool in a separate tokio runtime
+            let pool = tokio::runtime::Runtime
+                ::new()
+                .unwrap()
+                .block_on(async {
+                    SqlitePoolOptions::new()
+                        .max_connections(5)
+                        .connect(&db_url).await
+                        .expect("Failed to create pool")
+                });
 
-                app_handle_clone.manage(pool);
-            });
+            app_handle.manage(pool);
 
             let main_window = app.get_webview_window("main");
 
-            let _ = db::database::setup(app);
+            db::database::setup(app).expect("Failed to setup database");
             api::hotkeys::setup(app_handle.clone());
-            api::tray::setup(app)?;
-            api::clipboard::setup(app.handle());
-            let _ = api::clipboard::start_monitor(app_handle.clone());
+            api::tray::setup(app).expect("Failed to setup tray");
+            api::clipboard::setup(&app_handle);
+            api::clipboard::start_monitor(app_handle.clone()).expect("Failed to start monitor");
+
+            let pairing_manager = PairingManager::new();
+            let encryption_key = pairing_manager.get_encryption_key().clone();
+            let nonce = pairing_manager.get_nonce().clone();
+            app_handle.manage(pairing_manager);
+
+            let clipboard_sync = ClipboardSync::new(&encryption_key, &nonce);
+            let clipboard_sync_arc = Arc::new(Mutex::new(clipboard_sync));
+            app_handle.manage(clipboard_sync_arc.clone());
+
+            let clipboard_sync_clone = clipboard_sync_arc.clone();
+            let app_handle_clone = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let sync = clipboard_sync_clone.lock().await;
+                sync.listen_webhook(app_handle_clone, clipboard_sync_clone).await;
+            });
 
             utils::commands::center_window_on_current_monitor(main_window.as_ref().unwrap());
-            main_window
+            let _ = main_window
                 .as_ref()
                 .map(|w| w.hide())
-                .unwrap_or(Ok(()))?;
+                .expect("Failed to hide window");
 
-            let _ = app.track_event("app_started", None);
-
-            tauri::async_runtime::spawn(async move {
-                api::updater::check_for_updates(app_handle, false).await;
-            });
+            app.track_event("app_started", None).expect("Failed to track event");
 
             Ok(())
         })
@@ -124,7 +141,11 @@ fn main() {
                 db::history::read_image,
                 db::settings::get_setting,
                 db::settings::save_setting,
-                utils::commands::fetch_page_meta
+                utils::commands::fetch_page_meta,
+                sync::pairing::initiate_pairing,
+                sync::pairing::complete_pairing,
+                sync::sync::send_clipboard_data,
+                sync::sync::receive_clipboard_data
             ]
         )
         .run(tauri::generate_context!())
