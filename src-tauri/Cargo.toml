@@ -13,7 +13,7 @@ tauri-build = { version = "2.0.5", features = [] }
 tauri = { version = "2.2.5", features = [
   "macos-private-api",
   "tray-icon",
-  "image-png"
+  "image-png",
 ] }
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
 tauri-plugin-autostart = "2.2.0"
@@ -24,8 +24,13 @@ tauri-plugin-fs = "2.2.0"
 tauri-plugin-clipboard = "2.1.11"
 tauri-plugin-prevent-default = "1.0.2"
 tauri-plugin-global-shortcut = "2.2.0"
-tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
-sqlx = { version = "0.8.3", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
+# tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
+tauri-plugin-aptabase = { path = "C:\\Users\\pandadev\\Documents\\Developer\\Rust\\tauri-plugin-aptabase" }
+sqlx = { version = "0.8.3", features = [
+  "runtime-tokio-native-tls",
+  "sqlite",
+  "chrono",
+] }
 serde = { version = "1.0.217", features = ["derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
 serde_json = "1.0.138"
