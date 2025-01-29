@@ -33,6 +33,8 @@ pub async fn write_and_paste(
 
     match content_type.as_str() {
         "text" => clipboard.write_text(content).map_err(|e| e.to_string())?,
+        "link" => clipboard.write_text(content).map_err(|e| e.to_string())?,
+        "color" => clipboard.write_text(content).map_err(|e| e.to_string())?,
         "image" => {
             clipboard.write_image_base64(content).map_err(|e| e.to_string())?;
         }
