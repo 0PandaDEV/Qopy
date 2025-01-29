@@ -25,3 +25,4 @@ logs
 bun.lockb
 .gitignore
 .vscode
+bun.lock
