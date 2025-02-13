@@ -3,7 +3,7 @@
 <img align="center" width="128px" src="src-tauri/icons/icon.png" />
 <h1 align="center"><b>Qopy</b></h1>
 
-The fixed and simple clipboard manager for both Windows and Linux.
+A better version of a clipboard manager for all platforms.
 
 <a href="https://github.com/0PandaDEV/Qopy/releases/download/v0.3.1/Qopy-0.3.1_x64.msi">
   <img src="./public/windows.png"> Windows (x64)
