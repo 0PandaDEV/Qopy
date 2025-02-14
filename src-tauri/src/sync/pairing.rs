@@ -1,7 +1,8 @@
 use aes_gcm::{ Aes256Gcm, KeyInit };
 use aes_gcm::aead::Aead;
 use base64::{ engine::general_purpose::STANDARD, Engine };
-use rand::{ Rng, thread_rng };
+use rand::thread_rng;
+use rand::Rng;
 use rand::seq::SliceRandom;
 use serde::{ Deserialize, Serialize };
 use tauri::State;
@@ -26,8 +27,8 @@ impl PairingManager {
     pub fn new() -> Self {
         let mut rng = thread_rng();
         let pairing_key = Self::generate_emoji_sequence(&mut rng);
-        let encryption_key: [u8; 32] = rng.gen();
-        let nonce: [u8; 12] = rng.gen();
+        let encryption_key = rng.gen::<[u8; 32]>();
+        let nonce = rng.gen::<[u8; 12]>();
         PairingManager {
             pairing_key,
             encryption_key,
@@ -35,9 +36,10 @@ impl PairingManager {
         }
     }
 
-    pub fn generate_emoji_sequence(rng: &mut impl Rng) -> String {
-        let key: Vec<&str> = EMOJI_POOL.choose_multiple(rng, PAIRING_KEY_LENGTH).cloned().collect();
-        key.join(" ")
+    pub fn generate_emoji_sequence<R: Rng>(rng: &mut R) -> String {
+        let mut emojis = EMOJI_POOL.to_vec();
+        emojis.shuffle(rng);
+        emojis.iter().take(PAIRING_KEY_LENGTH).cloned().collect::<Vec<&str>>().join(" ")
     }
 
     pub fn validate_pairing(&self, input_key: &str) -> bool {
@@ -110,3 +112,4 @@ pub fn complete_pairing(
 pub fn generate_invitation(pairing_manager: State<'_, PairingManager>) -> String {
     pairing_manager.generate_invitation_code()
 }
+
