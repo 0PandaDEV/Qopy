@@ -1,8 +1,8 @@
-use crate::utils::types::{ ContentType, HistoryItem };
-use base64::{ engine::general_purpose::STANDARD, Engine };
-use rand::{ rng, Rng };
+use crate::utils::types::{ContentType, HistoryItem};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use rand::distr::Alphanumeric;
-use sqlx::{ Row, SqlitePool };
+use rand::{rng, Rng};
+use sqlx::{Row, SqlitePool};
 use std::fs;
 use tauri_plugin_aptabase::EventTracker;
 
@@ -55,16 +55,16 @@ pub async fn get_history(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<Histo
 pub async fn add_history_item(
     app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
-    item: HistoryItem
+    item: HistoryItem,
 ) -> Result<(), String> {
     let (id, source, source_icon, content_type, content, favicon, timestamp, language) =
         item.to_row();
 
-    let existing = sqlx
-        ::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
+    let existing = sqlx::query("SELECT id FROM history WHERE content = ? AND content_type = ?")
         .bind(&content)
         .bind(&content_type)
-        .fetch_optional(&*pool).await
+        .fetch_optional(&*pool)
+        .await
         .map_err(|e| e.to_string())?;
 
     match existing {
@@ -99,8 +99,8 @@ pub async fn add_history_item(
     let _ = app_handle.track_event(
         "history_item_added",
         Some(serde_json::json!({
-        "content_type": item.content_type.to_string()
-    }))
+            "content_type": item.content_type.to_string()
+        })),
     );
 
     Ok(())
@@ -109,7 +109,7 @@ pub async fn add_history_item(
 #[tauri::command]
 pub async fn search_history(
     pool: tauri::State<'_, SqlitePool>,
-    query: String
+    query: String,
 ) -> Result<Vec<HistoryItem>, String> {
     let query = format!("%{}%", query);
     let rows = sqlx
@@ -141,7 +141,7 @@ pub async fn search_history(
 pub async fn load_history_chunk(
     pool: tauri::State<'_, SqlitePool>,
     offset: i64,
-    limit: i64
+    limit: i64,
 ) -> Result<Vec<HistoryItem>, String> {
     let rows = sqlx
         ::query(
@@ -173,12 +173,12 @@ pub async fn load_history_chunk(
 pub async fn delete_history_item(
     app_handle: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
-    id: String
+    id: String,
 ) -> Result<(), String> {
-    sqlx
-        ::query("DELETE FROM history WHERE id = ?")
+    sqlx::query("DELETE FROM history WHERE id = ?")
         .bind(id)
-        .execute(&*pool).await
+        .execute(&*pool)
+        .await
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_item_deleted", None);
@@ -189,11 +189,11 @@ pub async fn delete_history_item(
 #[tauri::command]
 pub async fn clear_history(
     app_handle: tauri::AppHandle,
-    pool: tauri::State<'_, SqlitePool>
+    pool: tauri::State<'_, SqlitePool>,
 ) -> Result<(), String> {
-    sqlx
-        ::query("DELETE FROM history")
-        .execute(&*pool).await
+    sqlx::query("DELETE FROM history")
+        .execute(&*pool)
+        .await
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_cleared", None);
