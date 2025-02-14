@@ -108,7 +108,7 @@ async fn main() {
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 let sync = clipboard_sync_clone.lock().await;
-                sync.listen_webhook(app_handle_clone, clipboard_sync_clone).await;
+                sync.listen_webhook(app_handle_clone, clipboard_sync_arc.clone()).await;
             });
 
             utils::commands::center_window_on_current_monitor(main_window.as_ref().unwrap());
