@@ -24,7 +24,7 @@ tauri-plugin-fs = "2.2.0"
 tauri-plugin-clipboard = "2.1.11"
 tauri-plugin-prevent-default = "1.0.2"
 tauri-plugin-global-shortcut = "2.2.0"
-tauri-plugin-aptabase = { git = "https://github.com/0PandaDEV/tauri-plugin-aptabase", branch = "v2" }
+tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
 sqlx = { version = "0.8.3", features = [
   "runtime-tokio-native-tls",
   "sqlite",
