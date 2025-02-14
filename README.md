@@ -46,10 +46,9 @@ The fixed and simple clipboard manager for both Windows and Linux.
 
 <details>
   <summary><kbd>Star History</kbd></summary>
-  <a href="https://star-history.com/#0pandadev/qopy&Date">
+  <a href="https://starchart.cc/0PandaDEV/Qopy">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=0pandadev/qopy&theme=dark&type=Date">
-      <img width="100%" src="https://api.star-history.com/svg?repos=0pandadev/qopy&type=Date">
+      <img width="100%" src="https://starchart.cc/0PandaDEV/Qopy.svg?variant=adaptive">
     </picture>
   </a>
 </details>
