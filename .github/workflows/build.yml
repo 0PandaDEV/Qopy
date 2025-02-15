@@ -18,12 +18,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get version
         id: get_version
-        run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p \"require('./src-tauri/tauri.conf.json').version\")" >> $GITHUB_OUTPUT
 
   build-macos:
     needs: prepare
     runs-on: macos-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - args: "--target aarch64-apple-darwin"
+            arch: "arm64"
+          - args: "--target x86_64-apple-darwin"
+            arch: "x64"
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -88,24 +95,31 @@ jobs:
         if: failure()
         run: |
           echo "Attempting manual signing:"
-          timeout 300 codesign --force --options runtime --sign "$CERT_ID" --entitlements src-tauri/entitlements.plist src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app
+          timeout 300 codesign --force --options runtime --sign "$CERT_ID" --entitlements src-tauri/entitlements.plist src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy.app
           echo "Verifying signature:"
-          codesign -dv --verbose=4 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app | sed 's/.*Authority=.*/Authority=REDACTED/'
+          codesign -dv --verbose=4 "src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy.app" | sed 's/.*Authority=.*/Authority=REDACTED/'
+      - name: Set architecture label
+        run: |
+          if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
+            echo "ARCH_LABEL=aarch64-apple-darwin" >> $GITHUB_ENV
+          else
+            echo "ARCH_LABEL=x86_64-apple-darwin" >> $GITHUB_ENV
+          fi
       - name: Rename and Publish macOS Artifacts
         run: |
-          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
-          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz
-          mv src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz.sig src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz.sig
+          mv src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/dmg/*.dmg src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/dmg/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.dmg
+          mv src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/*.app.tar.gz src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz
+          mv src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/*.app.tar.gz.sig src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/Qopy-${{ needs.prepare.outputs.version }}_${{ matrix.arch }}.app.tar.gz.sig
       - uses: actions/upload-artifact@v4
         with:
           name: macos-dmg-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/dmg/*.dmg
+          path: "src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/dmg/*.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: updater-macos-${{ matrix.arch }}
           path: |
-            src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz
-            src-tauri/target/${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/*.app.tar.gz.sig
+            src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/${{ env.ARCH_LABEL }}/release/bundle/macos/*.app.tar.gz.sig
 
   build-windows:
     needs: prepare
