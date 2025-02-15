@@ -18,18 +18,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get version
         id: get_version
-        run: echo "VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p \"require('./src-tauri/tauri.conf.json').version\")" >> $GITHUB_OUTPUT
 
   build-macos:
     needs: prepare
-    strategy:
-      matrix:
-        include:
-          - args: "--target aarch64-apple-darwin"
-            arch: "silicon"
-          - args: "--target x86_64-apple-darwin"
-            arch: "intel"
     runs-on: macos-latest
+    timeout-minutes: 30
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -39,7 +33,7 @@ jobs:
       - name: Redact Sensitive Information
         run: |
           function redact_output {
-            sed -e "s/${{ secrets.REDACT_PATTERN }}/REDACTED/g"
+            sed -e "s/${{ secrets.APPLE_ID }}/REDACTED/g;s/${{ secrets.APPLE_ID_PASSWORD }}/REDACTED/g;s/${{ secrets.APPLE_CERTIFICATE }}/REDACTED/g;s/${{ secrets.APPLE_CERTIFICATE_PASSWORD }}/REDACTED/g;s/${{ secrets.KEYCHAIN_PASSWORD }}/REDACTED/g;s/${{ secrets.PAT }}/REDACTED/g;s/${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}/REDACTED/g"
           }
           exec > >(redact_output) 2>&1
       - uses: actions/setup-node@v4
@@ -94,7 +88,7 @@ jobs:
         if: failure()
         run: |
           echo "Attempting manual signing:"
-          codesign --force --options runtime --sign "$CERT_ID" --entitlements src-tauri/entitlements.plist src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app
+          timeout 300 codesign --force --options runtime --sign "$CERT_ID" --entitlements src-tauri/entitlements.plist src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app
           echo "Verifying signature:"
           codesign -dv --verbose=4 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Qopy.app | sed 's/.*Authority=.*/Authority=REDACTED/'
       - name: Rename and Publish macOS Artifacts
