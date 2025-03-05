@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { HistoryItem } from "~/types/types";
+import type { ContentType, HistoryItem } from "~/types/types";
 
 export default defineNuxtPlugin(() => {
   return {
@@ -37,7 +37,7 @@ export default defineNuxtPlugin(() => {
 
         async writeAndPaste(data: {
           content: string;
-          contentType: string;
+          contentType: ContentType;
         }): Promise<void> {
           await invoke<void>("write_and_paste", data);
         },
