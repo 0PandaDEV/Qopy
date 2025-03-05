@@ -157,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, shallowRef } from "vue";
+import { ref, computed, onMounted, watch, nextTick, shallowRef, onBeforeMount } from "vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { app, window } from "@tauri-apps/api";
@@ -174,7 +174,7 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import { Key } from "wrdu-keyboard/key";
+import { Key, keyboard } from "wrdu-keyboard";
 
 interface GroupedHistory {
   label: string;
@@ -206,8 +206,6 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
-
-const keyboard = useKeyboard();
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -287,7 +285,7 @@ const loadHistoryChunk = async (): Promise<void> => {
     }
 
     const processedItems = await Promise.all(
-      results.map(async (item) => {
+      results.map(async (item: HistoryItem) => {
         const historyItem = new HistoryItem(
           item.source,
           item.content_type,
@@ -389,7 +387,7 @@ const isSelected = (groupIndex: number, itemIndex: number): boolean => {
 
 const searchHistory = async (): Promise<void> => {
   const results = await $history.searchHistory(searchQuery.value);
-  history.value = results.map((item) =>
+  history.value = results.map((item: HistoryItem) =>
     Object.assign(
       new HistoryItem(
         item.source,
@@ -434,8 +432,8 @@ const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
 
   let content = selectedItem.value.content;
-  let contentType: string = selectedItem.value.content_type;
-  if (contentType === "image") {
+  let contentType = selectedItem.value.content_type as ContentType;
+  if (contentType === ContentType.Image) {
     try {
       content = await $history.readImage({ filename: content });
     } catch (error) {
@@ -488,10 +486,12 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
   const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
   if (results.length > 0) {
     const existingIds = new Set(history.value.map((item) => item.id));
-    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
+    const uniqueNewItems = results.filter(
+      (item: HistoryItem) => !existingIds.has(item.id)
+    );
 
     const processedNewItems = await Promise.all(
-      uniqueNewItems.map(async (item) => {
+      uniqueNewItems.map(async (item: HistoryItem) => {
         const historyItem = new HistoryItem(
           item.source,
           item.content_type,
@@ -561,71 +561,21 @@ const handleSelection = (
   if (shouldScroll) scrollToSelectedItem();
 };
 
-const setupEventListeners = async (): Promise<void> => {
-  await listen("clipboard-content-updated", async () => {
-    lastUpdateTime.value = Date.now();
-    await updateHistory(true);
-    if (groupedHistory.value[0]?.items.length > 0) {
-      handleSelection(0, 0, false);
-    }
-  });
-
-  await listen("tauri://focus", async () => {
-    const currentTime = Date.now();
-    if (currentTime - lastUpdateTime.value > 0) {
-      const previousState = {
-        groupIndex: selectedGroupIndex.value,
-        itemIndex: selectedItemIndex.value,
-        scroll:
-          resultsContainer.value?.osInstance()?.elements().viewport
-            ?.scrollTop || 0,
-      };
-
-      await updateHistory();
-      lastUpdateTime.value = currentTime;
-      handleSelection(previousState.groupIndex, previousState.itemIndex, false);
-
-      if (resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo) {
-        resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-          top: previousState.scroll,
-          behavior: "instant",
-        });
-      }
-    }
-    focusSearchInput();
-  });
-
-  await listen("tauri://blur", () => {
-    searchInput.value?.blur();
-  });
-
-  keyboard.prevent.down([Key.DownArrow], (event) => {
-    selectNext();
-  });
-
-  keyboard.prevent.down([Key.UpArrow], (event) => {
-    selectPrevious();
-  });
-
-  keyboard.prevent.down([Key.Enter], (event) => {
-    pasteSelectedItem();
-  });
-
-  keyboard.prevent.down([Key.Escape], (event) => {
-    hideApp();
-  });
+const setupKeyboardShortcuts = () => {
+  keyboard.prevent.down([Key.ArrowDown], () => selectNext());
+  keyboard.prevent.down([Key.ArrowUp], () => selectPrevious());
+  keyboard.prevent.down([Key.Enter], () => pasteSelectedItem());
+  keyboard.prevent.down([Key.Escape], () => hideApp());
 
   switch (os.value) {
     case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], (event) => {});
-
-      keyboard.prevent.down([Key.RightMeta, Key.K], (event) => {});
+      keyboard.prevent.down([Key.MetaLeft, Key.K], () => {});
+      keyboard.prevent.down([Key.MetaRight, Key.K], () => {});
       break;
-
-    case "linux" || "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], (event) => {});
-
-      keyboard.prevent.down([Key.RightControl, Key.K], (event) => {});
+    case "linux":
+    case "windows":
+      keyboard.prevent.down([Key.ControlLeft, Key.K], () => {});
+      keyboard.prevent.down([Key.ControlRight, Key.K], () => {});
       break;
   }
 };
@@ -654,6 +604,11 @@ watch(searchQuery, () => {
   searchHistory();
 });
 
+onBeforeMount(() => {
+  keyboard.clear();
+  setupKeyboardShortcuts();
+});
+
 onMounted(async () => {
   try {
     os.value = platform();
@@ -664,7 +619,50 @@ onMounted(async () => {
       ?.elements()
       ?.viewport?.addEventListener("scroll", handleScroll);
 
-    await setupEventListeners();
+    await listen("clipboard-content-updated", async () => {
+      lastUpdateTime.value = Date.now();
+      await updateHistory(true);
+      if (groupedHistory.value[0]?.items.length > 0) {
+        handleSelection(0, 0, false);
+      }
+    });
+
+    await listen("tauri://focus", async () => {
+      console.log("focus");
+      setupKeyboardShortcuts();
+      const currentTime = Date.now();
+      if (currentTime - lastUpdateTime.value > 0) {
+        const previousState = {
+          groupIndex: selectedGroupIndex.value,
+          itemIndex: selectedItemIndex.value,
+          scroll:
+            resultsContainer.value?.osInstance()?.elements().viewport
+              ?.scrollTop || 0,
+        };
+
+        await updateHistory();
+        lastUpdateTime.value = currentTime;
+        handleSelection(
+          previousState.groupIndex,
+          previousState.itemIndex,
+          false
+        );
+
+        if (
+          resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo
+        ) {
+          resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+            top: previousState.scroll,
+            behavior: "instant",
+          });
+        }
+      }
+      focusSearchInput();
+    });
+
+    await listen("tauri://blur", () => {
+      searchInput.value?.blur();
+    });
   } catch (error) {
     console.error("Error during onMounted:", error);
   }

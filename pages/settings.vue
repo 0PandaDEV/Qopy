@@ -89,43 +89,40 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core";
-import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
-import { Key } from "wrdu-keyboard/key";
-import { KeyValues, KeyLabels } from "../types/keys";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
+import { Key, keyboard } from "wrdu-keyboard";
+import { KeyLabels } from "~/types/keys";
 
-const activeModifiers = reactive<Set<KeyValues>>(new Set());
+const activeModifiers = reactive<Set<Key>>(new Set());
 const isKeybindInputFocused = ref(false);
-const keybind = ref<KeyValues[]>([]);
+const keybind = ref<Key[]>([]);
 const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
 const os = ref("");
 const router = useRouter();
-const keyboard = useKeyboard();
 const showEmptyKeybindError = ref(false);
 const autostart = ref(false);
 const { $settings } = useNuxtApp();
 
 const modifierKeySet = new Set([
-  KeyValues.AltLeft,
-  KeyValues.AltRight,
-  KeyValues.ControlLeft,
-  KeyValues.ControlRight,
-  KeyValues.MetaLeft,
-  KeyValues.MetaRight,
-  KeyValues.ShiftLeft,
-  KeyValues.ShiftRight,
+  Key.AltLeft,
+  Key.AltRight,
+  Key.ControlLeft,
+  Key.ControlRight,
+  Key.MetaLeft,
+  Key.MetaRight,
+  Key.ShiftLeft,
+  Key.ShiftRight,
 ]);
 
-const isModifier = (key: KeyValues): boolean => {
+const isModifier = (key: Key): boolean => {
   return modifierKeySet.has(key);
 };
 
-const keyToLabel = (key: KeyValues): string => {
-  return KeyLabels[key] || key;
+const keyToLabel = (key: Key): string => {
+  return KeyLabels[key as keyof typeof KeyLabels] || key;
 };
 
 const updateKeybind = () => {
@@ -148,9 +145,9 @@ const onFocus = () => {
 };
 
 const onKeyDown = (event: KeyboardEvent) => {
-  const key = event.code as KeyValues;
+  const key = event.code as Key;
 
-  if (key === KeyValues.Escape) {
+  if (key === Key.Escape) {
     if (keybindInput.value) {
       keybindInput.value.blur();
     }
@@ -186,16 +183,14 @@ const toggleAutostart = async () => {
   await $settings.saveSetting("autostart", autostart.value ? "true" : "false");
 };
 
-os.value = platform();
-
-onMounted(async () => {
-  keyboard.down([Key.All], (event) => {
+const setupKeyboardShortcuts = () => {
+  keyboard.prevent.down([Key.All], (event: KeyboardEvent) => {
     if (isKeybindInputFocused.value) {
       onKeyDown(event);
     }
   });
 
-  keyboard.down([Key.Escape], (event) => {
+  keyboard.prevent.down([Key.Escape], () => {
     if (isKeybindInputFocused.value) {
       keybindInput.value?.blur();
     } else {
@@ -205,39 +200,43 @@ onMounted(async () => {
 
   switch (os.value) {
     case "macos":
-      keyboard.down([Key.LeftMeta, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.MetaLeft, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
 
-      keyboard.down([Key.RightMeta, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.MetaRight, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
       break;
-
-    case "linux" || "windows":
-      keyboard.down([Key.LeftControl, Key.Enter], (event) => {
+    case "linux":
+    case "windows":
+      keyboard.prevent.down([Key.ControlLeft, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
 
-      keyboard.down([Key.RightControl, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.ControlRight, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
       break;
   }
+};
 
-  autostart.value = (await $settings.getSetting("autostart")) === "true";
+onBeforeMount(() => {
+  keyboard.clear();
+  setupKeyboardShortcuts();
 });
 
-onUnmounted(() => {
-  keyboard.clear();
+onMounted(async () => {
+  os.value = platform();
+  autostart.value = (await $settings.getSetting("autostart")) === "true";
 });
 </script>
 
