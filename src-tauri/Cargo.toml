@@ -7,10 +7,10 @@ edition = "2021"
 rust-version = "1.70"
 
 [build-dependencies]
-tauri-build = { version = "2.0.5", features = [] }
+tauri-build = { version = "2.0.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.2.5", features = [
+tauri = { version = "2.3.1", features = [
   "macos-private-api",
   "tray-icon",
   "image-png",
@@ -18,11 +18,11 @@ tauri = { version = "2.2.5", features = [
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
 tauri-plugin-autostart = "2.2.0"
 tauri-plugin-os = "2.2.0"
-tauri-plugin-updater = "2.4.0"
+tauri-plugin-updater = "2.5.1"
 tauri-plugin-dialog = "2.2.0"
 tauri-plugin-fs = "2.2.0"
 tauri-plugin-clipboard = "2.1.11"
-tauri-plugin-prevent-default = "1.0.2"
+tauri-plugin-prevent-default = "1.2.1"
 tauri-plugin-global-shortcut = "2.2.0"
 tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
 sqlx = { version = "0.8.3", features = [
@@ -30,9 +30,9 @@ sqlx = { version = "0.8.3", features = [
   "sqlite",
   "chrono",
 ] }
-serde = { version = "1.0.217", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
-serde_json = "1.0.138"
+serde_json = "1.0.140"
 rdev = "0.5.3"
 rand = "0.9.0"
 base64 = "0.22.1"
@@ -43,18 +43,19 @@ regex = "1.11.1"
 sha2 = "0.10.8"
 lazy_static = "1.5.0"
 time = "0.3.37"
-global-hotkey = "0.6.3"
-chrono = { version = "0.4.39", features = ["serde"] }
-log = { version = "0.4.25", features = ["std"] }
-uuid = "1.12.1"
+global-hotkey = "0.6.4"
+chrono = { version = "0.4.40", features = ["serde"] }
+log = { version = "0.4.26", features = ["std"] }
+uuid = "1.15.1"
 active-win-pos-rs = "0.9.0"
 include_dir = "0.7.4"
 # hyperpolyglot = { git = "https://github.com/0pandadev/hyperpolyglot" }
-applications = { git = "https://github.com/HuakunShen/applications-rs", branch = "dev" }
+applications = { git = "https://github.com/HuakunShen/applications-rs", branch = "main" }
+glob = "0.3.2"
 meta_fetcher = "0.1.1"
 parking_lot = "0.12.3"
 aes-gcm = "0.10.3"
-typenum = "1.17.0"
+typenum = "1.18.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
