@@ -9,13 +9,13 @@ import { listen } from "@tauri-apps/api/event";
 import { app, window } from "@tauri-apps/api";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
 import { onMounted } from "vue";
+import { keyboard } from "wrdu-keyboard";
 
-const keyboard = useKeyboard();
 const { $settings } = useNuxtApp();
+keyboard.init()
 
 onMounted(async () => {
   await listen("settings", async () => {
-    keyboard.clear();
     await navigateTo("/settings");
     await app.show();
     await window.getCurrentWindow().show();

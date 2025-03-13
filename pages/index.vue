@@ -174,7 +174,7 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import { Key } from "wrdu-keyboard/key";
+import { Key, keyboard } from "wrdu-keyboard";
 
 interface GroupedHistory {
   label: string;
@@ -206,8 +206,6 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
-
-const keyboard = useKeyboard();
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -593,39 +591,70 @@ const setupEventListeners = async (): Promise<void> => {
       }
     }
     focusSearchInput();
+    
+    // Re-register keyboard shortcuts on focus
+    keyboard.clear();
+    keyboard.prevent.down([Key.DownArrow], () => {
+      selectNext();
+    });
+
+    keyboard.prevent.down([Key.UpArrow], () => {
+      selectPrevious();
+    });
+
+    keyboard.prevent.down([Key.Enter], () => {
+      pasteSelectedItem();
+    });
+
+    keyboard.prevent.down([Key.Escape], () => {
+      hideApp();
+    });
+
+    switch (os.value) {
+      case "macos":
+        keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
+        keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
+        break;
+
+      case "linux":
+      case "windows":
+        keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
+        keyboard.prevent.down([Key.RightControl, Key.K], () => {});
+        break;
+    }
   });
 
   await listen("tauri://blur", () => {
     searchInput.value?.blur();
+    keyboard.clear();
   });
 
-  keyboard.prevent.down([Key.DownArrow], (event) => {
+  keyboard.prevent.down([Key.DownArrow], () => {
     selectNext();
   });
 
-  keyboard.prevent.down([Key.UpArrow], (event) => {
+  keyboard.prevent.down([Key.UpArrow], () => {
     selectPrevious();
   });
 
-  keyboard.prevent.down([Key.Enter], (event) => {
+  keyboard.prevent.down([Key.Enter], () => {
     pasteSelectedItem();
   });
 
-  keyboard.prevent.down([Key.Escape], (event) => {
+  keyboard.prevent.down([Key.Escape], () => {
     hideApp();
   });
 
   switch (os.value) {
     case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], (event) => {});
-
-      keyboard.prevent.down([Key.RightMeta, Key.K], (event) => {});
+      keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
+      keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
       break;
 
-    case "linux" || "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], (event) => {});
-
-      keyboard.prevent.down([Key.RightControl, Key.K], (event) => {});
+    case "linux":
+    case "windows":
+      keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
+      keyboard.prevent.down([Key.RightControl, Key.K], () => {});
       break;
   }
 };

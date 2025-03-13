@@ -3,7 +3,6 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   compatibilityDate: "2024-07-04",
   ssr: false,
-  modules: ["wrdu-keyboard"],
   vite: {
     css: {
       preprocessorOptions: {

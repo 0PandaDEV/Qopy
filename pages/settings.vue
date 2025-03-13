@@ -93,9 +93,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
-import { Key } from "wrdu-keyboard/key";
 import { KeyValues, KeyLabels } from "../types/keys";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
+import { Key, keyboard } from "wrdu-keyboard";
 
 const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);
@@ -104,7 +104,6 @@ const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
 const os = ref("");
 const router = useRouter();
-const keyboard = useKeyboard();
 const showEmptyKeybindError = ref(false);
 const autostart = ref(false);
 const { $settings } = useNuxtApp();
@@ -189,13 +188,13 @@ const toggleAutostart = async () => {
 os.value = platform();
 
 onMounted(async () => {
-  keyboard.down([Key.All], (event) => {
+  keyboard.prevent.down([Key.All], (event: KeyboardEvent) => {
     if (isKeybindInputFocused.value) {
       onKeyDown(event);
     }
   });
 
-  keyboard.down([Key.Escape], (event) => {
+  keyboard.prevent.down([Key.Escape], () => {
     if (isKeybindInputFocused.value) {
       keybindInput.value?.blur();
     } else {
@@ -205,27 +204,28 @@ onMounted(async () => {
 
   switch (os.value) {
     case "macos":
-      keyboard.down([Key.LeftMeta, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.LeftMeta, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
 
-      keyboard.down([Key.RightMeta, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.RightMeta, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
       break;
 
-    case "linux" || "windows":
-      keyboard.down([Key.LeftControl, Key.Enter], (event) => {
+    case "linux":
+    case "windows":
+      keyboard.prevent.down([Key.LeftControl, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
       });
 
-      keyboard.down([Key.RightControl, Key.Enter], (event) => {
+      keyboard.prevent.down([Key.RightControl, Key.Enter], () => {
         if (!isKeybindInputFocused.value) {
           saveKeybind();
         }
