@@ -494,6 +494,36 @@ const setupEventListeners = async (): Promise<void> => {
       }
     }
     focusSearchInput();
+
+    keyboard.clear();
+    keyboard.prevent.down([Key.DownArrow], () => {
+      selectNext();
+    });
+
+    keyboard.prevent.down([Key.UpArrow], () => {
+      selectPrevious();
+    });
+
+    keyboard.prevent.down([Key.Enter], () => {
+      pasteSelectedItem();
+    });
+
+    keyboard.prevent.down([Key.Escape], () => {
+      hideApp();
+    });
+
+    switch (os.value) {
+      case "macos":
+        keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
+        keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
+        break;
+
+      case "linux":
+      case "windows":
+        keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
+        keyboard.prevent.down([Key.RightControl, Key.K], () => {});
+        break;
+    }
   });
 
   await listen("tauri://blur", () => {
