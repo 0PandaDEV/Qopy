@@ -68,47 +68,6 @@
     </div>
     <BottomBar />
   </main>
-
-  <!-- <div class="right-panel">
-        <div
-          class="content"
-          v-if="selectedItem?.content_type === ContentType.Image">
-          <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
-        </div>
-        <div
-          v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
-          class="content">
-          <img
-            class="image"
-            :src="getYoutubeThumbnail(selectedItem.content)"
-            alt="YouTube Thumbnail" />
-        </div>
-        <div
-          class="content"
-          v-else-if="
-            selectedItem?.content_type === ContentType.Link && pageOgImage
-          ">
-          <img :src="pageOgImage" alt="Image" class="image" />
-        </div>
-        <OverlayScrollbarsComponent v-else class="content">
-          <span>{{ selectedItem?.content || "" }}</span>
-        </OverlayScrollbarsComponent>
-
-        <OverlayScrollbarsComponent
-          class="information"
-          :options="{ scrollbars: { autoHide: 'scroll' } }">
-          <div class="title">Information</div>
-          <div class="info-content" v-if="selectedItem && getInfo">
-            <div class="info-row" v-for="(row, index) in infoRows" :key="index">
-              <p class="label">{{ row.label }}</p>
-              <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
-                {{ row.value }}
-              </span>
-            </div>
-          </div>
-        </OverlayScrollbarsComponent>
-      </div>
-    </div> -->
 </template>
 
 <script setup lang="ts">
@@ -395,19 +354,6 @@ const pasteSelectedItem = async (): Promise<void> => {
   await $history.writeAndPaste({ content, contentType });
 };
 
-const truncateContent = (content: string): string => {
-  const maxWidth = 284;
-  const charWidth = 9;
-  const maxChars = Math.floor(maxWidth / charWidth);
-  return content.length > maxChars
-    ? content.slice(0, maxChars - 3) + "..."
-    : content;
-};
-
-const hasFavicon = (str: string): boolean => {
-  return str.trim() !== "";
-};
-
 const isYoutubeWatchUrl = (url: string): boolean => {
   return (
     /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/watch\?v=[\w-]+/.test(
@@ -426,10 +372,6 @@ const getYoutubeThumbnail = (url: string): string => {
   return videoId
     ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
     : "https://via.placeholder.com/1280x720";
-};
-
-const getFaviconFromDb = (favicon: string): string => {
-  return `data:image/png;base64,${favicon}`;
 };
 
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
@@ -540,36 +482,6 @@ const setupEventListeners = async (): Promise<void> => {
       }
     }
     focusSearchInput();
-
-    keyboard.clear();
-    keyboard.prevent.down([Key.DownArrow], () => {
-      selectNext();
-    });
-
-    keyboard.prevent.down([Key.UpArrow], () => {
-      selectPrevious();
-    });
-
-    keyboard.prevent.down([Key.Enter], () => {
-      pasteSelectedItem();
-    });
-
-    keyboard.prevent.down([Key.Escape], () => {
-      hideApp();
-    });
-
-    switch (os.value) {
-      case "macos":
-        keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
-        keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
-        break;
-
-      case "linux":
-      case "windows":
-        keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
-        keyboard.prevent.down([Key.RightControl, Key.K], () => {});
-        break;
-    }
   });
 
   await listen("tauri://blur", () => {
