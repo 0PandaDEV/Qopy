@@ -1,5 +1,6 @@
 <template>
-  <div style="pointer-events: auto">
+  <div>
+    <Noise />
     <NuxtPage />
   </div>
 </template>
@@ -12,7 +13,7 @@ import { onMounted } from "vue";
 import { keyboard } from "wrdu-keyboard";
 
 const { $settings } = useNuxtApp();
-keyboard.init()
+keyboard.init();
 
 onMounted(async () => {
   await listen("settings", async () => {
@@ -58,6 +59,24 @@ onMounted(async () => {
   src: url("~/assets/fonts/CommitMono.woff2") format("woff2");
 }
 
+:root {
+  --background: #2e2d2b;
+  --accent: #feb453;
+  --border: #ffffff0d;
+
+  --text: #e5dfd5;
+  --text-secondary: #ada9a1;
+  --text-muted: #78756f;
+
+  --sidebar-width: 286px;
+  --bottom-bar-height: 39px;
+  --info-panel-height: 160px;
+  --content-view-height: calc(
+    100% - var(--search-height) - var(--info-panel-height) -
+      var(--bottom-bar-height)
+  );
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -66,9 +85,6 @@ onMounted(async () => {
   font-family: SFRoundedRegular;
   scroll-behavior: smooth;
   scrollbar-width: thin;
-  user-select: none;
-  position: relative;
-  z-index: 1;
 
   --os-handle-bg: #ada9a1;
   --os-handle-bg-hover: #78756f;
@@ -80,8 +96,8 @@ body {
   background-color: transparent;
   width: 750px;
   height: 474px;
-  user-select: none !important;
-  pointer-events: none !important;
+  z-index: -1;
+  font-size: 14px;
 }
 
 .os-scrollbar-horizontal {
