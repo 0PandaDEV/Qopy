@@ -18,12 +18,9 @@
           :class="{ disabled: keybind.length === 0 }">
           <p>Save</p>
           <div>
-            <img alt="" src="../public/cmd.svg" v-if="os === 'macos'" />
-            <img
-              alt=""
-              src="../public/ctrl.svg"
-              v-if="os === 'linux' || os === 'windows'" />
-            <img alt="" src="../public/enter.svg" />
+            <IconsCmd v-if="os === 'macos'" />
+            <IconsCtrl v-if="os === 'linux' || os === 'windows'" />
+            <IconsEnter />
           </div>
         </div>
       </div>
