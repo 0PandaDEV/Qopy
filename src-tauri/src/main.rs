@@ -57,6 +57,7 @@ fn main() {
                 .build()
         )
         .setup(|app| {
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let app_data_dir = app.path().app_data_dir().unwrap();
             utils::logger::init_logger(&app_data_dir).expect("Failed to initialize logger");
 
