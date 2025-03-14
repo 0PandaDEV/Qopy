@@ -1,9 +1,7 @@
 <template>
   <main>
-    <TopBar 
-      ref="topBar"
-      @search="searchHistory" />
-    <div class="content">
+    <TopBar ref="topBar" @search="searchHistory" />
+    <div class="container">
       <OverlayScrollbarsComponent
         class="results"
         ref="resultsContainer"
@@ -23,113 +21,55 @@
               :dimensions="imageDimensions[item.id]"
               @select="selectItem(groupIndex, index)"
               @image-error="onImageError"
-              @setRef="el => selectedElement = el" />
+              @setRef="(el) => (selectedElement = el)" />
           </div>
         </div>
       </OverlayScrollbarsComponent>
       <div class="right">
-        <div class="content"></div>
-        <div class="information"></div>
+        <div
+          class="content"
+          v-if="selectedItem?.content_type === ContentType.Image">
+          <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
+        </div>
+        <div
+          v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
+          class="content">
+          <img
+            class="image"
+            :src="getYoutubeThumbnail(selectedItem.content)"
+            alt="YouTube Thumbnail" />
+        </div>
+        <div
+          class="content"
+          v-else-if="
+            selectedItem?.content_type === ContentType.Link && pageOgImage
+          ">
+          <img :src="pageOgImage" alt="Image" class="image" />
+        </div>
+        <OverlayScrollbarsComponent v-else class="content">
+          <span>{{ selectedItem?.content || "" }}</span>
+        </OverlayScrollbarsComponent>
+        <OverlayScrollbarsComponent
+          class="information"
+          :options="{ scrollbars: { autoHide: 'scroll' } }">
+          <div class="title">Information</div>
+          <div class="info-content" v-if="selectedItem && getInfo">
+            <div class="info-row" v-for="(row, index) in infoRows" :key="index">
+              <p class="label">{{ row.label }}</p>
+              <span
+                :class="{ 'url-truncate': row.isUrl }"
+                :data-text="row.value">
+                {{ row.value }}
+              </span>
+            </div>
+          </div>
+        </OverlayScrollbarsComponent>
       </div>
     </div>
     <BottomBar />
   </main>
 
-  <!-- <div class="bg" tabindex="0">
-    <input
-      ref="searchInput"
-      v-model="searchQuery"
-      @input="searchHistory"
-      autocorrect="off"
-      autocapitalize="off"
-      spellcheck="false"
-      class="search"
-      type="text"
-      placeholder="Type to filter entries..." />
-    
-    <div class="main-container">
-      <OverlayScrollbarsComponent
-        class="results"
-        ref="resultsContainer"
-        :options="{ scrollbars: { autoHide: 'scroll' } }">
-        <template v-for="(group, groupIndex) in groupedHistory" :key="groupIndex">
-          <div class="time-separator">{{ group.label }}</div>
-          <div
-            v-for="(item, index) in group.items"
-            :key="item.id"
-            :class="[
-              'result clothoid-corner',
-              { selected: isSelected(groupIndex, index) },
-            ]"
-            @click="selectItem(groupIndex, index)"
-            :ref="
-              (el: any) => {
-                if (isSelected(groupIndex, index))
-                  selectedElement = el as HTMLElement;
-              }
-            ">
-            <template v-if="item.content_type === 'image'">
-              <img
-                v-if="imageUrls[item.id]"
-                :src="imageUrls[item.id]"
-                alt="Image"
-                class="image"
-                @error="onImageError" />
-              <img v-else src="../public/icons/Image.svg" class="icon" />
-            </template>
-            <template v-else-if="hasFavicon(item.favicon ?? '')">
-              <img
-                :src="
-                  item.favicon
-                    ? getFaviconFromDb(item.favicon)
-                    : '../public/icons/Link.svg'
-                "
-                alt="Favicon"
-                class="favicon"
-                @error="
-                  ($event.target as HTMLImageElement).src =
-                    '../public/icons/Link.svg'
-                " />
-            </template>
-            <img
-              src="../public/icons/File.svg"
-              class="icon"
-              v-else-if="item.content_type === ContentType.File" />
-            <img
-              src="../public/icons/Text.svg"
-              class="icon"
-              v-else-if="item.content_type === ContentType.Text" />
-            <div v-else-if="item.content_type === ContentType.Color">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <g>
-                  <rect width="18" height="18" />
-                  <path
-                    d="M9 18C12.2154 18 15.1865 16.2846 16.7942 13.5C18.4019 10.7154 18.4019 7.28461 16.7942 4.5C15.1865 1.71539 12.2154 -1.22615e-06 9 0C5.78461 0 2.81347 1.71539 1.20577 4.5C-0.401925 7.28461 -0.401923 10.7154 1.20577 13.5C2.81347 16.2846 5.78461 18 9 18Z"
-                    fill="#E5DFD5" />
-                  <path
-                    d="M9 16C7.14348 16 5.36301 15.2625 4.05025 13.9497C2.7375 12.637 2 10.8565 2 9C2 7.14348 2.7375 5.36301 4.05025 4.05025C5.36301 2.7375 7.14348 2 9 2C10.8565 2 12.637 2.7375 13.9497 4.05025C15.2625 5.36301 16 7.14348 16 9C16 10.8565 15.2625 12.637 13.9497 13.9497C12.637 15.2625 10.8565 16 9 16Z"
-                    :fill="item.content" />
-                </g>
-              </svg>
-            </div>
-            <img
-              src="../public/icons/Code.svg"
-              class="icon"
-              v-else-if="item.content_type === ContentType.Code" />
-            <span v-if="item.content_type === ContentType.Image">
-              Image ({{ imageDimensions[item.id] || "Loading..." }})
-            </span>
-            <span v-else>{{ truncateContent(item.content) }}</span>
-          </div>
-        </template>
-      </OverlayScrollbarsComponent>
-      
-      <div class="right-panel">
+  <!-- <div class="right-panel">
         <div
           class="content"
           v-if="selectedItem?.content_type === ContentType.Image">
@@ -168,34 +108,7 @@
           </div>
         </OverlayScrollbarsComponent>
       </div>
-    </div>
-    
-    <div class="bottom-bar">
-      <div class="left">
-        <img class="logo" width="18px" src="../public/logo.png" alt="" />
-        <p>Qopy</p>
-      </div>
-      <div class="right">
-        <div class="paste" @click="pasteSelectedItem">
-          <p>Paste</p>
-          <img src="../public/enter.svg" alt="" />
-        </div>
-        <div class="divider"></div>
-        <div class="actions">
-          <p>Actions</p>
-          <div>
-            <img
-              v-if="os === 'windows' || os === 'linux'"
-              src="../public/ctrl.svg"
-              alt="" />
-            <img v-if="os === 'macos'" src="../public/cmd.svg" alt="" />
-            <img src="../public/k.svg" alt="" />
-          </div>
-        </div>
-      </div>
-    </div>
-    <Noise />
-  </div> -->
+    </div> -->
 </template>
 
 <script setup lang="ts">
@@ -217,7 +130,12 @@ import type {
   InfoCode,
 } from "~/types/types";
 import { Key, keyboard } from "wrdu-keyboard";
-import { selectedGroupIndex, selectedItemIndex, selectedElement, useSelectedResult } from '~/lib/selectedResult'
+import {
+  selectedGroupIndex,
+  selectedItemIndex,
+  selectedElement,
+  useSelectedResult,
+} from "~/lib/selectedResult";
 
 interface GroupedHistory {
   label: string;
@@ -250,7 +168,7 @@ const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
 
-const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null)
+const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null);
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -313,7 +231,8 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
     .map(([label, items]) => ({ label, items }));
 });
 
-const { selectedItem, isSelected, selectNext, selectPrevious, selectItem } = useSelectedResult(groupedHistory)
+const { selectedItem, isSelected, selectNext, selectPrevious, selectItem } =
+  useSelectedResult(groupedHistory);
 
 const loadHistoryChunk = async (): Promise<void> => {
   if (isLoading) return;
@@ -401,7 +320,7 @@ const scrollToSelectedItem = (): void => {
 
     setTimeout(() => {
       if (!selectedElement.value) return;
-      
+
       const viewportRect = viewport.getBoundingClientRect();
       const elementRect = selectedElement.value.getBoundingClientRect();
 
@@ -411,13 +330,19 @@ const scrollToSelectedItem = (): void => {
 
       if (isAbove) {
         viewport.scrollTo({
-          top: viewport.scrollTop + (elementRect.top - viewportRect.top) - (isFirstItemInGroup ? TOP_SCROLL_PADDING : SCROLL_PADDING),
-          behavior: "smooth"
+          top:
+            viewport.scrollTop +
+            (elementRect.top - viewportRect.top) -
+            (isFirstItemInGroup ? TOP_SCROLL_PADDING : SCROLL_PADDING),
+          behavior: "smooth",
         });
       } else if (isBelow) {
         viewport.scrollTo({
-          top: viewport.scrollTop + (elementRect.bottom - viewportRect.bottom) + SCROLL_PADDING,
-          behavior: "smooth"
+          top:
+            viewport.scrollTop +
+            (elementRect.bottom - viewportRect.bottom) +
+            SCROLL_PADDING,
+          behavior: "smooth",
         });
       }
     }, 10);
@@ -425,15 +350,15 @@ const scrollToSelectedItem = (): void => {
 };
 
 const searchHistory = async (query: string): Promise<void> => {
-  searchQuery.value = query
+  searchQuery.value = query;
   if (!query.trim()) {
-    history.value = []
-    offset = 0
-    await loadHistoryChunk()
-    return
+    history.value = [];
+    offset = 0;
+    await loadHistoryChunk();
+    return;
   }
-  
-  const results = await $history.searchHistory(query)
+
+  const results = await $history.searchHistory(query);
   history.value = results.map((item) =>
     Object.assign(
       new HistoryItem(
@@ -446,12 +371,12 @@ const searchHistory = async (query: string): Promise<void> => {
       ),
       { id: item.id, timestamp: new Date(item.timestamp) }
     )
-  )
+  );
 
   if (groupedHistory.value.length > 0) {
-    handleSelection(0, 0, false)
+    handleSelection(0, 0, false);
   }
-}
+};
 
 const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
@@ -579,9 +504,9 @@ const handleSelection = (
   itemIndex: number,
   shouldScroll: boolean = true
 ): void => {
-  selectItem(groupIndex, itemIndex)
-  if (shouldScroll) scrollToSelectedItem()
-}
+  selectItem(groupIndex, itemIndex);
+  if (shouldScroll) scrollToSelectedItem();
+};
 
 const setupEventListeners = async (): Promise<void> => {
   await listen("clipboard-content-updated", async () => {
@@ -689,18 +614,22 @@ const hideApp = async (): Promise<void> => {
 
 const focusSearchInput = (): void => {
   nextTick(() => {
-    topBar.value?.searchInput?.focus()
-  })
-}
+    topBar.value?.searchInput?.focus();
+  });
+};
 
 const onImageError = (): void => {
   imageLoadError.value = true;
   imageLoading.value = false;
 };
 
-watch([selectedGroupIndex, selectedItemIndex], () => {
-  scrollToSelectedItem();
-}, { flush: 'post' });
+watch(
+  [selectedGroupIndex, selectedItemIndex],
+  () => {
+    scrollToSelectedItem();
+  },
+  { flush: "post" }
+);
 
 watch(searchQuery, () => {
   searchHistory(searchQuery.value);

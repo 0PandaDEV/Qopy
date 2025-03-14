@@ -1,6 +1,6 @@
 <template>
   <div
-    :class="['result clothoid-corner', { selected }]"
+    :class="['result', { selected }]"
     @click="$emit('select')"
     :ref="el => { if (selected && el) $emit('setRef', el as HTMLElement) }">
     <template v-if="item.content_type === 'image'">
