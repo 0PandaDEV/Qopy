@@ -14,27 +14,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
 
-const searchQuery = ref('')
-const searchInput = ref<HTMLInputElement | null>(null)
+const searchQuery = ref("");
+const searchInput = ref<HTMLInputElement | null>(null);
 
 const emit = defineEmits<{
-  (e: 'search', query: string): void
-  (e: 'focus'): void
-}>()
+  (e: "search", query: string): void;
+  (e: "focus"): void;
+}>();
 
 const onSearch = () => {
-  emit('search', searchQuery.value)
-}
+  emit("search", searchQuery.value);
+};
 
-defineExpose({ searchInput })
+defineExpose({ searchInput });
 </script>
 
 <style lang="scss">
 .topbar {
   width: 100%;
-  height: 56px;
+  min-height: 56px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;

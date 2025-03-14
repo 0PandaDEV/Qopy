@@ -66,7 +66,17 @@
         </OverlayScrollbarsComponent>
       </div>
     </div>
-    <BottomBar />
+    <BottomBar
+      :primary-action="{
+        text: 'Paste',
+        icon: IconsEnter,
+        onClick: pasteSelectedItem,
+      }"
+      :secondary-action="{
+        text: 'Actions',
+        icon: IconsK,
+        showModifier: true,
+      }" />
   </main>
 </template>
 
@@ -95,6 +105,8 @@ import {
   selectedElement,
   useSelectedResult,
 } from "~/lib/selectedResult";
+import IconsEnter from "~/components/Icons/Enter.vue";
+import IconsK from "~/components/Icons/K.vue";
 
 interface GroupedHistory {
   label: string;
