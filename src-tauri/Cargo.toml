@@ -46,7 +46,7 @@ time = "0.3.39"
 global-hotkey = "0.6.4"
 chrono = { version = "0.4.40", features = ["serde"] }
 log = { version = "0.4.26", features = ["std"] }
-uuid = "1.15.1"
+uuid = "1.16.0"
 active-win-pos-rs = "0.9.0"
 include_dir = "0.7.4"
 # hyperpolyglot = { git = "https://github.com/0pandadev/hyperpolyglot" }
