@@ -1,5 +1,41 @@
 <template>
-  <div class="bg" tabindex="0">
+  <main>
+    <TopBar 
+      ref="topBar"
+      @search="searchHistory" />
+    <div class="content">
+      <OverlayScrollbarsComponent
+        class="results"
+        ref="resultsContainer"
+        :options="{ scrollbars: { autoHide: 'scroll' } }">
+        <div
+          v-for="(group, groupIndex) in groupedHistory"
+          :key="groupIndex"
+          class="group">
+          <div class="time-separator">{{ group.label }}</div>
+          <div class="results-group">
+            <Result
+              v-for="(item, index) in group.items"
+              :key="item.id"
+              :item="item"
+              :selected="isSelected(groupIndex, index)"
+              :image-url="imageUrls[item.id]"
+              :dimensions="imageDimensions[item.id]"
+              @select="selectItem(groupIndex, index)"
+              @image-error="onImageError"
+              @setRef="el => selectedElement = el" />
+          </div>
+        </div>
+      </OverlayScrollbarsComponent>
+      <div class="right">
+        <div class="content"></div>
+        <div class="information"></div>
+      </div>
+    </div>
+    <BottomBar />
+  </main>
+
+  <!-- <div class="bg" tabindex="0">
     <input
       ref="searchInput"
       v-model="searchQuery"
@@ -10,6 +46,130 @@
       class="search"
       type="text"
       placeholder="Type to filter entries..." />
+    
+    <div class="main-container">
+      <OverlayScrollbarsComponent
+        class="results"
+        ref="resultsContainer"
+        :options="{ scrollbars: { autoHide: 'scroll' } }">
+        <template v-for="(group, groupIndex) in groupedHistory" :key="groupIndex">
+          <div class="time-separator">{{ group.label }}</div>
+          <div
+            v-for="(item, index) in group.items"
+            :key="item.id"
+            :class="[
+              'result clothoid-corner',
+              { selected: isSelected(groupIndex, index) },
+            ]"
+            @click="selectItem(groupIndex, index)"
+            :ref="
+              (el: any) => {
+                if (isSelected(groupIndex, index))
+                  selectedElement = el as HTMLElement;
+              }
+            ">
+            <template v-if="item.content_type === 'image'">
+              <img
+                v-if="imageUrls[item.id]"
+                :src="imageUrls[item.id]"
+                alt="Image"
+                class="image"
+                @error="onImageError" />
+              <img v-else src="../public/icons/Image.svg" class="icon" />
+            </template>
+            <template v-else-if="hasFavicon(item.favicon ?? '')">
+              <img
+                :src="
+                  item.favicon
+                    ? getFaviconFromDb(item.favicon)
+                    : '../public/icons/Link.svg'
+                "
+                alt="Favicon"
+                class="favicon"
+                @error="
+                  ($event.target as HTMLImageElement).src =
+                    '../public/icons/Link.svg'
+                " />
+            </template>
+            <img
+              src="../public/icons/File.svg"
+              class="icon"
+              v-else-if="item.content_type === ContentType.File" />
+            <img
+              src="../public/icons/Text.svg"
+              class="icon"
+              v-else-if="item.content_type === ContentType.Text" />
+            <div v-else-if="item.content_type === ContentType.Color">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <g>
+                  <rect width="18" height="18" />
+                  <path
+                    d="M9 18C12.2154 18 15.1865 16.2846 16.7942 13.5C18.4019 10.7154 18.4019 7.28461 16.7942 4.5C15.1865 1.71539 12.2154 -1.22615e-06 9 0C5.78461 0 2.81347 1.71539 1.20577 4.5C-0.401925 7.28461 -0.401923 10.7154 1.20577 13.5C2.81347 16.2846 5.78461 18 9 18Z"
+                    fill="#E5DFD5" />
+                  <path
+                    d="M9 16C7.14348 16 5.36301 15.2625 4.05025 13.9497C2.7375 12.637 2 10.8565 2 9C2 7.14348 2.7375 5.36301 4.05025 4.05025C5.36301 2.7375 7.14348 2 9 2C10.8565 2 12.637 2.7375 13.9497 4.05025C15.2625 5.36301 16 7.14348 16 9C16 10.8565 15.2625 12.637 13.9497 13.9497C12.637 15.2625 10.8565 16 9 16Z"
+                    :fill="item.content" />
+                </g>
+              </svg>
+            </div>
+            <img
+              src="../public/icons/Code.svg"
+              class="icon"
+              v-else-if="item.content_type === ContentType.Code" />
+            <span v-if="item.content_type === ContentType.Image">
+              Image ({{ imageDimensions[item.id] || "Loading..." }})
+            </span>
+            <span v-else>{{ truncateContent(item.content) }}</span>
+          </div>
+        </template>
+      </OverlayScrollbarsComponent>
+      
+      <div class="right-panel">
+        <div
+          class="content"
+          v-if="selectedItem?.content_type === ContentType.Image">
+          <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
+        </div>
+        <div
+          v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
+          class="content">
+          <img
+            class="image"
+            :src="getYoutubeThumbnail(selectedItem.content)"
+            alt="YouTube Thumbnail" />
+        </div>
+        <div
+          class="content"
+          v-else-if="
+            selectedItem?.content_type === ContentType.Link && pageOgImage
+          ">
+          <img :src="pageOgImage" alt="Image" class="image" />
+        </div>
+        <OverlayScrollbarsComponent v-else class="content">
+          <span>{{ selectedItem?.content || "" }}</span>
+        </OverlayScrollbarsComponent>
+
+        <OverlayScrollbarsComponent
+          class="information"
+          :options="{ scrollbars: { autoHide: 'scroll' } }">
+          <div class="title">Information</div>
+          <div class="info-content" v-if="selectedItem && getInfo">
+            <div class="info-row" v-for="(row, index) in infoRows" :key="index">
+              <p class="label">{{ row.label }}</p>
+              <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
+                {{ row.value }}
+              </span>
+            </div>
+          </div>
+        </OverlayScrollbarsComponent>
+      </div>
+    </div>
+    
     <div class="bottom-bar">
       <div class="left">
         <img class="logo" width="18px" src="../public/logo.png" alt="" />
@@ -34,126 +194,8 @@
         </div>
       </div>
     </div>
-    <OverlayScrollbarsComponent
-      class="results"
-      ref="resultsContainer"
-      :options="{ scrollbars: { autoHide: 'scroll' } }">
-      <template v-for="(group, groupIndex) in groupedHistory" :key="groupIndex">
-        <div class="time-separator">{{ group.label }}</div>
-        <div
-          v-for="(item, index) in group.items"
-          :key="item.id"
-          :class="[
-            'result clothoid-corner',
-            { selected: isSelected(groupIndex, index) },
-          ]"
-          @click="selectItem(groupIndex, index)"
-          :ref="
-            (el: any) => {
-              if (isSelected(groupIndex, index))
-                selectedElement = el as HTMLElement;
-            }
-          ">
-          <template v-if="item.content_type === 'image'">
-            <img
-              v-if="imageUrls[item.id]"
-              :src="imageUrls[item.id]"
-              alt="Image"
-              class="image"
-              @error="onImageError" />
-            <img v-else src="../public/icons/Image.svg" class="icon" />
-          </template>
-          <template v-else-if="hasFavicon(item.favicon ?? '')">
-            <img
-              :src="
-                item.favicon
-                  ? getFaviconFromDb(item.favicon)
-                  : '../public/icons/Link.svg'
-              "
-              alt="Favicon"
-              class="favicon"
-              @error="
-                ($event.target as HTMLImageElement).src =
-                  '../public/icons/Link.svg'
-              " />
-          </template>
-          <img
-            src="../public/icons/File.svg"
-            class="icon"
-            v-else-if="item.content_type === ContentType.File" />
-          <img
-            src="../public/icons/Text.svg"
-            class="icon"
-            v-else-if="item.content_type === ContentType.Text" />
-          <div v-else-if="item.content_type === ContentType.Color">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <g>
-                <rect width="18" height="18" />
-                <path
-                  d="M9 18C12.2154 18 15.1865 16.2846 16.7942 13.5C18.4019 10.7154 18.4019 7.28461 16.7942 4.5C15.1865 1.71539 12.2154 -1.22615e-06 9 0C5.78461 0 2.81347 1.71539 1.20577 4.5C-0.401925 7.28461 -0.401923 10.7154 1.20577 13.5C2.81347 16.2846 5.78461 18 9 18Z"
-                  fill="#E5DFD5" />
-                <path
-                  d="M9 16C7.14348 16 5.36301 15.2625 4.05025 13.9497C2.7375 12.637 2 10.8565 2 9C2 7.14348 2.7375 5.36301 4.05025 4.05025C5.36301 2.7375 7.14348 2 9 2C10.8565 2 12.637 2.7375 13.9497 4.05025C15.2625 5.36301 16 7.14348 16 9C16 10.8565 15.2625 12.637 13.9497 13.9497C12.637 15.2625 10.8565 16 9 16Z"
-                  :fill="item.content" />
-              </g>
-            </svg>
-          </div>
-          <img
-            src="../public/icons/Code.svg"
-            class="icon"
-            v-else-if="item.content_type === ContentType.Code" />
-          <span v-if="item.content_type === ContentType.Image">
-            Image ({{ imageDimensions[item.id] || "Loading..." }})
-          </span>
-          <span v-else>{{ truncateContent(item.content) }}</span>
-        </div>
-      </template>
-    </OverlayScrollbarsComponent>
-
-    <div
-      class="content"
-      v-if="selectedItem?.content_type === ContentType.Image">
-      <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
-    </div>
-    <div
-      v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
-      class="content">
-      <img
-        class="image"
-        :src="getYoutubeThumbnail(selectedItem.content)"
-        alt="YouTube Thumbnail" />
-    </div>
-    <div
-      class="content"
-      v-else-if="
-        selectedItem?.content_type === ContentType.Link && pageOgImage
-      ">
-      <img :src="pageOgImage" alt="Image" class="image" />
-    </div>
-    <OverlayScrollbarsComponent v-else class="content">
-      <span>{{ selectedItem?.content || "" }}</span>
-    </OverlayScrollbarsComponent>
-
-    <OverlayScrollbarsComponent
-      class="information"
-      :options="{ scrollbars: { autoHide: 'scroll' } }">
-      <div class="title">Information</div>
-      <div class="info-content" v-if="selectedItem && getInfo">
-        <div class="info-row" v-for="(row, index) in infoRows" :key="index">
-          <p class="label">{{ row.label }}</p>
-          <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
-            {{ row.value }}
-          </span>
-        </div>
-      </div>
-    </OverlayScrollbarsComponent>
     <Noise />
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">
@@ -175,6 +217,7 @@ import type {
   InfoCode,
 } from "~/types/types";
 import { Key, keyboard } from "wrdu-keyboard";
+import { selectedGroupIndex, selectedItemIndex, selectedElement, useSelectedResult } from '~/lib/selectedResult'
 
 interface GroupedHistory {
   label: string;
@@ -182,8 +225,11 @@ interface GroupedHistory {
 }
 
 const { $history } = useNuxtApp();
+
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
+const SCROLL_PADDING = 8;
+const TOP_SCROLL_PADDING = 37;
 
 const history = shallowRef<HistoryItem[]>([]);
 let offset = 0;
@@ -193,9 +239,6 @@ const resultsContainer = shallowRef<InstanceType<
   typeof OverlayScrollbarsComponent
 > | null>(null);
 const searchQuery = ref("");
-const selectedGroupIndex = ref(0);
-const selectedItemIndex = ref(0);
-const selectedElement = shallowRef<HTMLElement | null>(null);
 const searchInput = ref<HTMLInputElement | null>(null);
 const os = ref<string>("");
 const imageUrls = shallowRef<Record<string, string>>({});
@@ -206,6 +249,8 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
+
+const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null)
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -268,10 +313,7 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
     .map(([label, items]) => ({ label, items }));
 });
 
-const selectedItem = computed<HistoryItem | null>(() => {
-  const group = groupedHistory.value[selectedGroupIndex.value];
-  return group?.items[selectedItemIndex.value] ?? null;
-});
+const { selectedItem, isSelected, selectNext, selectPrevious, selectItem } = useSelectedResult(groupedHistory)
 
 const loadHistoryChunk = async (): Promise<void> => {
   if (isLoading) return;
@@ -352,81 +394,64 @@ const handleScroll = (): void => {
   }
 };
 
-const scrollToSelectedItem = (forceScrollTop: boolean = false): void => {
+const scrollToSelectedItem = (): void => {
   nextTick(() => {
-    const osInstance = resultsContainer.value?.osInstance();
-    const viewport = osInstance?.elements().viewport;
+    const viewport = resultsContainer.value?.osInstance()?.elements().viewport;
     if (!selectedElement.value || !viewport) return;
 
-    if (!forceScrollTop) {
+    setTimeout(() => {
+      if (!selectedElement.value) return;
+      
       const viewportRect = viewport.getBoundingClientRect();
       const elementRect = selectedElement.value.getBoundingClientRect();
 
-      const isAbove = elementRect.top < viewportRect.top;
-      const isBelow = elementRect.bottom > viewportRect.bottom - 8;
+      const isFirstItemInGroup = selectedItemIndex.value === 0;
+      const isAbove = elementRect.top < viewportRect.top + SCROLL_PADDING;
+      const isBelow = elementRect.bottom > viewportRect.bottom - SCROLL_PADDING;
 
-      if (isAbove || isBelow) {
-        const scrollOffset = isAbove
-          ? elementRect.top -
-            viewportRect.top -
-            (selectedItemIndex.value === 0 ? 36 : 8)
-          : elementRect.bottom - viewportRect.bottom + 9;
-
-        viewport.scrollBy({ top: scrollOffset, behavior: "smooth" });
+      if (isAbove) {
+        viewport.scrollTo({
+          top: viewport.scrollTop + (elementRect.top - viewportRect.top) - (isFirstItemInGroup ? TOP_SCROLL_PADDING : SCROLL_PADDING),
+          behavior: "smooth"
+        });
+      } else if (isBelow) {
+        viewport.scrollTo({
+          top: viewport.scrollTop + (elementRect.bottom - viewportRect.bottom) + SCROLL_PADDING,
+          behavior: "smooth"
+        });
       }
-    }
+    }, 10);
   });
 };
 
-const isSelected = (groupIndex: number, itemIndex: number): boolean => {
-  return (
-    selectedGroupIndex.value === groupIndex &&
-    selectedItemIndex.value === itemIndex
-  );
-};
-
-const searchHistory = async (): Promise<void> => {
-  const results = await $history.searchHistory(searchQuery.value);
+const searchHistory = async (query: string): Promise<void> => {
+  searchQuery.value = query
+  if (!query.trim()) {
+    history.value = []
+    offset = 0
+    await loadHistoryChunk()
+    return
+  }
+  
+  const results = await $history.searchHistory(query)
   history.value = results.map((item) =>
     Object.assign(
       new HistoryItem(
         item.source,
         item.content_type,
         item.content,
-        item.favicon
+        item.favicon,
+        item.source_icon,
+        item.language
       ),
       { id: item.id, timestamp: new Date(item.timestamp) }
     )
-  );
-};
+  )
 
-const selectNext = (): void => {
-  const currentGroup = groupedHistory.value[selectedGroupIndex.value];
-  if (selectedItemIndex.value < currentGroup.items.length - 1) {
-    selectedItemIndex.value++;
-  } else if (selectedGroupIndex.value < groupedHistory.value.length - 1) {
-    selectedGroupIndex.value++;
-    selectedItemIndex.value = 0;
+  if (groupedHistory.value.length > 0) {
+    handleSelection(0, 0, false)
   }
-  scrollToSelectedItem();
-};
-
-const selectPrevious = (): void => {
-  if (selectedItemIndex.value > 0) {
-    selectedItemIndex.value--;
-  } else if (selectedGroupIndex.value > 0) {
-    selectedGroupIndex.value--;
-    selectedItemIndex.value =
-      groupedHistory.value[selectedGroupIndex.value].items.length - 1;
-  }
-  scrollToSelectedItem();
-};
-
-const selectItem = (groupIndex: number, itemIndex: number): void => {
-  selectedGroupIndex.value = groupIndex;
-  selectedItemIndex.value = itemIndex;
-  scrollToSelectedItem();
-};
+}
 
 const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
@@ -554,10 +579,9 @@ const handleSelection = (
   itemIndex: number,
   shouldScroll: boolean = true
 ): void => {
-  selectedGroupIndex.value = groupIndex;
-  selectedItemIndex.value = itemIndex;
-  if (shouldScroll) scrollToSelectedItem();
-};
+  selectItem(groupIndex, itemIndex)
+  if (shouldScroll) scrollToSelectedItem()
+}
 
 const setupEventListeners = async (): Promise<void> => {
   await listen("clipboard-content-updated", async () => {
@@ -591,8 +615,7 @@ const setupEventListeners = async (): Promise<void> => {
       }
     }
     focusSearchInput();
-    
-    // Re-register keyboard shortcuts on focus
+
     keyboard.clear();
     keyboard.prevent.down([Key.DownArrow], () => {
       selectNext();
@@ -666,9 +689,9 @@ const hideApp = async (): Promise<void> => {
 
 const focusSearchInput = (): void => {
   nextTick(() => {
-    searchInput.value?.focus();
-  });
-};
+    topBar.value?.searchInput?.focus()
+  })
+}
 
 const onImageError = (): void => {
   imageLoadError.value = true;
@@ -677,10 +700,10 @@ const onImageError = (): void => {
 
 watch([selectedGroupIndex, selectedItemIndex], () => {
   scrollToSelectedItem();
-});
+}, { flush: 'post' });
 
 watch(searchQuery, () => {
-  searchHistory();
+  searchHistory(searchQuery.value);
 });
 
 onMounted(async () => {
@@ -698,10 +721,6 @@ onMounted(async () => {
     console.error("Error during onMounted:", error);
   }
 });
-
-watch([selectedGroupIndex, selectedItemIndex], () =>
-  scrollToSelectedItem(false)
-);
 
 const getFormattedDate = computed(() => {
   if (!selectedItem.value?.timestamp) return "";
