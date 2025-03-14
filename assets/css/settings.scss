@@ -6,15 +6,15 @@ $text: #e5dfd5;
 $text2: #ada9a1;
 $mutedtext: #78756f;
 
-.bg {
-  width: 750px;
-  height: 474px;
+main {
+  width: 100vw;
+  height: 100vh;
   background-color: $primary;
   border: 1px solid $divider;
+  display: flex;
+  flex-direction: column;
   border-radius: 12px;
-  z-index: -1;
-  position: fixed;
-  outline: none;
+  justify-content: space-between;
 }
 
 .back {
@@ -42,6 +42,7 @@ p {
 
 .settings-container {
   width: 100%;
+  height: 100%;
   margin-top: 26px;
   position: relative;
   font-size: 12px;
@@ -59,7 +60,7 @@ p {
       display: flex;
       flex-direction: column;
       gap: 16px;
-      
+
       p {
         font-family: SFRoundedSemiBold;
         color: $text2;
@@ -144,7 +145,7 @@ p {
 
 .top-bar {
   width: 100%;
-  height: 56px;
+  min-height: 56px;
   border-bottom: 1px solid $divider;
 }
 

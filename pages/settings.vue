@@ -1,29 +1,10 @@
 <template>
-  <div class="bg">
+  <main>
     <div class="top-bar">
       <NuxtLink to="/" class="back">
         <img src="../public/back_arrow.svg" />
         <p>Back</p>
       </NuxtLink>
-    </div>
-    <div class="bottom-bar">
-      <div class="left">
-        <img alt="" class="logo" src="../public/logo.png" width="18px" />
-        <p>Qopy</p>
-      </div>
-      <div class="right">
-        <div
-          @click="saveKeybind"
-          class="actions"
-          :class="{ disabled: keybind.length === 0 }">
-          <p>Save</p>
-          <div>
-            <IconsCmd v-if="os === 'macos'" />
-            <IconsCtrl v-if="os === 'linux' || os === 'windows'" />
-            <IconsEnter />
-          </div>
-        </div>
-      </div>
     </div>
     <div class="settings-container">
       <div class="settings">
@@ -82,17 +63,25 @@
         </div>
       </div>
     </div>
-  </div>
+    <BottomBar
+      :primary-action="{
+        text: 'Save',
+        icon: IconsEnter,
+        onClick: saveKeybind,
+        showModifier: true,
+      }" />
+  </main>
 </template>
 
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core";
 import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
 import { KeyValues, KeyLabels } from "../types/keys";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
 import { Key, keyboard } from "wrdu-keyboard";
+import BottomBar from "../components/BottomBar.vue";
+import IconsEnter from "~/components/Icons/Enter.vue";
 
 const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);
