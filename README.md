@@ -60,7 +60,7 @@ The fixed and simple clipboard manager for both Windows and Linux.
 Qopy is a fixed clipboard manager designed as a simple alternative to the standard clipboard on Windows. It aims to provide a faster, more reliable experience while providing an extensive set of features compared to its Windows counterpart.
 
 ## 🚧 Roadmap
-- [ ] [Setup guide](https://github.com/0PandaDEV/Qopy/blob/main/GET_STARTED.md)
+- [x] [Setup guide](https://github.com/0PandaDEV/Qopy/blob/main/GET_STARTED.md)
 - [ ] Sync Clipboard across devices https://github.com/0PandaDEV/Qopy/issues/8
 - [x] Settings https://github.com/0PandaDEV/Qopy/issues/2
 - [x] Metadata for copied items https://github.com/0PandaDEV/Qopy/issues/5
