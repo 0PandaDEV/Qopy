@@ -399,7 +399,9 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
           item.source,
           item.content_type,
           item.content,
-          item.favicon
+          item.favicon,
+          item.source_icon,
+          item.language
         );
         Object.assign(historyItem, {
           id: item.id,
