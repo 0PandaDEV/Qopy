@@ -111,18 +111,27 @@ pub async fn search_history(
     pool: tauri::State<'_, SqlitePool>,
     query: String
 ) -> Result<Vec<HistoryItem>, String> {
+    if query.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
     let query = format!("%{}%", query);
+    
     let rows = sqlx
         ::query(
-            "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language FROM history WHERE content LIKE ? ORDER BY timestamp DESC"
+            "SELECT id, source, source_icon, content_type, content, favicon, timestamp, language 
+             FROM history 
+             WHERE content LIKE ? 
+             ORDER BY timestamp DESC
+             LIMIT 100"
         )
         .bind(query)
         .fetch_all(&*pool).await
         .map_err(|e| e.to_string())?;
 
-    let items = rows
-        .iter()
-        .map(|row| HistoryItem {
+    let mut items = Vec::with_capacity(rows.len());
+    for row in rows.iter() {
+        items.push(HistoryItem {
             id: row.get("id"),
             source: row.get("source"),
             source_icon: row.get("source_icon"),
@@ -131,8 +140,8 @@ pub async fn search_history(
             favicon: row.get("favicon"),
             timestamp: row.get("timestamp"),
             language: row.get("language"),
-        })
-        .collect();
+        });
+    }
 
     Ok(items)
 }

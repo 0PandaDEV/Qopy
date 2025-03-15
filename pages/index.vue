@@ -1,64 +1,40 @@
 <template>
   <main>
-    <TopBar ref="topBar" @search="searchHistory" />
+    <TopBar ref="topBar" @search="searchHistory" @searchStarted="searchStarted" />
     <div class="container">
-      <OverlayScrollbarsComponent
-        class="results"
-        ref="resultsContainer"
+      <OverlayScrollbarsComponent class="results" ref="resultsContainer"
         :options="{ scrollbars: { autoHide: 'scroll' } }">
-        <div
-          v-for="(group, groupIndex) in groupedHistory"
-          :key="groupIndex"
-          class="group">
+        <div v-for="(group, groupIndex) in groupedHistory" :key="groupIndex" class="group">
           <div class="time-separator">{{ group.label }}</div>
           <div class="results-group">
-            <Result
-              v-for="(item, index) in group.items"
-              :key="item.id"
-              :item="item"
-              :selected="isSelected(groupIndex, index)"
-              :image-url="imageUrls[item.id]"
-              :dimensions="imageDimensions[item.id]"
-              @select="selectItem(groupIndex, index)"
-              @image-error="onImageError"
+            <Result v-for="(item, index) in group.items" :key="item.id" :item="item"
+              :selected="isSelected(groupIndex, index)" :image-url="imageUrls[item.id]"
+              :dimensions="imageDimensions[item.id]" @select="selectItem(groupIndex, index)" @image-error="onImageError"
               @setRef="(el) => (selectedElement = el)" />
           </div>
         </div>
       </OverlayScrollbarsComponent>
       <div class="right">
-        <div
-          class="content"
-          v-if="selectedItem?.content_type === ContentType.Image">
+        <div class="content" v-if="selectedItem?.content_type === ContentType.Image">
           <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
         </div>
-        <div
-          v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
-          class="content">
-          <img
-            class="image"
-            :src="getYoutubeThumbnail(selectedItem.content)"
-            alt="YouTube Thumbnail" />
+        <div v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)" class="content">
+          <img class="image" :src="getYoutubeThumbnail(selectedItem.content)" alt="YouTube Thumbnail" />
         </div>
-        <div
-          class="content"
-          v-else-if="
-            selectedItem?.content_type === ContentType.Link && pageOgImage
-          ">
+        <div class="content" v-else-if="
+          selectedItem?.content_type === ContentType.Link && pageOgImage
+        ">
           <img :src="pageOgImage" alt="Image" class="image" />
         </div>
         <OverlayScrollbarsComponent v-else class="content">
           <span class="content-text">{{ selectedItem?.content || "" }}</span>
         </OverlayScrollbarsComponent>
-        <OverlayScrollbarsComponent
-          class="information"
-          :options="{ scrollbars: { autoHide: 'scroll' } }">
+        <OverlayScrollbarsComponent class="information" :options="{ scrollbars: { autoHide: 'scroll' } }">
           <div class="title">Information</div>
           <div class="info-content" v-if="selectedItem && getInfo">
             <div class="info-row" v-for="(row, index) in infoRows" :key="index">
               <p class="label">{{ row.label }}</p>
-              <span
-                :class="{ 'url-truncate': row.isUrl }"
-                :data-text="row.value">
+              <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
                 <img v-if="row.icon" :src="row.icon" :alt="String(row.value)">
                 {{ row.value }}
               </span>
@@ -67,17 +43,15 @@
         </OverlayScrollbarsComponent>
       </div>
     </div>
-    <BottomBar
-      :primary-action="{
-        text: 'Paste',
-        icon: IconsEnter,
-        onClick: pasteSelectedItem,
-      }"
-      :secondary-action="{
-        text: 'Actions',
-        icon: IconsK,
-        showModifier: true,
-      }" />
+    <BottomBar :primary-action="{
+      text: 'Paste',
+      icon: IconsEnter,
+      onClick: pasteSelectedItem,
+    }" :secondary-action="{
+      text: 'Actions',
+      icon: IconsK,
+      showModifier: true,
+    }" />
   </main>
 </template>
 
@@ -156,7 +130,7 @@ const getWeekNumber = (date: Date): number => {
     ((date.getTime() - firstDayOfYear.getTime()) / 86400000 +
       firstDayOfYear.getDay() +
       1) /
-      7
+    7
   );
 };
 
@@ -177,8 +151,8 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
 
   const filteredItems = searchQuery.value
     ? history.value.filter((item) =>
-        item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
+      item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
     : history.value;
 
   const yesterday = new Date(today.getTime() - 86400000);
@@ -321,32 +295,78 @@ const scrollToSelectedItem = (): void => {
   });
 };
 
+let searchController: AbortController | null = null;
+let searchQueue: Array<string> = [];
+let isProcessingSearch = false;
+
+const searchStarted = () => {
+  if (searchController) {
+    searchController.abort();
+  }
+};
+
+const processSearchQueue = async () => {
+  if (isProcessingSearch || searchQueue.length === 0) return;
+
+  isProcessingSearch = true;
+  const query = searchQueue.pop();
+  searchQueue = [];
+
+  try {
+    if (!query || !query.trim()) {
+      history.value = [];
+      offset = 0;
+      await loadHistoryChunk();
+      isProcessingSearch = false;
+      return;
+    }
+
+    const results = await $history.searchHistory(query);
+
+    if (searchController?.signal.aborted) {
+      isProcessingSearch = false;
+      return;
+    }
+
+    history.value = results.map((item) =>
+      Object.assign(
+        new HistoryItem(
+          item.source,
+          item.content_type,
+          item.content,
+          item.favicon,
+          item.source_icon,
+          item.language
+        ),
+        { id: item.id, timestamp: new Date(item.timestamp) }
+      )
+    );
+
+    if (groupedHistory.value.length > 0) {
+      handleSelection(0, 0, false);
+    }
+  } catch (error) {
+    console.error("Search error:", error);
+  } finally {
+    isProcessingSearch = false;
+    if (searchQueue.length > 0) {
+      requestAnimationFrame(() => processSearchQueue());
+    }
+  }
+};
+
 const searchHistory = async (query: string): Promise<void> => {
   searchQuery.value = query;
-  if (!query.trim()) {
-    history.value = [];
-    offset = 0;
-    await loadHistoryChunk();
-    return;
+
+  if (searchController) {
+    searchController.abort();
   }
 
-  const results = await $history.searchHistory(query);
-  history.value = results.map((item) =>
-    Object.assign(
-      new HistoryItem(
-        item.source,
-        item.content_type,
-        item.content,
-        item.favicon,
-        item.source_icon,
-        item.language
-      ),
-      { id: item.id, timestamp: new Date(item.timestamp) }
-    )
-  );
+  searchController = new AbortController();
 
-  if (groupedHistory.value.length > 0) {
-    handleSelection(0, 0, false);
+  searchQueue.push(query);
+  if (!isProcessingSearch) {
+    processSearchQueue();
   }
 };
 
@@ -517,14 +537,14 @@ const setupEventListeners = async (): Promise<void> => {
 
     switch (os.value) {
       case "macos":
-        keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
-        keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
+        keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
+        keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
         break;
 
       case "linux":
       case "windows":
-        keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
-        keyboard.prevent.down([Key.RightControl, Key.K], () => {});
+        keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
+        keyboard.prevent.down([Key.RightControl, Key.K], () => { });
         break;
     }
   });
@@ -552,14 +572,14 @@ const setupEventListeners = async (): Promise<void> => {
 
   switch (os.value) {
     case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], () => {});
-      keyboard.prevent.down([Key.RightMeta, Key.K], () => {});
+      keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
+      keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
       break;
 
     case "linux":
     case "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], () => {});
-      keyboard.prevent.down([Key.RightControl, Key.K], () => {});
+      keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
+      keyboard.prevent.down([Key.RightControl, Key.K], () => { });
       break;
   }
 };
@@ -750,9 +770,9 @@ const infoRows = computed(() => {
   if (!getInfo.value) return [];
 
   const commonRows = [
-    { 
-      label: "Source", 
-      value: getInfo.value.source, 
+    {
+      label: "Source",
+      value: getInfo.value.source,
       isUrl: false,
       icon: selectedItem.value?.source_icon ? `data:image/png;base64,${selectedItem.value.source_icon}` : undefined
     },
@@ -785,7 +805,7 @@ const infoRows = computed(() => {
     ],
     [ContentType.Link]: [
       ...((getInfo.value as InfoLink).title &&
-      (getInfo.value as InfoLink).title !== "Loading..."
+        (getInfo.value as InfoLink).title !== "Loading..."
         ? [{ label: "Title", value: (getInfo.value as InfoLink).title || "" }]
         : []),
       { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },
@@ -815,5 +835,5 @@ const infoRows = computed(() => {
 </script>
 
 <style scoped lang="scss">
-@use "~/assets/css/index.scss";
+@use "/styles/index.scss";
 </style>

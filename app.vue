@@ -38,25 +38,25 @@ onMounted(async () => {
 @font-face {
   font-family: SFRoundedRegular;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedRegular.otf") format("opentype");
+  src: url("/fonts/SFRoundedRegular.otf") format("opentype");
 }
 
 @font-face {
   font-family: SFRoundedMedium;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedMedium.otf") format("opentype");
+  src: url("/fonts/SFRoundedMedium.otf") format("opentype");
 }
 
 @font-face {
   font-family: SFRoundedSemiBold;
   font-display: swap;
-  src: url("~/assets/fonts/SFRoundedSemiBold.otf") format("opentype");
+  src: url("/fonts/SFRoundedSemiBold.otf") format("opentype");
 }
 
 @font-face {
   font-family: CommitMono;
   font-display: swap;
-  src: url("~/assets/fonts/CommitMono.woff2") format("woff2");
+  src: url("/fonts/CommitMono.woff2") format("woff2");
 }
 
 :root {
@@ -85,6 +85,7 @@ onMounted(async () => {
   font-family: SFRoundedRegular;
   scroll-behavior: smooth;
   scrollbar-width: thin;
+  user-select: none;
 
   --os-handle-bg: #ada9a1;
   --os-handle-bg-hover: #78756f;

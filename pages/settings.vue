@@ -228,5 +228,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-@use "~/assets/css/settings.scss";
+@use "/styles/settings.scss";
 </style>

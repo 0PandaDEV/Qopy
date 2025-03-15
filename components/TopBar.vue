@@ -3,7 +3,7 @@
     <input
       ref="searchInput"
       v-model="searchQuery"
-      @input="onSearch"
+      @input="onInputChange"
       class="search"
       autocorrect="off"
       autocapitalize="off"
@@ -21,10 +21,12 @@ const searchInput = ref<HTMLInputElement | null>(null);
 
 const emit = defineEmits<{
   (e: "search", query: string): void;
+  (e: "searchStarted"): void;
   (e: "focus"): void;
 }>();
 
-const onSearch = () => {
+const onInputChange = () => {
+  emit("searchStarted");
   emit("search", searchQuery.value);
 };
 

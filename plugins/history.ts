@@ -14,17 +14,27 @@ export default defineNuxtPlugin(() => {
         },
 
         async searchHistory(query: string): Promise<HistoryItem[]> {
-          return await invoke<HistoryItem[]>("search_history", { query });
+          try {
+            return await invoke<HistoryItem[]>("search_history", { query });
+          } catch (error) {
+            console.error("Error searching history:", error);
+            return [];
+          }
         },
 
         async loadHistoryChunk(
           offset: number,
           limit: number
         ): Promise<HistoryItem[]> {
-          return await invoke<HistoryItem[]>("load_history_chunk", {
-            offset,
-            limit,
-          });
+          try {
+            return await invoke<HistoryItem[]>("load_history_chunk", {
+              offset,
+              limit,
+            });
+          } catch (error) {
+            console.error("Error loading history chunk:", error);
+            return [];
+          }
         },
 
         async deleteHistoryItem(id: string): Promise<void> {
