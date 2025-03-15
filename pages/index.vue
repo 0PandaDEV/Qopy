@@ -341,10 +341,7 @@ const processSearchQueue = async () => {
         { id: item.id, timestamp: new Date(item.timestamp) }
       )
     );
-
-    if (groupedHistory.value.length > 0) {
-      handleSelection(0, 0, false);
-    }
+  
   } catch (error) {
     console.error("Search error:", error);
   } finally {
@@ -357,18 +354,30 @@ const processSearchQueue = async () => {
 
 const searchHistory = async (query: string): Promise<void> => {
   searchQuery.value = query;
-
+  
   if (searchController) {
     searchController.abort();
   }
-
+  
   searchController = new AbortController();
-
+  
   searchQueue.push(query);
   if (!isProcessingSearch) {
     processSearchQueue();
   }
 };
+
+watch(
+  () => groupedHistory.value,
+  (newGroupedHistory) => {
+    if (newGroupedHistory.length > 0) {
+      handleSelection(0, 0, true);
+    } else {
+      selectItem(-1, -1);
+    }
+  },
+  { deep: true }
+);
 
 const pasteSelectedItem = async (): Promise<void> => {
   if (!selectedItem.value) return;
@@ -607,10 +616,6 @@ watch(
   },
   { flush: "post" }
 );
-
-watch(searchQuery, () => {
-  searchHistory(searchQuery.value);
-});
 
 onMounted(async () => {
   try {
