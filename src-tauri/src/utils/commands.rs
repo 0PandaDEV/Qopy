@@ -1,5 +1,6 @@
 use applications::{AppInfoContext, AppInfo, AppTrait, utils::image::RustImage};
 use base64::{ engine::general_purpose::STANDARD, Engine };
+use image::codecs::png::PngEncoder;
 use tauri::PhysicalPosition;
 use meta_fetcher;
 
