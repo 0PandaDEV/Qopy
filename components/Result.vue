@@ -98,6 +98,7 @@ const truncateContent = (content: string): string => {
   padding: 11px;
   border-radius: 10px;
   cursor: pointer;
+      align-items: center;
 
   &.selected {
     background-color: var(--border);
