@@ -47,7 +47,7 @@
           <img :src="pageOgImage" alt="Image" class="image" />
         </div>
         <OverlayScrollbarsComponent v-else class="content">
-          <span>{{ selectedItem?.content || "" }}</span>
+          <span class="content-text">{{ selectedItem?.content || "" }}</span>
         </OverlayScrollbarsComponent>
         <OverlayScrollbarsComponent
           class="information"
