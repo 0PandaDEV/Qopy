@@ -1,6 +1,5 @@
-use active_win_pos_rs::get_active_window;
+use applications::{AppInfoContext, AppInfo, AppTrait, utils::image::RustImage};
 use base64::{ engine::general_purpose::STANDARD, Engine };
-use image::codecs::png::PngEncoder;
 use tauri::PhysicalPosition;
 use meta_fetcher;
 
@@ -37,21 +36,22 @@ pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
 }
 
 pub fn get_app_info() -> (String, Option<String>) {
-    match get_active_window() {
+    let mut ctx = AppInfoContext::new(vec![]);
+    ctx.refresh_apps().unwrap();
+    match ctx.get_frontmost_application() {
         Ok(window) => {
-            let app_name = window.app_name;
-            (app_name, None)
+            let name = window.name.clone();
+            let icon = window
+                .load_icon()
+                .ok()
+                .map(|i| {
+                    let png = i.to_png().unwrap();
+                    STANDARD.encode(png.get_bytes())
+                });
+            (name, icon)
         }
         Err(_) => ("System".to_string(), None),
     }
-}
-
-fn _process_icon_to_base64(path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let img = image::open(path)?;
-    let resized = img.resize(128, 128, image::imageops::FilterType::Lanczos3);
-    let mut png_buffer = Vec::new();
-    resized.write_with_encoder(PngEncoder::new(&mut png_buffer))?;
-    Ok(STANDARD.encode(png_buffer))
 }
 
 pub fn detect_color(color: &str) -> bool {

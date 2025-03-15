@@ -59,6 +59,7 @@
               <span
                 :class="{ 'url-truncate': row.isUrl }"
                 :data-text="row.value">
+                <img v-if="row.icon" :src="row.icon" :alt="String(row.value)">
                 {{ row.value }}
               </span>
             </div>
@@ -747,7 +748,12 @@ const infoRows = computed(() => {
   if (!getInfo.value) return [];
 
   const commonRows = [
-    { label: "Source", value: getInfo.value.source, isUrl: false },
+    { 
+      label: "Source", 
+      value: getInfo.value.source, 
+      isUrl: false,
+      icon: selectedItem.value?.source_icon ? `data:image/png;base64,${selectedItem.value.source_icon}` : undefined
+    },
     {
       label: "Content Type",
       value:
@@ -759,7 +765,7 @@ const infoRows = computed(() => {
 
   const typeSpecificRows: Record<
     ContentType,
-    Array<{ label: string; value: string | number; isUrl?: boolean }>
+    Array<{ label: string; value: string | number; isUrl?: boolean; icon?: string }>
   > = {
     [ContentType.Text]: [
       { label: "Characters", value: (getInfo.value as InfoText).characters },
