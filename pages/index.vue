@@ -54,7 +54,7 @@
       showModifier: true,
       onClick: toggleActionsMenu,
     }" />
-    <ActionsMenu :selected-item="selectedItem" :is-visible="isActionsMenuVisible" @close="closeActionsMenu" />
+    <ActionsMenu :selected-item="selectedItem" :is-visible="isActionsMenuVisible" @close="closeActionsMenu" @toggle="toggleActionsMenu" />
   </main>
 </template>
 
@@ -116,17 +116,21 @@ const isActionsMenuVisible = ref<boolean>(false);
 const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null);
 
 const toggleActionsMenu = () => {
-  nextTick(() => {
-    isActionsMenuVisible.value = !isActionsMenuVisible.value;
-    if (isActionsMenuVisible.value) {
-      $keyboard.enableContext('actionsMenu');
-    }
-  });
+  isActionsMenuVisible.value = !isActionsMenuVisible.value;
+  
+  if (isActionsMenuVisible.value) {
+    $keyboard.disableContext('main');
+    $keyboard.enableContext('actionsMenu');
+  } else {
+    $keyboard.disableContext('actionsMenu');
+    $keyboard.enableContext('main');
+  }
 };
 
 const closeActionsMenu = () => {
   isActionsMenuVisible.value = false;
   $keyboard.disableContext('actionsMenu');
+  $keyboard.enableContext('main');
 };
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
@@ -430,13 +434,13 @@ const getYoutubeThumbnail = (url: string): string => {
 };
 
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
-  const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
+  offset = 0;
+  history.value = [];
+  
+  const results = await $history.loadHistoryChunk(offset, CHUNK_SIZE);
   if (results.length > 0) {
-    const existingIds = new Set(history.value.map((item) => item.id));
-    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
-
-    const processedNewItems = await Promise.all(
-      uniqueNewItems.map(async (item) => {
+    const processedItems = await Promise.all(
+      results.map(async (item) => {
         const historyItem = new HistoryItem(
           item.source,
           item.content_type,
@@ -484,7 +488,8 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
       })
     );
 
-    history.value = [...processedNewItems, ...history.value];
+    history.value = processedItems;
+    offset = results.length;
 
     if (
       resetScroll &&
@@ -554,9 +559,14 @@ const setupEventListeners = async (): Promise<void> => {
       },
       onToggleActions: toggleActionsMenu,
       contextName: 'main',
-      priority: $keyboard.PRIORITY.LOW
+      priority: $keyboard.PRIORITY.HIGH
     });
-    $keyboard.enableContext('main');
+    
+    if (isActionsMenuVisible.value) {
+      $keyboard.enableContext('actionsMenu');
+    } else {
+      $keyboard.enableContext('main');
+    }
   });
 
   await listen("tauri://blur", () => {
