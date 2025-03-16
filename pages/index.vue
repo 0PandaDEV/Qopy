@@ -10,7 +10,7 @@
             <Result v-for="(item, index) in group.items" :key="item.id" :item="item"
               :selected="isSelected(groupIndex, index)" :image-url="imageUrls[item.id]"
               :dimensions="imageDimensions[item.id]" @select="selectItem(groupIndex, index)" @image-error="onImageError"
-              @setRef="(el) => (selectedElement = el)" />
+              @setRef="(el: HTMLElement | null) => (selectedElement = el)" />
           </div>
         </div>
       </OverlayScrollbarsComponent>
@@ -62,7 +62,6 @@
 import { ref, computed, onMounted, watch, nextTick, shallowRef } from "vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-import { app, window } from "@tauri-apps/api";
 import { platform } from "@tauri-apps/plugin-os";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
@@ -76,9 +75,10 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import IconsEnter from "~/components/Icons/Enter.vue";
-import IconsKey from "~/components/Icons/Key.vue";
+import IconsEnter from "~/components/Keys/Enter.vue";
+import IconsKey from "~/components/Keys/Key.vue";
 import ActionsMenu from "~/components/ActionsMenu.vue";
+import { useAppControl } from "~/composables/useAppControl";
 
 interface GroupedHistory {
   label: string;
@@ -583,10 +583,7 @@ const setupEventListeners = async (): Promise<void> => {
   $keyboard.enableContext('main');
 };
 
-const hideApp = async (): Promise<void> => {
-  await app.hide();
-  await window.getCurrentWindow().hide();
-};
+const { hideApp } = useAppControl();
 
 const focusSearchInput = (): void => {
   nextTick(() => {
