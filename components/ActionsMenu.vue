@@ -11,8 +11,8 @@
           </div>
           <div v-else v-for="(action, index) in allFilteredActions" :key="action.action" class="action"
             @click="executeAction(action)" :class="{ selected: isSelected && currentIndex === index }" :ref="(el) => {
-                if (currentIndex === index) setSelectedElement(el);
-              }
+              if (currentIndex === index) setSelectedElement(el);
+            }
               " :style="action.color ? { color: action.color } : {}">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
@@ -34,9 +34,9 @@
               selected:
                 isSelected && currentIndex === getActionIndex(index, 'top'),
             }" :ref="(el) => {
-                if (currentIndex === getActionIndex(index, 'top'))
-                  setSelectedElement(el);
-              }
+              if (currentIndex === getActionIndex(index, 'top'))
+                setSelectedElement(el);
+            }
               ">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
@@ -60,9 +60,9 @@
                 isSelected &&
                 currentIndex === getActionIndex(index, 'specific'),
             }" :ref="(el) => {
-                if (currentIndex === getActionIndex(index, 'specific'))
-                  setSelectedElement(el);
-              }
+              if (currentIndex === getActionIndex(index, 'specific'))
+                setSelectedElement(el);
+            }
               ">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
@@ -85,9 +85,9 @@
               selected:
                 isSelected && currentIndex === getActionIndex(index, 'bottom'),
             }" :ref="(el) => {
-                if (currentIndex === getActionIndex(index, 'bottom'))
-                  setSelectedElement(el);
-              }
+              if (currentIndex === getActionIndex(index, 'bottom'))
+                setSelectedElement(el);
+            }
               " :style="action.color ? { color: action.color } : {}">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
@@ -124,7 +124,6 @@ import Bin from "./Icons/Bin.vue";
 import Pen from "./Icons/Pen.vue";
 import T from "./Icons/T.vue";
 import Board from "./Icons/Board.vue";
-import Cube from "./Icons/Cube.vue";
 import Open from "./Icons/Open.vue";
 import Globe from "./Icons/Globe.vue";
 import Zip from "./Icons/Zip.vue";
@@ -149,7 +148,7 @@ const menuRef = ref<HTMLElement | null>(null);
 const scrollbarsRef = ref<InstanceType<
   typeof OverlayScrollbarsComponent
 > | null>(null);
-const { handleAction, isProcessing } = useActions();
+const { handleAction } = useActions();
 
 const SCROLL_PADDING = 8;
 
@@ -177,6 +176,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "close"): void;
+  (e: "toggle"): void;
   (e: "action", action: string, item?: HistoryItem): void;
 }>();
 
@@ -206,7 +206,7 @@ const topActions = computed((): ActionItem[] => [
           }
         });
       }
-    } : Cube,
+    } : undefined,
   },
   {
     title: "Copy to Clipboard",
@@ -502,6 +502,46 @@ const setupKeyboardHandlers = () => {
     },
     { priority: $keyboard.PRIORITY.HIGH }
   );
+  
+  $keyboard.on(
+    "actionsMenu",
+    [$keyboard.Key.LeftControl, $keyboard.Key.K],
+    (event) => {
+      event.preventDefault();
+      emit("toggle");
+    },
+    { priority: $keyboard.PRIORITY.HIGH }
+  );
+  
+  $keyboard.on(
+    "actionsMenu",
+    [$keyboard.Key.RightControl, $keyboard.Key.K],
+    (event) => {
+      event.preventDefault();
+      emit("toggle");
+    },
+    { priority: $keyboard.PRIORITY.HIGH }
+  );
+  
+  $keyboard.on(
+    "actionsMenu",
+    [$keyboard.Key.MetaLeft, $keyboard.Key.K],
+    (event) => {
+      event.preventDefault();
+      emit("toggle");
+    },
+    { priority: $keyboard.PRIORITY.HIGH }
+  );
+  
+  $keyboard.on(
+    "actionsMenu",
+    [$keyboard.Key.MetaRight, $keyboard.Key.K],
+    (event) => {
+      event.preventDefault();
+      emit("toggle");
+    },
+    { priority: $keyboard.PRIORITY.HIGH }
+  );
 };
 
 const selectNext = () => {
@@ -584,6 +624,13 @@ const handleSearchKeydown = (event: KeyboardEvent) => {
     event.key === "Enter" ||
     event.key === "Escape"
   ) {
+    return;
+  }
+  
+  if (event.key.toLowerCase() === "k" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    event.stopPropagation();
+    emit("toggle");
     return;
   }
 
