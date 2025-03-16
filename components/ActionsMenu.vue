@@ -13,7 +13,7 @@
             @click="executeAction(action)" :class="{ selected: isSelected && currentIndex === index }" :ref="(el) => {
                 if (currentIndex === index) setSelectedElement(el);
               }
-              ">
+              " :style="action.color ? { color: action.color } : {}">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
               <div class="title">{{ action.title }}</div>
@@ -64,8 +64,8 @@
                   setSelectedElement(el);
               }
               ">
-            <component v-if="action.icon" :is="action.icon" class="icon" />
             <div class="content">
+              <component v-if="action.icon" :is="action.icon" class="icon" />
               <div class="title">{{ action.title }}</div>
             </div>
             <div v-if="action.shortcut" class="shortcut">
@@ -88,7 +88,7 @@
                 if (currentIndex === getActionIndex(index, 'bottom'))
                   setSelectedElement(el);
               }
-              ">
+              " :style="action.color ? { color: action.color } : {}">
             <div class="content">
               <component v-if="action.icon" :is="action.icon" class="icon" />
               <div class="title">{{ action.title }}</div>
@@ -109,16 +109,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch, nextTick, h } from "vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-import Enter from "./Icons/Enter.vue";
-import Ctrl from "./Icons/Ctrl.vue";
-import Cmd from "./Icons/Cmd.vue";
-import Key from "./Icons/Key.vue";
+import Enter from "./Keys/Enter.vue";
+import Cmd from "./Keys/Cmd.vue";
+import Key from "./Keys/Key.vue";
 import { ContentType, HistoryItem } from "../types/types";
 import { invoke } from "@tauri-apps/api/core";
 import { useNuxtApp } from "#app";
+import Shift from "./Keys/Shift.vue";
+import Gear from "./Icons/Gear.vue";
+import Bin from "./Icons/Bin.vue";
+import Pen from "./Icons/Pen.vue";
+import T from "./Icons/T.vue";
+import Board from "./Icons/Board.vue";
+import Cube from "./Icons/Cube.vue";
+import Open from "./Icons/Open.vue";
+import Globe from "./Icons/Globe.vue";
+import Zip from "./Icons/Zip.vue";
+import Brush from "./Icons/Brush.vue";
+import Rotate from "./Icons/Rotate.vue";
+import Expand from "./Icons/Expand.vue";
+import { useActions } from "../composables/useActions";
 
 interface AppInfo {
   name: string;
@@ -136,6 +149,7 @@ const menuRef = ref<HTMLElement | null>(null);
 const scrollbarsRef = ref<InstanceType<
   typeof OverlayScrollbarsComponent
 > | null>(null);
+const { handleAction, isProcessing } = useActions();
 
 const SCROLL_PADDING = 8;
 
@@ -172,136 +186,152 @@ interface ActionItem {
   shortcut?: string;
   icon?: any;
   group: string;
+  color?: string;
 }
 
-const topActions = computed(() => [
+const topActions = computed((): ActionItem[] => [
   {
     title: `Paste to ${currentAppInfo.value.name || "Current App"}`,
     shortcut: "Enter",
     action: "paste-to-app",
     group: "top",
-    icon: undefined,
+    icon: currentAppInfo.value.icon ? {
+      render() {
+        return h('img', {
+          src: currentAppInfo.value.icon,
+          style: {
+            width: '14px',
+            height: '14px',
+            objectFit: 'contain'
+          }
+        });
+      }
+    } : Cube,
   },
   {
     title: "Copy to Clipboard",
     shortcut: "Ctrl+C",
     action: "copy",
     group: "top",
-    icon: undefined,
+    icon: Board,
   },
 ]);
 
-const bottomActions = computed(() => [
+const bottomActions = computed((): ActionItem[] => [
   {
     title: "Delete Entry",
-    shortcut: "Del",
+    shortcut: "Alt+X",
     action: "delete",
     group: "bottom",
-    icon: undefined,
+    icon: Bin,
+    color: "var(--red)"
   },
   {
     title: "Delete All Entries",
+    shortcut: "Alt+Shift+X",
     action: "delete-all",
     group: "bottom",
-    icon: undefined,
+    icon: Bin,
+    color: "var(--red)"
   },
   {
     title: "Settings",
+    shortcut: "Ctrl+S",
     action: "settings",
     group: "bottom",
-    icon: undefined,
+    icon: Gear,
   },
 ]);
 
-const textActions = computed(() => [
+const textActions = computed((): ActionItem[] => [
   {
     title: "Paste as plain text",
     action: "paste-plain",
-    shortcut: "",
+    shortcut: "Ctrl+Shift+V",
     group: "text",
-    icon: undefined,
+    icon: T,
   },
   {
     title: "Edit text",
     action: "edit-text",
-    shortcut: "",
+    shortcut: "Ctrl+E",
     group: "text",
-    icon: undefined,
+    icon: Pen,
   },
 ]);
 
-const imageActions = computed(() => [
+const imageActions = computed((): ActionItem[] => [
   {
     title: "Rotate",
     action: "rotate-image",
-    shortcut: "",
+    shortcut: "Alt+R",
     group: "image",
-    icon: undefined,
+    icon: Rotate,
   },
   {
     title: "Resize",
     action: "resize-image",
-    shortcut: "",
+    shortcut: "Alt+S",
     group: "image",
-    icon: undefined,
+    icon: Expand,
   },
   {
     title: "Compress",
     action: "compress-image",
-    shortcut: "",
+    shortcut: "Alt+C",
     group: "image",
-    icon: undefined,
+    icon: Zip,
   },
 ]);
 
-const fileActions = computed(() => [
+const fileActions = computed((): ActionItem[] => [
   {
     title: "Open",
     action: "open-file",
-    shortcut: "",
+    shortcut: "Ctrl+O",
     group: "file",
-    icon: undefined,
+    icon: Open,
   },
   {
-    title: "Compress to zip/7z",
+    title: "Compress to zip",
     action: "compress-file",
-    shortcut: "",
+    shortcut: "Alt+C",
     group: "file",
-    icon: undefined,
+    icon: Zip,
   },
 ]);
 
-const linkActions = computed(() => [
+const linkActions = computed((): ActionItem[] => [
   {
     title: "Open in Browser",
     action: "open-link",
-    shortcut: "",
+    shortcut: "Ctrl+O",
     group: "link",
-    icon: undefined,
+    icon: Globe,
   },
 ]);
 
-const colorActions = computed(() => [
+const colorActions = computed((): ActionItem[] => [
   {
     title: "Copy as HEX",
     action: "copy-hex",
-    shortcut: "",
+    shortcut: "Alt+H",
     group: "color",
-    icon: undefined,
+    icon: Brush,
   },
   {
     title: "Copy as RGB(a)",
     action: "copy-rgba",
-    shortcut: "",
+    shortcut: "Alt+R",
     group: "color",
-    icon: undefined,
+    icon: Brush,
   },
   {
     title: "Copy as HSL(a)",
     action: "copy-hsla",
-    shortcut: "",
+    shortcut: "Alt+S",
     group: "color",
-    icon: undefined,
+    icon: Brush,
   },
 ]);
 
@@ -369,10 +399,10 @@ const parseShortcut = (shortcut: string): KeyPart[] => {
     const trimmedPart = part.trim();
     let keyPart: KeyPart;
 
-    if (trimmedPart.toLowerCase() === "ctrl") {
-      keyPart = { type: "modifier", value: trimmedPart, component: Ctrl };
-    } else if (trimmedPart.toLowerCase() === "cmd") {
+    if (trimmedPart.toLowerCase() === "cmd") {
       keyPart = { type: "modifier", value: trimmedPart, component: Cmd };
+    } else if (trimmedPart.toLowerCase() === "shift") {
+      keyPart = { type: "modifier", value: trimmedPart, component: Shift };
     } else if (trimmedPart.toLowerCase() === "enter") {
       keyPart = { type: "key", value: trimmedPart, component: Enter };
     } else {
@@ -391,7 +421,7 @@ const parseShortcut = (shortcut: string): KeyPart[] => {
 
 const executeAction = (action: ActionItem) => {
   emit("close");
-  emit("action", action.action, props.selectedItem);
+  handleAction(action.action, props.selectedItem);
 };
 
 const close = () => {
@@ -402,6 +432,10 @@ const handleClickOutside = (event: MouseEvent) => {
   if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
     close();
   }
+};
+
+const handleWindowBlur = () => {
+  close();
 };
 
 const setupKeyboardHandlers = () => {
@@ -603,11 +637,13 @@ watch(
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
+  window.addEventListener("blur", handleWindowBlur);
   getAppInfo();
 });
 
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("blur", handleWindowBlur);
   $keyboard.disableContext("actionsMenu");
 });
 </script>
@@ -682,6 +718,10 @@ onUnmounted(() => {
     .icon {
       width: 14px;
       height: 14px;
+    }
+
+    .title {
+      color: inherit;
     }
   }
 }
