@@ -81,7 +81,7 @@ import { KeyValues, KeyLabels } from "../types/keys";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
 import { useNuxtApp } from "#app";
 import BottomBar from "../components/BottomBar.vue";
-import IconsEnter from "~/components/Icons/Enter.vue";
+import IconsEnter from "~/components/Keys/Enter.vue";
 
 const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);

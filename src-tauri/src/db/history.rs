@@ -71,8 +71,12 @@ pub async fn add_history_item(
         Some(_) => {
             sqlx
                 ::query(
-                    "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
+                    "UPDATE history SET source = ?, source_icon = ?, timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now'), favicon = ?, language = ? WHERE content = ? AND content_type = ?"
                 )
+                .bind(&source)
+                .bind(&source_icon)
+                .bind(&favicon)
+                .bind(&language)
                 .bind(&content)
                 .bind(&content_type)
                 .execute(&*pool).await

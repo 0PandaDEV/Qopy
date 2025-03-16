@@ -64,6 +64,8 @@ onMounted(async () => {
   --accent: #feb453;
   --border: #ffffff0d;
 
+  --red: #F84E4E;
+
   --text: #e5dfd5;
   --text-secondary: #ada9a1;
   --text-muted: #78756f;
