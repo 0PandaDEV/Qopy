@@ -7,12 +7,16 @@
     <div class="buttons">
       <div v-if="primaryAction" class="paste" @click="handlePrimaryClick">
         <p class="text">{{ primaryAction.text }}</p>
-        <component :is="primaryAction.icon" />
+        <div class="keys">
+          <Key v-if="(os === 'windows' || os === 'linux') && primaryAction.showModifier" :input="'Ctrl'" />
+          <IconsCmd v-if="os === 'macos' && primaryAction.showModifier" />
+          <component :is="primaryAction.icon" :input="primaryAction.input" />
+        </div>
       </div>
       <div v-if="secondaryAction" class="divider"></div>
       <div v-if="secondaryAction" class="actions" @click="handleSecondaryClick">
         <p class="text">{{ secondaryAction.text }}</p>
-        <div>
+        <div class="keys">
           <Key v-if="(os === 'windows' || os === 'linux') && secondaryAction.showModifier" :input="'Ctrl'" />
           <IconsCmd v-if="os === 'macos' && secondaryAction.showModifier" />
           <component :is="secondaryAction.icon" :input="secondaryAction.input" />
@@ -96,7 +100,7 @@ onMounted(async () => {
       color: var(--text);
     }
 
-    .actions div {
+    .keys {
       display: flex;
       align-items: center;
       gap: 2px;
