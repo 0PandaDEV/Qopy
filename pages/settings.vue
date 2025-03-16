@@ -79,7 +79,7 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
 import { KeyValues, KeyLabels } from "../types/keys";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
-import { Key, keyboard } from "wrdu-keyboard";
+import { useNuxtApp } from "#app";
 import BottomBar from "../components/BottomBar.vue";
 import IconsEnter from "~/components/Icons/Enter.vue";
 
@@ -92,7 +92,7 @@ const os = ref("");
 const router = useRouter();
 const showEmptyKeybindError = ref(false);
 const autostart = ref(false);
-const { $settings } = useNuxtApp();
+const { $settings, $keyboard } = useNuxtApp();
 
 const modifierKeySet = new Set([
   KeyValues.AltLeft,
@@ -174,56 +174,71 @@ const toggleAutostart = async () => {
 os.value = platform();
 
 onMounted(async () => {
-  keyboard.prevent.down([Key.All], (event: KeyboardEvent) => {
-    if (isKeybindInputFocused.value) {
-      onKeyDown(event);
+  $keyboard.setupKeybindCapture({
+    onCapture: (key: string) => {
+      if (isKeybindInputFocused.value) {
+        const keyValue = key as KeyValues;
+        
+        if (isModifier(keyValue)) {
+          activeModifiers.add(keyValue);
+        } else if (!keybind.value.includes(keyValue)) {
+          keybind.value = keybind.value.filter((k) => isModifier(k));
+          keybind.value.push(keyValue);
+        }
+        
+        updateKeybind();
+        showEmptyKeybindError.value = false;
+      }
+    },
+    onComplete: () => {
+      if (isKeybindInputFocused.value) {
+        keybindInput.value?.blur();
+      } else {
+        router.push("/");
+      }
     }
   });
 
-  keyboard.prevent.down([Key.Escape], () => {
-    if (isKeybindInputFocused.value) {
-      keybindInput.value?.blur();
-    } else {
-      router.push("/");
-    }
-  });
-
-  switch (os.value) {
-    case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.Enter], () => {
-        if (!isKeybindInputFocused.value) {
-          saveKeybind();
-        }
-      });
-
-      keyboard.prevent.down([Key.RightMeta, Key.Enter], () => {
-        if (!isKeybindInputFocused.value) {
-          saveKeybind();
-        }
-      });
-      break;
-
-    case "linux":
-    case "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.Enter], () => {
-        if (!isKeybindInputFocused.value) {
-          saveKeybind();
-        }
-      });
-
-      keyboard.prevent.down([Key.RightControl, Key.Enter], () => {
-        if (!isKeybindInputFocused.value) {
-          saveKeybind();
-        }
-      });
-      break;
+  if (os.value === "macos") {
+    $keyboard.on("settings", [$keyboard.Key.LeftMeta, $keyboard.Key.Enter], () => {
+      if (!isKeybindInputFocused.value) {
+        saveKeybind();
+      }
+    }, { priority: $keyboard.PRIORITY.MEDIUM });
+    
+    $keyboard.on("settings", [$keyboard.Key.RightMeta, $keyboard.Key.Enter], () => {
+      if (!isKeybindInputFocused.value) {
+        saveKeybind();
+      }
+    }, { priority: $keyboard.PRIORITY.MEDIUM });
+  } else {
+    $keyboard.on("settings", [$keyboard.Key.LeftControl, $keyboard.Key.Enter], () => {
+      if (!isKeybindInputFocused.value) {
+        saveKeybind();
+      }
+    }, { priority: $keyboard.PRIORITY.MEDIUM });
+    
+    $keyboard.on("settings", [$keyboard.Key.RightControl, $keyboard.Key.Enter], () => {
+      if (!isKeybindInputFocused.value) {
+        saveKeybind();
+      }
+    }, { priority: $keyboard.PRIORITY.MEDIUM });
   }
 
+  $keyboard.on("settings", [$keyboard.Key.Escape], () => {
+    if (!isKeybindInputFocused.value) {
+      router.push("/");
+    }
+  }, { priority: $keyboard.PRIORITY.MEDIUM });
+
+  $keyboard.enableContext("settings");
+  
   autostart.value = (await $settings.getSetting("autostart")) === "true";
 });
 
 onUnmounted(() => {
-  keyboard.clear();
+  $keyboard.disableContext("settings");
+  $keyboard.clearAll();
 });
 </script>
 

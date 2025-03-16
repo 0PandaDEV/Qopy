@@ -49,9 +49,12 @@
       onClick: pasteSelectedItem,
     }" :secondary-action="{
       text: 'Actions',
-      icon: IconsK,
+      icon: IconsKey,
+      input: 'K',
       showModifier: true,
+      onClick: toggleActionsMenu,
     }" />
+    <ActionsMenu :selected-item="selectedItem" :is-visible="isActionsMenuVisible" @close="closeActionsMenu" />
   </main>
 </template>
 
@@ -73,22 +76,17 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import { Key, keyboard } from "wrdu-keyboard";
-import {
-  selectedGroupIndex,
-  selectedItemIndex,
-  selectedElement,
-  useSelectedResult,
-} from "~/lib/selectedResult";
 import IconsEnter from "~/components/Icons/Enter.vue";
-import IconsK from "~/components/Icons/K.vue";
+import IconsKey from "~/components/Icons/Key.vue";
+import ActionsMenu from "~/components/ActionsMenu.vue";
 
 interface GroupedHistory {
   label: string;
   items: HistoryItem[];
 }
 
-const { $history } = useNuxtApp();
+const { $history, $keyboard, $selectedResult } = useNuxtApp();
+const { selectedGroupIndex, selectedItemIndex, selectedElement, useSelectedResult } = $selectedResult;
 
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
@@ -113,8 +111,23 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
+const isActionsMenuVisible = ref<boolean>(false);
 
 const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null);
+
+const toggleActionsMenu = () => {
+  nextTick(() => {
+    isActionsMenuVisible.value = !isActionsMenuVisible.value;
+    if (isActionsMenuVisible.value) {
+      $keyboard.enableContext('actionsMenu');
+    }
+  });
+};
+
+const closeActionsMenu = () => {
+  isActionsMenuVisible.value = false;
+  $keyboard.disableContext('actionsMenu');
+};
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -527,70 +540,47 @@ const setupEventListeners = async (): Promise<void> => {
     }
     focusSearchInput();
 
-    keyboard.clear();
-    keyboard.prevent.down([Key.DownArrow], () => {
-      selectNext();
+    $keyboard.clearAll();
+    $keyboard.setupAppShortcuts({
+      onNavigateDown: selectNext,
+      onNavigateUp: selectPrevious,
+      onSelect: pasteSelectedItem,
+      onEscape: () => {
+        if (isActionsMenuVisible.value) {
+          closeActionsMenu();
+        } else {
+          hideApp();
+        }
+      },
+      onToggleActions: toggleActionsMenu,
+      contextName: 'main',
+      priority: $keyboard.PRIORITY.LOW
     });
-
-    keyboard.prevent.down([Key.UpArrow], () => {
-      selectPrevious();
-    });
-
-    keyboard.prevent.down([Key.Enter], () => {
-      pasteSelectedItem();
-    });
-
-    keyboard.prevent.down([Key.Escape], () => {
-      hideApp();
-    });
-
-    switch (os.value) {
-      case "macos":
-        keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-        keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
-        break;
-
-      case "linux":
-      case "windows":
-        keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-        keyboard.prevent.down([Key.RightControl, Key.K], () => { });
-        break;
-    }
+    $keyboard.enableContext('main');
   });
 
   await listen("tauri://blur", () => {
     searchInput.value?.blur();
-    keyboard.clear();
+    $keyboard.clearAll();
+    $keyboard.disableContext('main');
   });
 
-  keyboard.prevent.down([Key.DownArrow], () => {
-    selectNext();
+  $keyboard.setupAppShortcuts({
+    onNavigateDown: selectNext,
+    onNavigateUp: selectPrevious,
+    onSelect: pasteSelectedItem,
+    onEscape: () => {
+      if (isActionsMenuVisible.value) {
+        closeActionsMenu();
+      } else {
+        hideApp();
+      }
+    },
+    onToggleActions: toggleActionsMenu,
+    contextName: 'main',
+    priority: $keyboard.PRIORITY.LOW
   });
-
-  keyboard.prevent.down([Key.UpArrow], () => {
-    selectPrevious();
-  });
-
-  keyboard.prevent.down([Key.Enter], () => {
-    pasteSelectedItem();
-  });
-
-  keyboard.prevent.down([Key.Escape], () => {
-    hideApp();
-  });
-
-  switch (os.value) {
-    case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-      keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
-      break;
-
-    case "linux":
-    case "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-      keyboard.prevent.down([Key.RightControl, Key.K], () => { });
-      break;
-  }
+  $keyboard.enableContext('main');
 };
 
 const hideApp = async (): Promise<void> => {
