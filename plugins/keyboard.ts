@@ -1,4 +1,5 @@
 import { Key, keyboard } from "wrdu-keyboard";
+import { platform } from "@tauri-apps/plugin-os";
 
 type KeyboardHandler = (event: KeyboardEvent) => void;
 
@@ -256,6 +257,12 @@ const initKeyboardHandlers = () => {
 };
 
 export default defineNuxtPlugin(async (nuxtApp) => {
+  try {
+    const osName = platform();
+    currentOS = osName.toLowerCase().includes("mac") ? "macos" : "windows";
+  } catch (error) {
+    console.error("Error detecting platform:", error);
+  }
 
   initKeyboardHandlers();
 
