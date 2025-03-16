@@ -13,7 +13,7 @@
       <div v-if="secondaryAction" class="actions" @click="handleSecondaryClick">
         <p class="text">{{ secondaryAction.text }}</p>
         <div>
-          <IconsCtrl v-if="(os === 'windows' || os === 'linux') && secondaryAction.showModifier" />
+          <Key v-if="(os === 'windows' || os === 'linux') && secondaryAction.showModifier" :input="'Ctrl'" />
           <IconsCmd v-if="os === 'macos' && secondaryAction.showModifier" />
           <component :is="secondaryAction.icon" :input="secondaryAction.input" />
         </div>
@@ -25,8 +25,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { platform } from "@tauri-apps/plugin-os";
-import IconsCtrl from './Icons/Ctrl.vue';
-import IconsCmd from './Icons/Cmd.vue';
+import IconsCmd from './Keys/Cmd.vue';
+import Key from './Keys/Key.vue';
 
 interface Action {
   text: string;
