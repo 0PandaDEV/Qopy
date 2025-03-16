@@ -127,7 +127,8 @@ fn main() {
                 db::history::read_image,
                 db::settings::get_setting,
                 db::settings::save_setting,
-                utils::commands::fetch_page_meta
+                utils::commands::fetch_page_meta,
+                utils::commands::get_app_info
             ]
         )
         .run(tauri::generate_context!())
