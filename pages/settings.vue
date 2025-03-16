@@ -238,7 +238,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   $keyboard.disableContext("settings");
-  $keyboard.clearAll();
 });
 </script>
 

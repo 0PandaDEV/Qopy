@@ -1,110 +1,119 @@
 <template>
-  <div v-if="isVisible" class="actions" ref="menuRef">
-    <OverlayScrollbarsComponent ref="scrollbarsRef" class="actions-scrollable"
-      :options="{ scrollbars: { autoHide: 'scroll' } }">
-      <template v-if="searchQuery">
-        <div class="action-group">
-          <div v-if="allFilteredActions.length === 0" class="action no-results">
-            <div class="content">
-              <div class="title">No Results</div>
+  <div 
+    id="actions-menu"
+    class="actions-menu-overlay" 
+    :class="{ visible: isVisible }" 
+    @click="$emit('close')"
+    tabindex="-1">
+    <div class="actions-menu" @click.stop>
+      <div v-if="isVisible" class="actions" ref="menuRef">
+        <OverlayScrollbarsComponent ref="scrollbarsRef" class="actions-scrollable"
+          :options="{ scrollbars: { autoHide: 'scroll' } }">
+          <template v-if="searchQuery">
+            <div class="action-group">
+              <div v-if="allFilteredActions.length === 0" class="action no-results">
+                <div class="content">
+                  <div class="title">No Results</div>
+                </div>
+              </div>
+              <div v-else v-for="(action, index) in allFilteredActions" :key="action.action" class="action"
+                @click="executeAction(action)" :class="{ selected: isSelected && currentIndex === index }" :ref="(el) => {
+                  if (currentIndex === index) setSelectedElement(el);
+                }
+                  " :style="action.color ? { color: action.color } : {}">
+                <div class="content">
+                  <component v-if="action.icon" :is="action.icon" class="icon" />
+                  <div class="title">{{ action.title }}</div>
+                </div>
+                <div v-if="action.shortcut" class="shortcut">
+                  <template v-for="(key, keyIndex) in parseShortcut(action.shortcut)" :key="keyIndex">
+                    <component :is="key.component" v-if="key.component" :input="key.value" />
+                  </template>
+                </div>
+              </div>
             </div>
-          </div>
-          <div v-else v-for="(action, index) in allFilteredActions" :key="action.action" class="action"
-            @click="executeAction(action)" :class="{ selected: isSelected && currentIndex === index }" :ref="(el) => {
-              if (currentIndex === index) setSelectedElement(el);
-            }
-              " :style="action.color ? { color: action.color } : {}">
-            <div class="content">
-              <component v-if="action.icon" :is="action.icon" class="icon" />
-              <div class="title">{{ action.title }}</div>
-            </div>
-            <div v-if="action.shortcut" class="shortcut">
-              <template v-for="(key, keyIndex) in parseShortcut(action.shortcut)" :key="keyIndex">
-                <component :is="key.component" v-if="key.component" :input="key.value" />
-              </template>
-            </div>
-          </div>
-        </div>
-      </template>
+          </template>
 
-      <template v-else>
-        <div class="action-group">
-          <div v-for="(action, index) in topActions" :key="action.action" class="action" @click="executeAction(action)"
-            :class="{
-              selected:
-                isSelected && currentIndex === getActionIndex(index, 'top'),
-            }" :ref="(el) => {
-              if (currentIndex === getActionIndex(index, 'top'))
-                setSelectedElement(el);
-            }
-              ">
-            <div class="content">
-              <component v-if="action.icon" :is="action.icon" class="icon" />
-              <div class="title">{{ action.title }}</div>
+          <template v-else>
+            <div class="action-group">
+              <div v-for="(action, index) in topActions" :key="action.action" class="action" @click="executeAction(action)"
+                :class="{
+                  selected:
+                    isSelected && currentIndex === getActionIndex(index, 'top'),
+                }" :ref="(el) => {
+                  if (currentIndex === getActionIndex(index, 'top'))
+                    setSelectedElement(el);
+                }
+                  ">
+                <div class="content">
+                  <component v-if="action.icon" :is="action.icon" class="icon" />
+                  <div class="title">{{ action.title }}</div>
+                </div>
+                <div v-if="action.shortcut" class="shortcut">
+                  <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
+                    <component :is="key.component" v-if="key.component" :input="key.value" />
+                  </template>
+                </div>
+              </div>
+              <div class="divider" v-if="
+                topActions.length > 0 && typeSpecificActions.length > 0
+              "></div>
             </div>
-            <div v-if="action.shortcut" class="shortcut">
-              <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
-                <component :is="key.component" v-if="key.component" :input="key.value" />
-              </template>
-            </div>
-          </div>
-          <div class="divider" v-if="
-            topActions.length > 0 && typeSpecificActions.length > 0
-          "></div>
-        </div>
 
-        <div v-if="typeSpecificActions.length > 0" class="action-group">
-          <div v-for="(action, index) in typeSpecificActions" :key="action.action" class="action"
-            @click="executeAction(action)" :class="{
-              selected:
-                isSelected &&
-                currentIndex === getActionIndex(index, 'specific'),
-            }" :ref="(el) => {
-              if (currentIndex === getActionIndex(index, 'specific'))
-                setSelectedElement(el);
-            }
-              ">
-            <div class="content">
-              <component v-if="action.icon" :is="action.icon" class="icon" />
-              <div class="title">{{ action.title }}</div>
+            <div v-if="typeSpecificActions.length > 0" class="action-group">
+              <div v-for="(action, index) in typeSpecificActions" :key="action.action" class="action"
+                @click="executeAction(action)" :class="{
+                  selected:
+                    isSelected &&
+                    currentIndex === getActionIndex(index, 'specific'),
+                }" :ref="(el) => {
+                  if (currentIndex === getActionIndex(index, 'specific'))
+                    setSelectedElement(el);
+                }
+                  ">
+                <div class="content">
+                  <component v-if="action.icon" :is="action.icon" class="icon" />
+                  <div class="title">{{ action.title }}</div>
+                </div>
+                <div v-if="action.shortcut" class="shortcut">
+                  <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
+                    <component :is="key.component" v-if="key.component" :input="key.value" />
+                  </template>
+                </div>
+              </div>
+              <div class="divider" v-if="
+                typeSpecificActions.length > 0 && bottomActions.length > 0
+              "></div>
             </div>
-            <div v-if="action.shortcut" class="shortcut">
-              <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
-                <component :is="key.component" v-if="key.component" :input="key.value" />
-              </template>
-            </div>
-          </div>
-          <div class="divider" v-if="
-            typeSpecificActions.length > 0 && bottomActions.length > 0
-          "></div>
-        </div>
 
-        <div class="action-group">
-          <div v-for="(action, index) in bottomActions" :key="action.action" class="action"
-            @click="executeAction(action)" :class="{
-              selected:
-                isSelected && currentIndex === getActionIndex(index, 'bottom'),
-            }" :ref="(el) => {
-              if (currentIndex === getActionIndex(index, 'bottom'))
-                setSelectedElement(el);
-            }
-              " :style="action.color ? { color: action.color } : {}">
-            <div class="content">
-              <component v-if="action.icon" :is="action.icon" class="icon" />
-              <div class="title">{{ action.title }}</div>
+            <div class="action-group">
+              <div v-for="(action, index) in bottomActions" :key="action.action" class="action"
+                @click="executeAction(action)" :class="{
+                  selected:
+                    isSelected && currentIndex === getActionIndex(index, 'bottom'),
+                }" :ref="(el) => {
+                  if (currentIndex === getActionIndex(index, 'bottom'))
+                    setSelectedElement(el);
+                }
+                  " :style="action.color ? { color: action.color } : {}">
+                <div class="content">
+                  <component v-if="action.icon" :is="action.icon" class="icon" />
+                  <div class="title">{{ action.title }}</div>
+                </div>
+                <div v-if="action.shortcut" class="shortcut">
+                  <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
+                    <component :is="key.component" v-if="key.component" :input="key.value" />
+                  </template>
+                </div>
+              </div>
             </div>
-            <div v-if="action.shortcut" class="shortcut">
-              <template v-for="(key, index) in parseShortcut(action.shortcut)" :key="index">
-                <component :is="key.component" v-if="key.component" :input="key.value" />
-              </template>
-            </div>
-          </div>
-        </div>
-      </template>
-    </OverlayScrollbarsComponent>
+          </template>
+        </OverlayScrollbarsComponent>
 
-    <input type="text" v-model="searchQuery" class="search-input" placeholder="Search..." @keydown="handleSearchKeydown"
-      ref="searchInput" />
+        <input type="text" v-model="searchQuery" class="search-input" placeholder="Search..." @keydown="handleSearchKeydown"
+          ref="searchInput" />
+      </div>
+    </div>
   </div>
 </template>
 

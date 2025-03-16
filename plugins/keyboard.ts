@@ -1,5 +1,4 @@
 import { Key, keyboard } from "wrdu-keyboard";
-import { platform } from "@tauri-apps/plugin-os";
 
 type KeyboardHandler = (event: KeyboardEvent) => void;
 
@@ -21,9 +20,6 @@ const PRIORITY = {
 };
 
 let currentOS = "windows";
-const initOS = async () => {
-  currentOS = await platform();
-};
 
 const useKeyboard = {
   PRIORITY,
@@ -58,12 +54,29 @@ const useKeyboard = {
     if (!handlersByContext[contextName]) {
       useKeyboard.registerContext(contextName);
     }
-    handlersByContext[contextName].push({
-      keys,
-      callback,
-      prevent: options.prevent ?? true,
-      priority: options.priority ?? PRIORITY.LOW,
-    });
+
+    const existingHandlerIndex = handlersByContext[contextName].findIndex(
+      (handler) =>
+        handler.keys.length === keys.length &&
+        handler.keys.every((key, i) => key === keys[i]) &&
+        handler.callback.toString() === callback.toString()
+    );
+
+    if (existingHandlerIndex !== -1) {
+      handlersByContext[contextName][existingHandlerIndex] = {
+        keys,
+        callback,
+        prevent: options.prevent ?? true,
+        priority: options.priority ?? PRIORITY.LOW,
+      };
+    } else {
+      handlersByContext[contextName].push({
+        keys,
+        callback,
+        prevent: options.prevent ?? true,
+        priority: options.priority ?? PRIORITY.LOW,
+      });
+    }
 
     if (activeContexts.has(contextName)) {
       initKeyboardHandlers();
@@ -118,8 +131,8 @@ const useKeyboard = {
     }
 
     if (onToggleActions) {
-      const togglePriority = PRIORITY.HIGH;
-      
+      const togglePriority = Math.max(priority, PRIORITY.HIGH);
+
       if (currentOS === "macos") {
         useKeyboard.on(
           contextName,
@@ -169,52 +182,71 @@ const useKeyboard = {
 const initKeyboardHandlers = () => {
   keyboard.clear();
 
-  let allHandlers: Array<{ keys: Key[], callback: KeyboardHandler, prevent: boolean, priority: number, contextName: string }> = [];
-  
+  let allHandlers: Array<{
+    keys: Key[];
+    callback: KeyboardHandler;
+    prevent: boolean;
+    priority: number;
+    contextName: string;
+  }> = [];
+
   for (const contextName of activeContexts) {
     const handlers = handlersByContext[contextName] || [];
-    allHandlers = [...allHandlers, ...handlers.map(handler => ({
-      ...handler,
-      priority: handler.priority ?? PRIORITY.LOW,
-      contextName
-    }))];
+    allHandlers = [
+      ...allHandlers,
+      ...handlers.map((handler) => ({
+        ...handler,
+        priority: handler.priority ?? PRIORITY.LOW,
+        contextName,
+      })),
+    ];
   }
-  
+
   allHandlers.sort((a, b) => b.priority - a.priority);
-  
-  const handlersByKeyCombination: Record<string, Array<typeof allHandlers[0]>> = {};
-  
-  allHandlers.forEach(handler => {
-    const keyCombo = handler.keys.join('+');
+
+  const handlersByKeyCombination: Record<
+    string,
+    Array<(typeof allHandlers)[0]>
+  > = {};
+
+  allHandlers.forEach((handler) => {
+    const keyCombo = handler.keys.sort().join("+");
     if (!handlersByKeyCombination[keyCombo]) {
       handlersByKeyCombination[keyCombo] = [];
     }
     handlersByKeyCombination[keyCombo].push(handler);
   });
-  
-  Object.values(handlersByKeyCombination).forEach(handlers => {
+
+  Object.entries(handlersByKeyCombination).forEach(([_keyCombo, handlers]) => {
+    handlers.sort((a, b) => b.priority - a.priority);
     const handler = handlers[0];
-    
+
     const wrappedCallback: KeyboardHandler = (event) => {
-      const isMetaCombo = handler.keys.length > 1 && 
-        (handler.keys.includes(Key.LeftMeta) || 
-         handler.keys.includes(Key.RightMeta) || 
-         handler.keys.includes(Key.LeftControl) ||
-         handler.keys.includes(Key.RightControl));
-      
-      const isNavigationKey = event.key === 'ArrowUp' || 
-                             event.key === 'ArrowDown' || 
-                             event.key === 'Enter' || 
-                             event.key === 'Escape';
-      
-      const isInInput = event.target instanceof HTMLInputElement || 
-                        event.target instanceof HTMLTextAreaElement;
-      
-      if (isMetaCombo || isNavigationKey || !isInInput) {
+      const isMetaCombo =
+        handler.keys.length > 1 &&
+        (handler.keys.includes(Key.LeftMeta) ||
+          handler.keys.includes(Key.RightMeta) ||
+          handler.keys.includes(Key.LeftControl) ||
+          handler.keys.includes(Key.RightControl));
+
+      const isNavigationKey =
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "Enter" ||
+        event.key === "Escape";
+
+      const isInInput =
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement;
+
+      if (
+        (isMetaCombo || isNavigationKey || !isInInput) &&
+        activeContexts.has(handler.contextName)
+      ) {
         handler.callback(event);
       }
     };
-    
+
     if (handler.prevent) {
       keyboard.prevent.down(handler.keys, wrappedCallback);
     } else {
@@ -223,10 +255,13 @@ const initKeyboardHandlers = () => {
   });
 };
 
-export default defineNuxtPlugin(async () => {
-  await initOS();
+export default defineNuxtPlugin(async (nuxtApp) => {
 
   initKeyboardHandlers();
+
+  nuxtApp.hook("page:finish", () => {
+    initKeyboardHandlers();
+  });
 
   return {
     provide: {

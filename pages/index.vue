@@ -125,6 +125,14 @@ const toggleActionsMenu = () => {
     $keyboard.disableContext('actionsMenu');
     $keyboard.enableContext('main');
   }
+  
+  nextTick(() => {
+    if (isActionsMenuVisible.value) {
+      document.getElementById('actions-menu')?.focus();
+    } else {
+      focusSearchInput();
+    }
+  });
 };
 
 const closeActionsMenu = () => {
@@ -545,34 +553,18 @@ const setupEventListeners = async (): Promise<void> => {
     }
     focusSearchInput();
 
-    $keyboard.clearAll();
-    $keyboard.setupAppShortcuts({
-      onNavigateDown: selectNext,
-      onNavigateUp: selectPrevious,
-      onSelect: pasteSelectedItem,
-      onEscape: () => {
-        if (isActionsMenuVisible.value) {
-          closeActionsMenu();
-        } else {
-          hideApp();
-        }
-      },
-      onToggleActions: toggleActionsMenu,
-      contextName: 'main',
-      priority: $keyboard.PRIORITY.HIGH
-    });
-    
+    $keyboard.disableContext('actionsMenu');
+    $keyboard.disableContext('settings');
+    $keyboard.enableContext('main');
     if (isActionsMenuVisible.value) {
       $keyboard.enableContext('actionsMenu');
-    } else {
-      $keyboard.enableContext('main');
     }
   });
 
   await listen("tauri://blur", () => {
     searchInput.value?.blur();
-    $keyboard.clearAll();
     $keyboard.disableContext('main');
+    $keyboard.disableContext('actionsMenu');
   });
 
   $keyboard.setupAppShortcuts({
@@ -588,8 +580,9 @@ const setupEventListeners = async (): Promise<void> => {
     },
     onToggleActions: toggleActionsMenu,
     contextName: 'main',
-    priority: $keyboard.PRIORITY.LOW
+    priority: $keyboard.PRIORITY.HIGH
   });
+  $keyboard.disableContext('settings');
   $keyboard.enableContext('main');
 };
 
@@ -625,6 +618,24 @@ onMounted(async () => {
       ?.viewport?.addEventListener("scroll", handleScroll);
 
     await setupEventListeners();
+
+    $keyboard.setupAppShortcuts({
+      onNavigateDown: selectNext,
+      onNavigateUp: selectPrevious,
+      onSelect: pasteSelectedItem,
+      onEscape: () => {
+        if (isActionsMenuVisible.value) {
+          closeActionsMenu();
+        } else {
+          hideApp();
+        }
+      },
+      onToggleActions: toggleActionsMenu,
+      contextName: 'main',
+      priority: $keyboard.PRIORITY.HIGH
+    });
+    $keyboard.disableContext('settings');
+    $keyboard.enableContext('main');
   } catch (error) {
     console.error("Error during onMounted:", error);
   }
