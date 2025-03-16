@@ -45,6 +45,7 @@
           <div
             @blur="onBlur"
             @focus="onFocus"
+            @keydown="onKeyDown"
             class="keybind-input"
             ref="keybindInput"
             tabindex="0"
@@ -88,6 +89,7 @@ const isKeybindInputFocused = ref(false);
 const keybind = ref<KeyValues[]>([]);
 const keybindInput = ref<HTMLElement | null>(null);
 const lastBlurTime = ref(0);
+const blurredByEscape = ref(false);
 const os = ref("");
 const router = useRouter();
 const showEmptyKeybindError = ref(false);
@@ -127,6 +129,7 @@ const onBlur = () => {
 
 const onFocus = () => {
   isKeybindInputFocused.value = true;
+  blurredByEscape.value = false;
   activeModifiers.clear();
   keybind.value = [];
   showEmptyKeybindError.value = false;
@@ -137,7 +140,10 @@ const onKeyDown = (event: KeyboardEvent) => {
 
   if (key === KeyValues.Escape) {
     if (keybindInput.value) {
+      blurredByEscape.value = true;
       keybindInput.value.blur();
+      event.preventDefault();
+      event.stopPropagation();
     }
     return;
   }
@@ -201,36 +207,30 @@ onMounted(async () => {
 
   if (os.value === "macos") {
     $keyboard.on("settings", [$keyboard.Key.LeftMeta, $keyboard.Key.Enter], () => {
-      if (!isKeybindInputFocused.value) {
-        saveKeybind();
-      }
-    }, { priority: $keyboard.PRIORITY.MEDIUM });
+      saveKeybind();
+    }, { priority: $keyboard.PRIORITY.HIGH });
     
     $keyboard.on("settings", [$keyboard.Key.RightMeta, $keyboard.Key.Enter], () => {
-      if (!isKeybindInputFocused.value) {
-        saveKeybind();
-      }
-    }, { priority: $keyboard.PRIORITY.MEDIUM });
+      saveKeybind();
+    }, { priority: $keyboard.PRIORITY.HIGH });
   } else {
     $keyboard.on("settings", [$keyboard.Key.LeftControl, $keyboard.Key.Enter], () => {
-      if (!isKeybindInputFocused.value) {
-        saveKeybind();
-      }
-    }, { priority: $keyboard.PRIORITY.MEDIUM });
+      saveKeybind();
+    }, { priority: $keyboard.PRIORITY.HIGH });
     
     $keyboard.on("settings", [$keyboard.Key.RightControl, $keyboard.Key.Enter], () => {
-      if (!isKeybindInputFocused.value) {
-        saveKeybind();
-      }
-    }, { priority: $keyboard.PRIORITY.MEDIUM });
+      saveKeybind();
+    }, { priority: $keyboard.PRIORITY.HIGH });
   }
 
   $keyboard.on("settings", [$keyboard.Key.Escape], () => {
-    if (!isKeybindInputFocused.value) {
+    if (!isKeybindInputFocused.value && !blurredByEscape.value) {
       router.push("/");
     }
-  }, { priority: $keyboard.PRIORITY.MEDIUM });
+    blurredByEscape.value = false;
+  }, { priority: $keyboard.PRIORITY.HIGH });
 
+  $keyboard.disableContext("main");
   $keyboard.enableContext("settings");
   
   autostart.value = (await $settings.getSetting("autostart")) === "true";
