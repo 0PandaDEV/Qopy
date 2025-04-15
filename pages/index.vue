@@ -10,7 +10,7 @@
             <Result v-for="(item, index) in group.items" :key="item.id" :item="item"
               :selected="isSelected(groupIndex, index)" :image-url="imageUrls[item.id]"
               :dimensions="imageDimensions[item.id]" @select="selectItem(groupIndex, index)" @image-error="onImageError"
-              @setRef="(el) => (selectedElement = el)" />
+              @setRef="(el: HTMLElement | null) => (selectedElement = el)" />
           </div>
         </div>
       </OverlayScrollbarsComponent>
@@ -49,9 +49,12 @@
       onClick: pasteSelectedItem,
     }" :secondary-action="{
       text: 'Actions',
-      icon: IconsK,
+      icon: IconsKey,
+      input: 'K',
       showModifier: true,
+      onClick: toggleActionsMenu,
     }" />
+    <ActionsMenu :selected-item="selectedItem" :is-visible="isActionsMenuVisible" @close="closeActionsMenu" @toggle="toggleActionsMenu" />
   </main>
 </template>
 
@@ -59,7 +62,6 @@
 import { ref, computed, onMounted, watch, nextTick, shallowRef } from "vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-import { app, window } from "@tauri-apps/api";
 import { platform } from "@tauri-apps/plugin-os";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
@@ -73,22 +75,18 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import { Key, keyboard } from "wrdu-keyboard";
-import {
-  selectedGroupIndex,
-  selectedItemIndex,
-  selectedElement,
-  useSelectedResult,
-} from "~/lib/selectedResult";
-import IconsEnter from "~/components/Icons/Enter.vue";
-import IconsK from "~/components/Icons/K.vue";
+import IconsEnter from "~/components/Keys/Enter.vue";
+import IconsKey from "~/components/Keys/Key.vue";
+import ActionsMenu from "~/components/ActionsMenu.vue";
+import { useAppControl } from "~/composables/useAppControl";
 
 interface GroupedHistory {
   label: string;
   items: HistoryItem[];
 }
 
-const { $history } = useNuxtApp();
+const { $history, $keyboard, $selectedResult } = useNuxtApp();
+const { selectedGroupIndex, selectedItemIndex, selectedElement, useSelectedResult } = $selectedResult;
 
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
@@ -113,8 +111,35 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
+const isActionsMenuVisible = ref<boolean>(false);
 
 const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null);
+
+const toggleActionsMenu = () => {
+  isActionsMenuVisible.value = !isActionsMenuVisible.value;
+  
+  if (isActionsMenuVisible.value) {
+    $keyboard.disableContext('main');
+    $keyboard.enableContext('actionsMenu');
+  } else {
+    $keyboard.disableContext('actionsMenu');
+    $keyboard.enableContext('main');
+  }
+  
+  nextTick(() => {
+    if (isActionsMenuVisible.value) {
+      document.getElementById('actions-menu')?.focus();
+    } else {
+      focusSearchInput();
+    }
+  });
+};
+
+const closeActionsMenu = () => {
+  isActionsMenuVisible.value = false;
+  $keyboard.disableContext('actionsMenu');
+  $keyboard.enableContext('main');
+};
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -417,13 +442,13 @@ const getYoutubeThumbnail = (url: string): string => {
 };
 
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
-  const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
+  offset = 0;
+  history.value = [];
+  
+  const results = await $history.loadHistoryChunk(offset, CHUNK_SIZE);
   if (results.length > 0) {
-    const existingIds = new Set(history.value.map((item) => item.id));
-    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
-
-    const processedNewItems = await Promise.all(
-      uniqueNewItems.map(async (item) => {
+    const processedItems = await Promise.all(
+      results.map(async (item) => {
         const historyItem = new HistoryItem(
           item.source,
           item.content_type,
@@ -471,7 +496,8 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
       })
     );
 
-    history.value = [...processedNewItems, ...history.value];
+    history.value = processedItems;
+    offset = results.length;
 
     if (
       resetScroll &&
@@ -527,76 +553,40 @@ const setupEventListeners = async (): Promise<void> => {
     }
     focusSearchInput();
 
-    keyboard.clear();
-    keyboard.prevent.down([Key.DownArrow], () => {
-      selectNext();
-    });
-
-    keyboard.prevent.down([Key.UpArrow], () => {
-      selectPrevious();
-    });
-
-    keyboard.prevent.down([Key.Enter], () => {
-      pasteSelectedItem();
-    });
-
-    keyboard.prevent.down([Key.Escape], () => {
-      hideApp();
-    });
-
-    switch (os.value) {
-      case "macos":
-        keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-        keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
-        break;
-
-      case "linux":
-      case "windows":
-        keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-        keyboard.prevent.down([Key.RightControl, Key.K], () => { });
-        break;
+    $keyboard.disableContext('actionsMenu');
+    $keyboard.disableContext('settings');
+    $keyboard.enableContext('main');
+    if (isActionsMenuVisible.value) {
+      $keyboard.enableContext('actionsMenu');
     }
   });
 
   await listen("tauri://blur", () => {
     searchInput.value?.blur();
-    keyboard.clear();
+    $keyboard.disableContext('main');
+    $keyboard.disableContext('actionsMenu');
   });
 
-  keyboard.prevent.down([Key.DownArrow], () => {
-    selectNext();
+  $keyboard.setupAppShortcuts({
+    onNavigateDown: selectNext,
+    onNavigateUp: selectPrevious,
+    onSelect: pasteSelectedItem,
+    onEscape: () => {
+      if (isActionsMenuVisible.value) {
+        closeActionsMenu();
+      } else {
+        hideApp();
+      }
+    },
+    onToggleActions: toggleActionsMenu,
+    contextName: 'main',
+    priority: $keyboard.PRIORITY.HIGH
   });
-
-  keyboard.prevent.down([Key.UpArrow], () => {
-    selectPrevious();
-  });
-
-  keyboard.prevent.down([Key.Enter], () => {
-    pasteSelectedItem();
-  });
-
-  keyboard.prevent.down([Key.Escape], () => {
-    hideApp();
-  });
-
-  switch (os.value) {
-    case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-      keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
-      break;
-
-    case "linux":
-    case "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-      keyboard.prevent.down([Key.RightControl, Key.K], () => { });
-      break;
-  }
+  $keyboard.disableContext('settings');
+  $keyboard.enableContext('main');
 };
 
-const hideApp = async (): Promise<void> => {
-  await app.hide();
-  await window.getCurrentWindow().hide();
-};
+const { hideApp } = useAppControl();
 
 const focusSearchInput = (): void => {
   nextTick(() => {
@@ -628,6 +618,24 @@ onMounted(async () => {
       ?.viewport?.addEventListener("scroll", handleScroll);
 
     await setupEventListeners();
+
+    $keyboard.setupAppShortcuts({
+      onNavigateDown: selectNext,
+      onNavigateUp: selectPrevious,
+      onSelect: pasteSelectedItem,
+      onEscape: () => {
+        if (isActionsMenuVisible.value) {
+          closeActionsMenu();
+        } else {
+          hideApp();
+        }
+      },
+      onToggleActions: toggleActionsMenu,
+      contextName: 'main',
+      priority: $keyboard.PRIORITY.HIGH
+    });
+    $keyboard.disableContext('settings');
+    $keyboard.enableContext('main');
   } catch (error) {
     console.error("Error during onMounted:", error);
   }
