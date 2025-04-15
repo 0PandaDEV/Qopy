@@ -123,7 +123,7 @@ bun build
 
 ## 📝 License
 
-Qopy is licensed under GPL-3. See the [LICENSE file](./LICENCE) for more information.
+Qopy is licensed under AGPL-3. See the [LICENSE file](./LICENCE) for more information.
 
 [codespaces-link]: https://codespaces.new/0pandadev/Qopy
 [codespaces-shield]: https://github.com/codespaces/badge.svg
