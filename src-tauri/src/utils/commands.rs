@@ -36,31 +36,49 @@ pub fn center_window_on_current_monitor(window: &tauri::WebviewWindow) {
     }
 }
 
+#[tauri::command]
 pub fn get_app_info() -> (String, Option<String>) {
     println!("Getting app info");
     let mut ctx = AppInfoContext::new(vec![]);
     println!("Created AppInfoContext");
-    ctx.refresh_apps().unwrap();
+    
+    if let Err(e) = ctx.refresh_apps() {
+        println!("Failed to refresh apps: {:?}", e);
+        return ("System".to_string(), None);
+    }
+    
     println!("Refreshed apps");
-    match ctx.get_frontmost_application() {
-        Ok(window) => {
-            println!("Found frontmost application: {}", window.name);
-            let name = window.name.clone();
-            let icon = window
-                .load_icon()
-                .ok()
-                .map(|i| {
-                    println!("Loading icon for {}", name);
-                    let png = i.to_png().unwrap();
-                    let encoded = STANDARD.encode(png.get_bytes());
-                    println!("Icon encoded successfully");
-                    encoded
-                });
-            println!("Returning app info: {} with icon: {}", name, icon.is_some());
-            (name, icon)
+    
+    let result = std::panic::catch_unwind(|| {
+        match ctx.get_frontmost_application() {
+            Ok(window) => {
+                println!("Found frontmost application: {}", window.name);
+                let name = window.name.clone();
+                let icon = window
+                    .load_icon()
+                    .ok()
+                    .and_then(|i| {
+                        println!("Loading icon for {}", name);
+                        i.to_png().ok().map(|png| {
+                            let encoded = STANDARD.encode(png.get_bytes());
+                            println!("Icon encoded successfully");
+                            encoded
+                        })
+                    });
+                println!("Returning app info: {} with icon: {}", name, icon.is_some());
+                (name, icon)
+            }
+            Err(e) => {
+                println!("Failed to get frontmost application: {:?}", e);
+                ("System".to_string(), None)
+            }
         }
-        Err(e) => {
-            println!("Failed to get frontmost application: {:?}", e);
+    });
+    
+    match result {
+        Ok(info) => info,
+        Err(_) => {
+            println!("Panic occurred while getting app info");
             ("System".to_string(), None)
         }
     }
