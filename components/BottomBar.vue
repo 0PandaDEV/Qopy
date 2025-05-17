@@ -5,17 +5,21 @@
       <p class="name">Qopy</p>
     </div>
     <div class="buttons">
-      <div v-if="primaryAction" class="paste" @click="primaryAction.onClick">
+      <div v-if="primaryAction" class="paste" @click="handlePrimaryClick">
         <p class="text">{{ primaryAction.text }}</p>
-        <component :is="primaryAction.icon" />
+        <div class="keys">
+          <Key v-if="(os === 'windows' || os === 'linux') && primaryAction.showModifier" :input="'Ctrl'" />
+          <IconsCmd v-if="os === 'macos' && primaryAction.showModifier" />
+          <component :is="primaryAction.icon" :input="primaryAction.input" />
+        </div>
       </div>
       <div v-if="secondaryAction" class="divider"></div>
-      <div v-if="secondaryAction" class="actions" @click="secondaryAction.onClick">
+      <div v-if="secondaryAction" class="actions" @click="handleSecondaryClick">
         <p class="text">{{ secondaryAction.text }}</p>
-        <div>
-          <IconsCtrl v-if="(os === 'windows' || os === 'linux') && secondaryAction.showModifier" />
+        <div class="keys">
+          <Key v-if="(os === 'windows' || os === 'linux') && secondaryAction.showModifier" :input="'Ctrl'" />
           <IconsCmd v-if="os === 'macos' && secondaryAction.showModifier" />
-          <component :is="secondaryAction.icon" />
+          <component :is="secondaryAction.icon" :input="secondaryAction.input" />
         </div>
       </div>
     </div>
@@ -23,13 +27,17 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { platform } from "@tauri-apps/plugin-os";
+import IconsCmd from './Keys/Cmd.vue';
+import Key from './Keys/Key.vue';
 
 interface Action {
   text: string;
   icon: any;
   onClick?: () => void;
   showModifier?: boolean;
+  input?: string;
 }
 
 const props = defineProps<{
@@ -39,8 +47,22 @@ const props = defineProps<{
 
 const os = ref<string>("");
 
-onMounted(() => {
-  os.value = platform();
+const handlePrimaryClick = (event: MouseEvent) => {
+  event.stopPropagation();
+  if (props.primaryAction?.onClick) {
+    props.primaryAction.onClick();
+  }
+};
+
+const handleSecondaryClick = (event: MouseEvent) => {
+  event.stopPropagation();
+  if (props.secondaryAction?.onClick) {
+    props.secondaryAction.onClick();
+  }
+};
+
+onMounted(async () => {
+  os.value = await platform();
 });
 </script>
 
@@ -78,7 +100,7 @@ onMounted(() => {
       color: var(--text);
     }
 
-    .actions div {
+    .keys {
       display: flex;
       align-items: center;
       gap: 2px;
@@ -109,6 +131,12 @@ onMounted(() => {
     .paste:hover,
     .actions:hover {
       background-color: var(--border);
+    }
+
+    .paste:active,
+    .actions:active {
+      background-color: var(--border-active, #444);
+      transform: scale(0.98);
     }
 
     &:hover .paste:hover ~ .divider,
