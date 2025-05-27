@@ -73,7 +73,6 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import { Key, keyboard } from "wrdu-keyboard";
 import {
   selectedGroupIndex,
   selectedItemIndex,
@@ -82,6 +81,7 @@ import {
 } from "~/lib/selectedResult";
 import IconsEnter from "~/components/Icons/Enter.vue";
 import IconsK from "~/components/Icons/K.vue";
+import { Key, useKeyboard } from "@waradu/keyboard";
 
 interface GroupedHistory {
   label: string;
@@ -89,6 +89,8 @@ interface GroupedHistory {
 }
 
 const { $history } = useNuxtApp();
+
+const keyboard = useKeyboard();
 
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
@@ -527,33 +529,33 @@ const setupEventListeners = async (): Promise<void> => {
     }
     focusSearchInput();
 
-    keyboard.clear();
-    keyboard.prevent.down([Key.DownArrow], () => {
+    keyboard.init();
+    keyboard.listen([Key.DownArrow], () => {
       selectNext();
-    });
+    }, { prevent: true });
 
-    keyboard.prevent.down([Key.UpArrow], () => {
+    keyboard.listen([Key.UpArrow], () => {
       selectPrevious();
-    });
+    }, { prevent: true });
 
-    keyboard.prevent.down([Key.Enter], () => {
+    keyboard.listen([Key.Enter], () => {
       pasteSelectedItem();
-    });
+    }, { prevent: true });
 
-    keyboard.prevent.down([Key.Escape], () => {
+    keyboard.listen([Key.Escape], () => {
       hideApp();
-    });
+    }, { prevent: true });
 
     switch (os.value) {
       case "macos":
-        keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-        keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
+        keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
+        keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
         break;
 
       case "linux":
       case "windows":
-        keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-        keyboard.prevent.down([Key.RightControl, Key.K], () => { });
+        keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
+        keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
         break;
     }
   });
@@ -563,32 +565,32 @@ const setupEventListeners = async (): Promise<void> => {
     keyboard.clear();
   });
 
-  keyboard.prevent.down([Key.DownArrow], () => {
+  keyboard.listen([Key.DownArrow], () => {
     selectNext();
-  });
+  }, { prevent: true });
 
-  keyboard.prevent.down([Key.UpArrow], () => {
+  keyboard.listen([Key.UpArrow], () => {
     selectPrevious();
-  });
+  }, { prevent: true });
 
-  keyboard.prevent.down([Key.Enter], () => {
+  keyboard.listen([Key.Enter], () => {
     pasteSelectedItem();
-  });
+  }, { prevent: true });
 
-  keyboard.prevent.down([Key.Escape], () => {
+  keyboard.listen([Key.Escape], () => {
     hideApp();
-  });
+  }, { prevent: true });
 
   switch (os.value) {
     case "macos":
-      keyboard.prevent.down([Key.LeftMeta, Key.K], () => { });
-      keyboard.prevent.down([Key.RightMeta, Key.K], () => { });
+      keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
+      keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
       break;
 
     case "linux":
     case "windows":
-      keyboard.prevent.down([Key.LeftControl, Key.K], () => { });
-      keyboard.prevent.down([Key.RightControl, Key.K], () => { });
+      keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
+      keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
       break;
   }
 };
@@ -631,6 +633,10 @@ onMounted(async () => {
   } catch (error) {
     console.error("Error during onMounted:", error);
   }
+});
+
+onUnmounted(() => {
+  keyboard.clear();
 });
 
 const getFormattedDate = computed(() => {
