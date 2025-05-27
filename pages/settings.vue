@@ -45,7 +45,6 @@
           <div
             @blur="onBlur"
             @focus="onFocus"
-            @keydown="onKeyDown"
             class="keybind-input"
             ref="keybindInput"
             tabindex="0"
@@ -75,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRouter } from "vue-router";
 import { KeyValues, KeyLabels } from "../types/keys";
@@ -88,13 +87,13 @@ const activeModifiers = reactive<Set<KeyValues>>(new Set());
 const isKeybindInputFocused = ref(false);
 const keybind = ref<KeyValues[]>([]);
 const keybindInput = ref<HTMLElement | null>(null);
-const lastBlurTime = ref(0);
 const blurredByEscape = ref(false);
-const os = ref("");
 const router = useRouter();
 const showEmptyKeybindError = ref(false);
 const autostart = ref(false);
 const { $settings, $keyboard } = useNuxtApp();
+
+const listeners: Array<() => void> = [];
 
 const modifierKeySet = new Set([
   KeyValues.AltLeft,
@@ -115,15 +114,15 @@ const keyToLabel = (key: KeyValues): string => {
   return KeyLabels[key] || key;
 };
 
-const updateKeybind = () => {
+const updateKeybindDisplay = () => {
   const modifiers = Array.from(activeModifiers);
   const nonModifiers = keybind.value.filter((key) => !isModifier(key));
-  keybind.value = [...modifiers, ...nonModifiers];
+  const sortedModifiers = modifiers.sort();
+  keybind.value = [...sortedModifiers, ...nonModifiers];
 };
 
 const onBlur = () => {
   isKeybindInputFocused.value = false;
-  lastBlurTime.value = Date.now();
   showEmptyKeybindError.value = false;
 };
 
@@ -133,35 +132,39 @@ const onFocus = () => {
   activeModifiers.clear();
   keybind.value = [];
   showEmptyKeybindError.value = false;
-};
 
-const onKeyDown = (event: KeyboardEvent) => {
-  const key = event.code as KeyValues;
+  const unlistenAll = $keyboard.listen([$keyboard.Key.All], (event: KeyboardEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const key = event.code as KeyValues;
 
-  if (key === KeyValues.Escape) {
-    if (keybindInput.value) {
+    if (key === KeyValues.Escape) {
       blurredByEscape.value = true;
-      keybindInput.value.blur();
-      event.preventDefault();
-      event.stopPropagation();
+      keybindInput.value?.blur();
+      return;
     }
-    return;
-  }
 
-  if (isModifier(key)) {
-    activeModifiers.add(key);
-  } else if (!keybind.value.includes(key)) {
-    keybind.value = keybind.value.filter((k) => isModifier(k));
-    keybind.value.push(key);
-  }
-
-  updateKeybind();
-  showEmptyKeybindError.value = false;
+    if (isModifier(key)) {
+      activeModifiers.add(key);
+    } else {
+      const nonModifierKey = keybind.value.find(k => !isModifier(k));
+      if (!nonModifierKey || nonModifierKey === key) {
+         keybind.value = Array.from(activeModifiers);
+         if (nonModifierKey !== key) keybind.value.push(key);
+      } else {
+        keybind.value = [ ...Array.from(activeModifiers), key];
+      }
+    }
+    updateKeybindDisplay();
+    showEmptyKeybindError.value = false;
+  }, { prevent: true });
+  listeners.push(unlistenAll);
 };
 
 const saveKeybind = async () => {
-  if (keybind.value.length > 0) {
-    await $settings.saveSetting("keybind", JSON.stringify(keybind.value));
+  const finalKeybind = keybind.value.filter(k => k);
+  if (finalKeybind.length > 0) {
+    await $settings.saveSetting("keybind", JSON.stringify(finalKeybind));
     router.push("/");
   } else {
     showEmptyKeybindError.value = true;
@@ -177,67 +180,27 @@ const toggleAutostart = async () => {
   await $settings.saveSetting("autostart", autostart.value ? "true" : "false");
 };
 
-os.value = platform();
-
 onMounted(async () => {
-  $keyboard.setupKeybindCapture({
-    onCapture: (key: string) => {
-      if (isKeybindInputFocused.value) {
-        const keyValue = key as KeyValues;
-        
-        if (isModifier(keyValue)) {
-          activeModifiers.add(keyValue);
-        } else if (!keybind.value.includes(keyValue)) {
-          keybind.value = keybind.value.filter((k) => isModifier(k));
-          keybind.value.push(keyValue);
-        }
-        
-        updateKeybind();
-        showEmptyKeybindError.value = false;
-      }
-    },
-    onComplete: () => {
-      if (isKeybindInputFocused.value) {
-        keybindInput.value?.blur();
-      } else {
+  autostart.value = (await $settings.getSetting("autostart")) === "true";
+
+  const metaOrCtrlKey = $keyboard.currentOS === "macos" ? $keyboard.Key.Meta : $keyboard.Key.Control;
+  listeners.push(
+    $keyboard.listen([metaOrCtrlKey, $keyboard.Key.Enter], saveKeybind, { prevent: true, ignoreIfEditable: true })
+  );
+
+  listeners.push(
+    $keyboard.listen([$keyboard.Key.Escape], () => {
+      if (!isKeybindInputFocused.value && !blurredByEscape.value) {
         router.push("/");
       }
-    }
-  });
-
-  if (os.value === "macos") {
-    $keyboard.on("settings", [$keyboard.Key.LeftMeta, $keyboard.Key.Enter], () => {
-      saveKeybind();
-    }, { priority: $keyboard.PRIORITY.HIGH });
-    
-    $keyboard.on("settings", [$keyboard.Key.RightMeta, $keyboard.Key.Enter], () => {
-      saveKeybind();
-    }, { priority: $keyboard.PRIORITY.HIGH });
-  } else {
-    $keyboard.on("settings", [$keyboard.Key.LeftControl, $keyboard.Key.Enter], () => {
-      saveKeybind();
-    }, { priority: $keyboard.PRIORITY.HIGH });
-    
-    $keyboard.on("settings", [$keyboard.Key.RightControl, $keyboard.Key.Enter], () => {
-      saveKeybind();
-    }, { priority: $keyboard.PRIORITY.HIGH });
-  }
-
-  $keyboard.on("settings", [$keyboard.Key.Escape], () => {
-    if (!isKeybindInputFocused.value && !blurredByEscape.value) {
-      router.push("/");
-    }
-    blurredByEscape.value = false;
-  }, { priority: $keyboard.PRIORITY.HIGH });
-
-  $keyboard.disableContext("main");
-  $keyboard.enableContext("settings");
-  
-  autostart.value = (await $settings.getSetting("autostart")) === "true";
+      if(blurredByEscape.value) blurredByEscape.value = false; 
+    }, { prevent: true })
+  );
 });
 
 onUnmounted(() => {
-  $keyboard.disableContext("settings");
+  listeners.forEach(unlisten => unlisten());
+  listeners.length = 0;
 });
 </script>
 
