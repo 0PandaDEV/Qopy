@@ -16,37 +16,37 @@ tauri = { version = "2.3.1", features = [
   "image-png",
 ] }
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
-tauri-plugin-autostart = "2.2.0"
+tauri-plugin-autostart = "2.3.0"
 tauri-plugin-os = "2.2.1"
-tauri-plugin-updater = "2.6.0"
-tauri-plugin-dialog = "2.2.0"
-tauri-plugin-fs = "2.2.0"
+tauri-plugin-updater = "2.7.1"
+tauri-plugin-dialog = "2.2.2"
+tauri-plugin-fs = "2.3.0"
 tauri-plugin-clipboard = "2.1.11"
-tauri-plugin-prevent-default = "1.2.1"
-tauri-plugin-global-shortcut = "2.2.0"
-tauri-plugin-aptabase = { git = "https://github.com/aptabase/tauri-plugin-aptabase", branch = "v2" }
-sqlx = { version = "0.8.3", features = [
+tauri-plugin-prevent-default = "2.1.0"
+tauri-plugin-global-shortcut = "2.2.1"
+tauri-plugin-aptabase = "1.0.0"
+sqlx = { version = "0.8.6", features = [
   "runtime-tokio-native-tls",
   "sqlite",
   "chrono",
 ] }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.44.1", features = ["full"] }
+tokio = { version = "1.45.1", features = ["full"] }
 serde_json = "1.0.140"
 rdev = "0.5.3"
-rand = "0.9.0"
+rand = "0.9.1"
 base64 = "0.22.1"
-image = "0.25.5"
-reqwest = { version = "0.12.14", features = ["json", "blocking"] }
+image = "0.25.6"
+reqwest = { version = "0.12.15", features = ["json", "blocking"] }
 url = "2.5.4"
 regex = "1.11.1"
-sha2 = "0.10.8"
+sha2 = "0.10.9"
 lazy_static = "1.5.0"
-time = "0.3.39"
-global-hotkey = "0.6.4"
-chrono = { version = "0.4.40", features = ["serde"] }
-log = { version = "0.4.26", features = ["std"] }
-uuid = "1.16.0"
+time = "0.3.41"
+global-hotkey = "0.7.0"
+chrono = { version = "0.4.41", features = ["serde"] }
+log = { version = "0.4.27", features = ["std"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 include_dir = "0.7.4"
 # hyperpolyglot = { git = "https://github.com/0pandadev/hyperpolyglot" }
 applications = { git = "https://github.com/HuakunShen/applications-rs", branch = "fix/win-app-detection" }
