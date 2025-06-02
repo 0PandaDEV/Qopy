@@ -1,41 +1,68 @@
 <template>
   <main>
-    <TopBar ref="topBar" @search="searchHistory" @searchStarted="searchStarted" />
+    <TopBar
+      ref="topBar"
+      @search="searchHistory"
+      @searchStarted="searchStarted" />
     <div class="container">
-      <OverlayScrollbarsComponent class="results" ref="resultsContainer"
+      <OverlayScrollbarsComponent
+        class="results"
+        ref="resultsContainer"
         :options="{ scrollbars: { autoHide: 'scroll' } }">
-        <div v-for="(group, groupIndex) in groupedHistory" :key="groupIndex" class="group">
+        <div
+          v-for="(group, groupIndex) in groupedHistory"
+          :key="groupIndex"
+          class="group">
           <div class="time-separator">{{ group.label }}</div>
           <div class="results-group">
-            <Result v-for="(item, index) in group.items" :key="item.id" :item="item"
-              :selected="isSelected(groupIndex, index)" :image-url="imageUrls[item.id]"
-              :dimensions="imageDimensions[item.id]" @select="selectItem(groupIndex, index)" @image-error="onImageError"
-              @setRef="(el) => (selectedElement = el)" />
+            <Result
+              v-for="(item, index) in group.items"
+              :key="item.id"
+              :item="item"
+              :selected="isSelected(groupIndex, index)"
+              :image-url="imageUrls[item.id]"
+              :dimensions="imageDimensions[item.id]"
+              @select="selectItem(groupIndex, index)"
+              @image-error="onImageError"
+              @setRef="(el: HTMLElement | null) => (selectedElement = el)" />
           </div>
         </div>
       </OverlayScrollbarsComponent>
       <div class="right">
-        <div class="content" v-if="selectedItem?.content_type === ContentType.Image">
+        <div
+          class="content"
+          v-if="selectedItem?.content_type === ContentType.Image">
           <img :src="imageUrls[selectedItem.id]" alt="Image" class="image" />
         </div>
-        <div v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)" class="content">
-          <img class="image" :src="getYoutubeThumbnail(selectedItem.content)" alt="YouTube Thumbnail" />
+        <div
+          v-else-if="selectedItem && isYoutubeWatchUrl(selectedItem.content)"
+          class="content">
+          <img
+            class="image"
+            :src="getYoutubeThumbnail(selectedItem.content)"
+            alt="YouTube Thumbnail" />
         </div>
-        <div class="content" v-else-if="
-          selectedItem?.content_type === ContentType.Link && pageOgImage
-        ">
+        <div
+          class="content"
+          v-else-if="
+            selectedItem?.content_type === ContentType.Link && pageOgImage
+          ">
           <img :src="pageOgImage" alt="Image" class="image" />
         </div>
         <OverlayScrollbarsComponent v-else class="content">
           <span class="content-text">{{ selectedItem?.content || "" }}</span>
         </OverlayScrollbarsComponent>
-        <OverlayScrollbarsComponent class="information" :options="{ scrollbars: { autoHide: 'scroll' } }">
+        <OverlayScrollbarsComponent
+          class="information"
+          :options="{ scrollbars: { autoHide: 'scroll' } }">
           <div class="title">Information</div>
           <div class="info-content" v-if="selectedItem && getInfo">
             <div class="info-row" v-for="(row, index) in infoRows" :key="index">
               <p class="label">{{ row.label }}</p>
-              <span :class="{ 'url-truncate': row.isUrl }" :data-text="row.value">
-                <img v-if="row.icon" :src="row.icon" :alt="String(row.value)">
+              <span
+                :class="{ 'url-truncate': row.isUrl }"
+                :data-text="row.value">
+                <img v-if="row.icon" :src="row.icon" :alt="String(row.value)" />
                 {{ row.value }}
               </span>
             </div>
@@ -43,24 +70,39 @@
         </OverlayScrollbarsComponent>
       </div>
     </div>
-    <BottomBar :primary-action="{
-      text: 'Paste',
-      icon: IconsEnter,
-      onClick: pasteSelectedItem,
-    }" :secondary-action="{
-      text: 'Actions',
-      icon: IconsK,
-      showModifier: true,
-    }" />
+    <BottomBar
+      :primary-action="{
+        text: 'Paste',
+        icon: IconsEnter,
+        onClick: pasteSelectedItem,
+      }"
+      :secondary-action="{
+        text: 'Actions',
+        icon: IconsKey,
+        input: 'K',
+        showModifier: true,
+        onClick: toggleActionsMenu,
+      }" />
+    <ActionsMenu
+      :selected-item="selectedItem"
+      :is-visible="isActionsMenuVisible"
+      @close="closeActionsMenu"
+      @toggle="toggleActionsMenu" />
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, shallowRef } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onUnmounted,
+  watch,
+  nextTick,
+  shallowRef,
+} from "vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-import { app, window } from "@tauri-apps/api";
-import { platform } from "@tauri-apps/plugin-os";
 import { listen } from "@tauri-apps/api/event";
 import { useNuxtApp } from "#app";
 import { invoke } from "@tauri-apps/api/core";
@@ -73,24 +115,25 @@ import type {
   InfoColor,
   InfoCode,
 } from "~/types/types";
-import {
-  selectedGroupIndex,
-  selectedItemIndex,
-  selectedElement,
-  useSelectedResult,
-} from "~/lib/selectedResult";
-import IconsEnter from "~/components/Icons/Enter.vue";
-import IconsK from "~/components/Icons/K.vue";
-import { Key, useKeyboard } from "@waradu/keyboard";
+import IconsEnter from "~/components/Keys/Enter.vue";
+import IconsKey from "~/components/Keys/Key.vue";
+import ActionsMenu from "~/components/ActionsMenu.vue";
+import { useAppControl } from "~/composables/useAppControl";
 
 interface GroupedHistory {
   label: string;
   items: HistoryItem[];
 }
 
-const { $history } = useNuxtApp();
+const { $history, $keyboard, $selectedResult } = useNuxtApp();
+const {
+  selectedGroupIndex,
+  selectedItemIndex,
+  selectedElement,
+  useSelectedResult,
+} = $selectedResult;
 
-const keyboard = useKeyboard();
+const listeners: Array<() => void> = [];
 
 const CHUNK_SIZE = 50;
 const SCROLL_THRESHOLD = 100;
@@ -106,7 +149,6 @@ const resultsContainer = shallowRef<InstanceType<
 > | null>(null);
 const searchQuery = ref("");
 const searchInput = ref<HTMLInputElement | null>(null);
-const os = ref<string>("");
 const imageUrls = shallowRef<Record<string, string>>({});
 const imageDimensions = shallowRef<Record<string, string>>({});
 const imageSizes = shallowRef<Record<string, string>>({});
@@ -115,8 +157,25 @@ const imageLoadError = ref<boolean>(false);
 const imageLoading = ref<boolean>(false);
 const pageTitle = ref<string>("");
 const pageOgImage = ref<string>("");
+const isActionsMenuVisible = ref<boolean>(false);
 
 const topBar = ref<{ searchInput: HTMLInputElement | null } | null>(null);
+
+const toggleActionsMenu = () => {
+  isActionsMenuVisible.value = !isActionsMenuVisible.value;
+  nextTick(() => {
+    if (isActionsMenuVisible.value) {
+      document.getElementById("actions-menu")?.focus();
+    } else {
+      focusSearchInput();
+    }
+  });
+};
+
+const closeActionsMenu = () => {
+  isActionsMenuVisible.value = false;
+  focusSearchInput();
+};
 
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
@@ -132,7 +191,7 @@ const getWeekNumber = (date: Date): number => {
     ((date.getTime() - firstDayOfYear.getTime()) / 86400000 +
       firstDayOfYear.getDay() +
       1) /
-    7
+      7
   );
 };
 
@@ -153,8 +212,8 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
 
   const filteredItems = searchQuery.value
     ? history.value.filter((item) =>
-      item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+        item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
     : history.value;
 
   const yesterday = new Date(today.getTime() - 86400000);
@@ -220,16 +279,16 @@ const loadHistoryChunk = async (): Promise<void> => {
             img.src = `data:image/png;base64,${base64}`;
             imageUrls.value[historyItem.id] = img.src;
 
-            await new Promise<void>((resolve) => {
+            await new Promise<void>((resolveProm) => {
               img.onload = () => {
                 imageDimensions.value[
                   historyItem.id
                 ] = `${img.width}x${img.height}`;
-                resolve();
+                resolveProm();
               };
               img.onerror = () => {
                 imageDimensions.value[historyItem.id] = "Error";
-                resolve();
+                resolveProm();
               };
             });
           } catch (error) {
@@ -343,7 +402,11 @@ const processSearchQueue = async () => {
         { id: item.id, timestamp: new Date(item.timestamp) }
       )
     );
-  
+    if (groupedHistory.value.length > 0) {
+      handleSelection(0, 0, true);
+    } else {
+      selectItem(-1, -1);
+    }
   } catch (error) {
     console.error("Search error:", error);
   } finally {
@@ -356,13 +419,13 @@ const processSearchQueue = async () => {
 
 const searchHistory = async (query: string): Promise<void> => {
   searchQuery.value = query;
-  
+
   if (searchController) {
     searchController.abort();
   }
-  
+
   searchController = new AbortController();
-  
+
   searchQueue.push(query);
   if (!isProcessingSearch) {
     processSearchQueue();
@@ -371,10 +434,14 @@ const searchHistory = async (query: string): Promise<void> => {
 
 watch(
   () => groupedHistory.value,
-  (newGroupedHistory) => {
-    if (newGroupedHistory.length > 0) {
+  (newGroupedHistory, oldGroupedHistory) => {
+    if (
+      newGroupedHistory.length > 0 &&
+      oldGroupedHistory &&
+      oldGroupedHistory.length === 0
+    ) {
       handleSelection(0, 0, true);
-    } else {
+    } else if (newGroupedHistory.length === 0) {
       selectItem(-1, -1);
     }
   },
@@ -419,13 +486,13 @@ const getYoutubeThumbnail = (url: string): string => {
 };
 
 const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
-  const results = await $history.loadHistoryChunk(0, CHUNK_SIZE);
-  if (results.length > 0) {
-    const existingIds = new Set(history.value.map((item) => item.id));
-    const uniqueNewItems = results.filter((item) => !existingIds.has(item.id));
+  offset = 0;
+  history.value = [];
 
-    const processedNewItems = await Promise.all(
-      uniqueNewItems.map(async (item) => {
+  const results = await $history.loadHistoryChunk(offset, CHUNK_SIZE);
+  if (results.length > 0) {
+    const processedItems = await Promise.all(
+      results.map(async (item) => {
         const historyItem = new HistoryItem(
           item.source,
           item.content_type,
@@ -451,16 +518,16 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
             img.src = `data:image/png;base64,${base64}`;
             imageUrls.value[historyItem.id] = img.src;
 
-            await new Promise<void>((resolve) => {
+            await new Promise<void>((resolveProm) => {
               img.onload = () => {
                 imageDimensions.value[
                   historyItem.id
                 ] = `${img.width}x${img.height}`;
-                resolve();
+                resolveProm();
               };
               img.onerror = () => {
                 imageDimensions.value[historyItem.id] = "Error";
-                resolve();
+                resolveProm();
               };
             });
           } catch (error) {
@@ -473,7 +540,8 @@ const updateHistory = async (resetScroll: boolean = false): Promise<void> => {
       })
     );
 
-    history.value = [...processedNewItems, ...history.value];
+    history.value = processedItems;
+    offset = results.length;
 
     if (
       resetScroll &&
@@ -496,109 +564,7 @@ const handleSelection = (
   if (shouldScroll) scrollToSelectedItem();
 };
 
-const setupEventListeners = async (): Promise<void> => {
-  await listen("clipboard-content-updated", async () => {
-    lastUpdateTime.value = Date.now();
-    await updateHistory(true);
-    if (groupedHistory.value[0]?.items.length > 0) {
-      handleSelection(0, 0, false);
-    }
-  });
-
-  await listen("tauri://focus", async () => {
-    const currentTime = Date.now();
-    if (currentTime - lastUpdateTime.value > 0) {
-      const previousState = {
-        groupIndex: selectedGroupIndex.value,
-        itemIndex: selectedItemIndex.value,
-        scroll:
-          resultsContainer.value?.osInstance()?.elements().viewport
-            ?.scrollTop || 0,
-      };
-
-      await updateHistory();
-      lastUpdateTime.value = currentTime;
-      handleSelection(previousState.groupIndex, previousState.itemIndex, false);
-
-      if (resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo) {
-        resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
-          top: previousState.scroll,
-          behavior: "instant",
-        });
-      }
-    }
-    focusSearchInput();
-
-    keyboard.init();
-    keyboard.listen([Key.DownArrow], () => {
-      selectNext();
-    }, { prevent: true });
-
-    keyboard.listen([Key.UpArrow], () => {
-      selectPrevious();
-    }, { prevent: true });
-
-    keyboard.listen([Key.Enter], () => {
-      pasteSelectedItem();
-    }, { prevent: true });
-
-    keyboard.listen([Key.Escape], () => {
-      hideApp();
-    }, { prevent: true });
-
-    switch (os.value) {
-      case "macos":
-        keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
-        keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
-        break;
-
-      case "linux":
-      case "windows":
-        keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
-        keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
-        break;
-    }
-  });
-
-  await listen("tauri://blur", () => {
-    searchInput.value?.blur();
-    keyboard.clear();
-  });
-
-  keyboard.listen([Key.DownArrow], () => {
-    selectNext();
-  }, { prevent: true });
-
-  keyboard.listen([Key.UpArrow], () => {
-    selectPrevious();
-  }, { prevent: true });
-
-  keyboard.listen([Key.Enter], () => {
-    pasteSelectedItem();
-  }, { prevent: true });
-
-  keyboard.listen([Key.Escape], () => {
-    hideApp();
-  }, { prevent: true });
-
-  switch (os.value) {
-    case "macos":
-      keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
-      keyboard.listen([Key.Meta, Key.K], () => { }, { prevent: true });
-      break;
-
-    case "linux":
-    case "windows":
-      keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
-      keyboard.listen([Key.Control, Key.K], () => { }, { prevent: true });
-      break;
-  }
-};
-
-const hideApp = async (): Promise<void> => {
-  await app.hide();
-  await window.getCurrentWindow().hide();
-};
+const { hideApp } = useAppControl();
 
 const focusSearchInput = (): void => {
   nextTick(() => {
@@ -621,22 +587,145 @@ watch(
 
 onMounted(async () => {
   try {
-    os.value = platform();
     await loadHistoryChunk();
+    if (groupedHistory.value.length > 0 && !selectedItem.value) {
+      handleSelection(0, 0, true);
+    }
 
     resultsContainer.value
       ?.osInstance()
       ?.elements()
       ?.viewport?.addEventListener("scroll", handleScroll);
 
-    await setupEventListeners();
+    listeners.push(
+      await listen("clipboard-content-updated", async () => {
+        lastUpdateTime.value = Date.now();
+        await updateHistory(true);
+        if (groupedHistory.value[0]?.items.length > 0) {
+          handleSelection(0, 0, false);
+        }
+      })
+    );
+
+    listeners.push(
+      await listen("tauri://focus", async () => {
+        console.log("Tauri window focused");
+        // Attempt to re-initialize keyboard listeners
+        if ($keyboard && typeof $keyboard.init === "function") {
+          console.log("Re-initializing keyboard via $keyboard.init()");
+          $keyboard.init();
+        } else {
+          console.warn("$keyboard.init is not available");
+        }
+
+        const currentTime = Date.now();
+        if (currentTime - lastUpdateTime.value > 0) {
+          const previousState = {
+            groupIndex: selectedGroupIndex.value,
+            itemIndex: selectedItemIndex.value,
+            scroll:
+              resultsContainer.value?.osInstance()?.elements().viewport
+                ?.scrollTop || 0,
+          };
+
+          await updateHistory();
+          lastUpdateTime.value = currentTime;
+          handleSelection(
+            previousState.groupIndex,
+            previousState.itemIndex,
+            false
+          );
+
+          if (
+            resultsContainer.value?.osInstance()?.elements().viewport?.scrollTo
+          ) {
+            resultsContainer.value.osInstance()?.elements().viewport?.scrollTo({
+              top: previousState.scroll,
+              behavior: "instant",
+            });
+          }
+        }
+        focusSearchInput();
+      })
+    );
+
+    listeners.push(
+      await listen("tauri://blur", () => {
+        searchInput.value?.blur();
+      })
+    );
+
+    listeners.push(
+      $keyboard.listen(
+        [$keyboard.Key.DownArrow],
+        () => {
+          console.log(
+            "Down Arrow pressed. Active element:",
+            document.activeElement
+          );
+          selectNext();
+        },
+        { prevent: true }
+      )
+    );
+    listeners.push(
+      $keyboard.listen(
+        [$keyboard.Key.UpArrow],
+        () => {
+          console.log(
+            "Up Arrow pressed. Active element:",
+            document.activeElement
+          );
+          selectPrevious();
+        },
+        { prevent: true }
+      )
+    );
+    listeners.push(
+      $keyboard.listen([$keyboard.Key.Enter], pasteSelectedItem, {
+        prevent: true,
+      })
+    );
+    listeners.push(
+      $keyboard.listen(
+        [$keyboard.Key.Escape],
+        () => {
+          if (isActionsMenuVisible.value) {
+            closeActionsMenu();
+          } else {
+            hideApp();
+          }
+        },
+        { prevent: true }
+      )
+    );
+
+    const metaOrCtrlKey =
+      $keyboard.currentOS === "macos"
+        ? $keyboard.Key.Meta
+        : $keyboard.Key.Control;
+    listeners.push(
+      $keyboard.listen([metaOrCtrlKey, $keyboard.Key.K], toggleActionsMenu, {
+        prevent: true,
+        ignoreIfEditable: true,
+      })
+    );
   } catch (error) {
     console.error("Error during onMounted:", error);
   }
 });
 
 onUnmounted(() => {
-  keyboard.clear();
+  listeners.forEach((unlisten) => {
+    if (typeof unlisten === "function") {
+      unlisten();
+    }
+  });
+  listeners.length = 0;
+  const viewport = resultsContainer.value?.osInstance()?.elements()?.viewport;
+  if (viewport) {
+    viewport.removeEventListener("scroll", handleScroll);
+  }
 });
 
 const getFormattedDate = computed(() => {
@@ -785,7 +874,9 @@ const infoRows = computed(() => {
       label: "Source",
       value: getInfo.value.source,
       isUrl: false,
-      icon: selectedItem.value?.source_icon ? `data:image/png;base64,${selectedItem.value.source_icon}` : undefined
+      icon: selectedItem.value?.source_icon
+        ? `data:image/png;base64,${selectedItem.value.source_icon}`
+        : undefined,
     },
     {
       label: "Content Type",
@@ -798,7 +889,12 @@ const infoRows = computed(() => {
 
   const typeSpecificRows: Record<
     ContentType,
-    Array<{ label: string; value: string | number; isUrl?: boolean; icon?: string }>
+    Array<{
+      label: string;
+      value: string | number;
+      isUrl?: boolean;
+      icon?: string;
+    }>
   > = {
     [ContentType.Text]: [
       { label: "Characters", value: (getInfo.value as InfoText).characters },
@@ -816,7 +912,7 @@ const infoRows = computed(() => {
     ],
     [ContentType.Link]: [
       ...((getInfo.value as InfoLink).title &&
-        (getInfo.value as InfoLink).title !== "Loading..."
+      (getInfo.value as InfoLink).title !== "Loading..."
         ? [{ label: "Title", value: (getInfo.value as InfoLink).title || "" }]
         : []),
       { label: "URL", value: (getInfo.value as InfoLink).url, isUrl: true },

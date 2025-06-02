@@ -230,7 +230,6 @@ pub fn setup(app: &AppHandle) {
                 }
             }
 
-            let _ = app_handle.emit("clipboard-content-updated", ());
             let _ = app_handle.track_event(
                 "clipboard_copied",
                 Some(

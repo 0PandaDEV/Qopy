@@ -10,8 +10,10 @@ import { listen } from "@tauri-apps/api/event";
 import { app, window } from "@tauri-apps/api";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
 import { onMounted } from "vue";
+import { keyboard } from "wrdu-keyboard";
 
 const { $settings } = useNuxtApp();
+keyboard.init();
 
 onMounted(async () => {
   await listen("settings", async () => {
@@ -61,6 +63,8 @@ onMounted(async () => {
   --background: #2e2d2b;
   --accent: #feb453;
   --border: #ffffff0d;
+
+  --red: #F84E4E;
 
   --text: #e5dfd5;
   --text-secondary: #ada9a1;

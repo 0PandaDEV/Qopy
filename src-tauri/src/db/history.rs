@@ -5,6 +5,7 @@ use rand::distr::Alphanumeric;
 use sqlx::{ Row, SqlitePool };
 use std::fs;
 use tauri_plugin_aptabase::EventTracker;
+use tauri::Emitter;
 
 pub async fn initialize_history(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
     let id: String = rng()
@@ -71,8 +72,12 @@ pub async fn add_history_item(
         Some(_) => {
             sqlx
                 ::query(
-                    "UPDATE history SET timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now') WHERE content = ? AND content_type = ?"
+                    "UPDATE history SET source = ?, source_icon = ?, timestamp = strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now'), favicon = ?, language = ? WHERE content = ? AND content_type = ?"
                 )
+                .bind(&source)
+                .bind(&source_icon)
+                .bind(&favicon)
+                .bind(&language)
                 .bind(&content)
                 .bind(&content_type)
                 .execute(&*pool).await
@@ -102,6 +107,8 @@ pub async fn add_history_item(
         "content_type": item.content_type.to_string()
     }))
     );
+    
+    let _ = app_handle.emit("clipboard-content-updated", ());
 
     Ok(())
 }
@@ -191,6 +198,7 @@ pub async fn delete_history_item(
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_item_deleted", None);
+    let _ = app_handle.emit("clipboard-content-updated", ());
 
     Ok(())
 }
@@ -206,6 +214,7 @@ pub async fn clear_history(
         .map_err(|e| e.to_string())?;
 
     let _ = app_handle.track_event("history_cleared", None);
+    let _ = app_handle.emit("clipboard-content-updated", ());
 
     Ok(())
 }
