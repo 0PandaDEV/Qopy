@@ -53,7 +53,7 @@ The fixed and simple clipboard manager for both Windows and Linux.
   </a>
 </details>
 
-[![wakatime](https://wakatime.com/badge/user/018ce503-097f-4057-9599-db20b190920c/project/fe76359d-56c2-4a13-8413-55207b6ad298.svg?style=flat_square)](https://wakatime.com/badge/user/018ce503-097f-4057-9599-db20b190920c/project/fe76359d-56c2-4a13-8413-55207b6ad298)
+![ziit](https://ziit.app/api/public/badge/cm98il90n0000o52c3my0bf5p/all-time/qopy)
 
 ## 📋 What is Qopy
 
