@@ -21,3 +21,14 @@ reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System" /v Allow
 ```
 
 After that a restart may be reqired.
+
+## Install Fuse for Ubuntu
+
+`libfuse2` is required on Ubuntu.
+
+```sh
+sudo apt install libfuse2
+```
+
+After that a restart may be reqired.
+
